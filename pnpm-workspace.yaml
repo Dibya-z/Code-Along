@@ -1,0 +1,18 @@
+packages:
+  - apps/*
+  - packages/*
+
+engineStrict: true
+strictPeerDependencies: true
+saveExact: true
+storeDir: .pnpm-store/pnpm
+ignoreScripts: true
+verifyDepsBeforeRun: error
+minimumReleaseAgeStrict: true
+
+# GHSA-g3hv-75wg-m249; remove when these parents adopt patched minimatch.
+# Scope the major-version substitution to the audited development-tool edges.
+overrides:
+  eslint>minimatch: 11.0.1
+  '@eslint/config-array>minimatch': 11.0.1
+  '@typescript-eslint/typescript-estree>minimatch': 11.0.1

@@ -6,7 +6,7 @@ Act as a senior software engineer and development partner. Inspect existing code
 
 ## Project Structure & Current State
 
-The approved architecture is recorded in `docs/architecture/approved-architecture.html`; the task/dependency and commit tracker is `IMPLEMENTATION_PROGRESS.md`. The repository has an initial documentation commit and is establishing tooling. No application, dependency lockfiles, runnable services or test framework exist yet. Do not invent working commands. Update `README.md` with actual verified setup as tooling is introduced.
+The approved architecture is recorded in `docs/architecture/approved-architecture.html`; the task/dependency and commit tracker is `IMPLEMENTATION_PROGRESS.md`. The repository has approved documentation/hygiene commits and pinned root JavaScript tooling with a pnpm lockfile. No application, Python tooling, runnable services or product test suite exists yet. Do not invent working commands. Update `README.md` with actual verified setup as tooling is introduced.
 
 Follow the approved React/TypeScript/Vite frontend, CodeMirror/Yjs editor, Django/DRF/Channels product backend, narrow Node/Hocuspocus collaboration service, PostgreSQL durability and separate-site Pyodide Worker architecture. Redis is transient coordination; learner code must never execute in Django or ordinary Celery application workers. Exact versions and critical integrations require M0 verification. Obtain approval before changing accepted architecture.
 
@@ -22,7 +22,7 @@ Favor simple solutions that meet current requirements. Avoid overengineering and
 
 ## Development & Validation
 
-No installation, development, build or application-test commands exist yet. Git inspection commands are documented in `README.md`. Document exact, reproducible commands when tooling is added.
+Use Node 24.22.3 and the pinned pnpm through Corepack; follow the project-local cache/setup instructions in `README.md`. `corepack pnpm install --frozen-lockfile` installs tooling without lifecycle scripts; `corepack pnpm check` runs lint, format and current config type checks. `corepack pnpm test` intentionally fails until real tests exist; never claim that an empty suite establishes coverage. There are no application start/build/migration commands yet. Add package-specific type/test commands as source modules are introduced, rather than treating the root config check as whole-application verification.
 
 Work one logical unit at a time: PLAN → IMPLEMENT → TEST → REVIEW → SHOW CHANGES → APPROVAL → COMMIT → UPDATE PROGRESS → NEXT TASK. State the scope, dependencies and files before implementation. Fix failed checks before proceeding. Update the tracker after every meaningful unit with status, verification, known issues and actual approved commit hashes; do not mark planned functionality implemented.
 
