@@ -4,7 +4,7 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-Architecture approved on 13 November 2026. M0.1 recorded the design and development plan; M0.2 is establishing repository hygiene and tooling. The pinned JavaScript and Python tooling is installed and verified. There is no application, database migration, runnable service or product test suite yet.
+Architecture approved on 13 November 2026. M0.1 recorded the design and development plan; M0.2 tooling is complete. M0.3 adds the first shared collaboration checkpoint contract and protocol tests. There is no application UI, database migration or running service yet.
 
 - [Approved architecture](docs/architecture/approved-architecture.html): feature comparison, technology decisions, domain/schema relationships, protocols, security boundaries, target folder structure and milestone gates. Open the HTML file in a browser. Some historical investigation links refer to machine-local files and are not portable.
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): task order, dependencies, acceptance criteria, status, review state and commit records.
@@ -46,16 +46,16 @@ corepack pnpm check
 
 The first install needs access to the npm registry. Dependency lifecycle scripts are disabled in workspace configuration; the current tooling works without them. An out-of-date dependency installation causes script commands to fail rather than silently reinstall. Run the frozen install again when an approved dependency change requires it. Review any future dependency that needs lifecycle scripts before changing this setting. See [pnpm build settings](https://pnpm.io/settings/build).
 
-| Command                      | Current behavior                                                                                                                |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `corepack pnpm lint`         | Lints JavaScript/TypeScript with ESLint; warnings fail the check                                                                |
-| `corepack pnpm format:check` | Checks formatting; excludes the archived architecture and generated lockfile                                                    |
-| `corepack pnpm format`       | Formats supported repository files; review the diff before staging                                                              |
-| `corepack pnpm typecheck`    | Checks the current Vitest config with the shared strict TypeScript baseline; package-specific checks arrive with their packages |
-| `corepack pnpm check`        | Runs lint, format check and typecheck; does not claim product-test coverage                                                     |
-| `corepack pnpm test`         | Runs Node-environment Vitest tests in apps/, packages/ and tests/; currently exits nonzero because no real tests exist yet      |
+| Command                      | Current behavior                                                                                                |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `corepack pnpm lint`         | Lints JavaScript/TypeScript with ESLint; warnings fail the check                                                |
+| `corepack pnpm format:check` | Checks formatting; excludes the archived architecture and generated lockfile                                    |
+| `corepack pnpm format`       | Formats supported repository files; review the diff before staging                                              |
+| `corepack pnpm typecheck`    | Checks root tooling plus each workspace package; contracts source is checked separately from its Node/Yjs tests |
+| `corepack pnpm check`        | Runs lint, format check and typecheck; run `test` separately for behavioral checks                              |
+| `corepack pnpm test`         | Runs the protocol test suite, including actual Yjs deletion/remote-update cases; empty suites still fail        |
 
-Do not use a pass-with-no-tests option to disguise the empty suite. M0.3 introduces the first protocol tests. During M0.2b verification, temporary fixtures demonstrated passing/failing assertions, lint errors, guarded/unguarded indexed access and format checks; these fixtures were removed. A clean cached frozen install was also verified, including rejection of a manifest/lock mismatch. This validates the toolchain, not application behavior.
+The first real test suite is in `packages/contracts/tests/checkpoints.test.ts`: **122 protocol tests** passed in the development tree and a clean cached install. No pass-with-no-tests bypass is enabled. These verify contract validation and receipt eligibility, not a live server/database commit. M0.2's temporary tool fixtures were removed after verification.
 
 ### Pinned JavaScript tools
 
@@ -73,7 +73,17 @@ TypeScript 6.0.3 satisfies the selected parser's declared `<6.1.0` peer range; T
 
 The initial audit identified [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) in minimatch 10.2.6. Workspace overrides resolve only the affected ESLint, @eslint/config-array and @typescript-eslint/typescript-estree dependency edges to patched **11.0.1**. This is a deliberate cross-major substitution: frozen-install and lint positive/negative checks were rerun, and the resulting audit reported no known vulnerabilities. Remove these temporary overrides when the parent packages adopt patched versions, rerunning the checks rather than widening unrelated dependencies. Audit results describe the check date, not a guarantee against undiscovered issues.
 
-Only root tooling exists. The workspace reserves apps/* and packages/* without creating empty application modules. No React, Hocuspocus, Yjs or database packages are installed yet; add them when the owning task needs them. Python setup is documented below. There are no application start, migration or build commands yet. macOS arm64 tooling was verified; other operating systems and browsers have not been tested.
+Root tooling and the first private workspace, `@code-along/contracts`, now exist. The workspace still reserves apps/* without creating empty applications. Yjs 13.6.33 is a **test-only** dependency of contracts; the exported runtime contract has no third-party dependencies. No React, Hocuspocus server or database packages are installed yet. Python tooling is documented below. macOS arm64 was verified; browsers and other operating systems have not been tested.
+
+### Collaboration checkpoint contract
+
+Read the [v1 protocol specification](docs/protocols/collaboration-checkpoints.md) and [shared implementation](packages/contracts/collaboration/checkpoints.ts).
+
+- `parseCheckpointRequest` and `parseCheckpointResponse` validate bounded JSON envelopes, exact versions/fields, canonical base64, UUIDs, safe counters, digests and decimal PostgreSQL revisions. Parsing does not authorize access or prove valid Yjs state.
+- `receiptCoversObservedState` matches a trusted parsed receipt to the immutable pending request and current observed document/session/generation/counter. Older receipts, errors, remote edits and deletion-only changes cannot incorrectly mark the current observation Saved.
+- The package exports source TypeScript via `@code-along/contracts/collaboration`. Source is typechecked without Node globals; tests have their own Node/DOM declarations because Yjs's XML types refer to DOM interfaces. Native Node 24 import and the Vitest package export were verified. This does not claim a browser runtime test.
+
+Run `corepack pnpm test` locally to exercise the first protocol behavior. Real save persistence, idempotent storage, auth integration and Hocuspocus transport are the separate M0.4/M3 work. There is no localhost application preview or start command yet. Provider sync is never a commit receipt; a checksum is not an authentication mechanism or named source revision.
 
 ### Python tooling
 

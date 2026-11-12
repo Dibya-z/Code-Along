@@ -1,0 +1,15 @@
+{
+  "name": "@code-along/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./collaboration": "./collaboration/checkpoints.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --project tsconfig.json && tsc --project tsconfig.test.json"
+  },
+  "devDependencies": {
+    "yjs": "13.6.33"
+  }
+}

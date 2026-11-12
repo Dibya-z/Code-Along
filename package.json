@@ -11,7 +11,7 @@
     "lint": "eslint . --max-warnings 0",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
-    "typecheck": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json && corepack pnpm --recursive --if-present run typecheck",
     "test": "vitest run",
     "check": "corepack pnpm run lint && corepack pnpm run format:check && corepack pnpm run typecheck"
   },
