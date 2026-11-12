@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Code Along approved architecture</title><style>
+:root{color-scheme:light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#202830;background:#f4f5f5}
+*{box-sizing:border-box}body{margin:0}main{max-width:1180px;margin:0 auto;background:white;padding:60px 64px;overflow-wrap:anywhere}h1{font-size:42px;letter-spacing:-1.4px;line-height:1.12;margin:12px 0 24px}h2{font-size:27px;margin:0 0 24px;padding-top:8px;letter-spacing:-.5px}h3{font-size:20px;margin:38px 0 16px;line-height:1.35}p,li,dd{font-size:15px;line-height:1.75}.lead{font-size:19px;line-height:1.65;max-width:920px}.eyebrow{color:#48616e;font-size:12px;letter-spacing:1px;text-transform:uppercase;font-weight:650}.metadata{display:grid;grid-template-columns:180px 1fr;gap:8px 24px;border-top:1px solid #d8dfe2;padding-top:24px;margin:28px 0 36px}dt{font-size:13px;font-weight:650;padding-top:3px}dd{margin:0;font-size:13px}nav{display:flex;flex-wrap:wrap;gap:10px 22px;border-block:1px solid #d8dfe2;padding:20px 0;margin:28px 0 44px}nav a{font-size:13px;font-weight:600}section{margin-top:52px;padding-top:28px;border-top:1px solid #d8dfe2}section#scope{border:0;padding-top:0;margin-top:0}section#features-continued{border:0;padding-top:0;margin-top:0}a{color:#175d79;text-underline-offset:3px}a:hover{text-decoration-thickness:2px}.source{font-size:12px;line-height:1.7;display:inline;word-break:break-word}.source code{background:none;font-size:11.5px}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em;background:#f0f3f4;padding:1px 3px;border-radius:3px}table{width:100%;border-collapse:collapse;margin:20px 0 26px;table-layout:auto}td,th{text-align:left;vertical-align:top;border-bottom:1px solid #dce2e5;padding:11px 12px;font-size:13px;line-height:1.65;overflow-wrap:anywhere}th{background:#eef2f4;font-size:12px;font-weight:700}td:first-child{min-width:120px}ul,ol{padding-left:24px}li{padding-left:4px;margin:10px 0}pre{background:#f2f5f6;padding:20px;overflow:auto;font-size:12px;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre;overflow-wrap:normal;border-left:3px solid #8caab6}.tree{font-size:11.5px}footer{font-size:12px;color:#53636d;border-top:1px solid #d8dfe2;margin-top:48px;padding-top:20px}strong{font-weight:680}
+@media(max-width:760px){main{padding:28px 20px}h1{font-size:33px}h2{font-size:24px}.metadata{grid-template-columns:1fr;gap:3px}dd{margin-bottom:12px}td,th{padding:8px;font-size:11px}td:first-child{min-width:72px}.source,.source code{font-size:10px}pre{padding:12px}nav{gap:12px}p,li{font-size:14px}}
+@media print{@page{size:A4;margin:15mm}body,main{background:white}main{padding:0;max-width:none}nav{display:none}h1{font-size:30px}h2{font-size:22px}h3{font-size:17px;break-after:avoid}p,li{font-size:10pt;line-height:1.55}td,th{font-size:8.5pt;padding:6px}section{margin-top:28px;padding-top:20px}tr{break-inside:avoid}pre{font-size:8pt;white-space:pre-wrap}a{color:inherit}.source,.source code{font-size:8pt}}
+
+nav a:focus-visible,a:focus-visible{outline:2px solid #175d79;outline-offset:4px}pre.tree{line-height:1.7}header{margin-bottom:24px}
+</style></head><body><main><header><p class="eyebrow">Code Along · Approved architecture · 13 November 2026</p><h1>Code Along application architecture</h1><p class="lead">Build an independently authored, learning-focused collaborative Python platform: a React/TypeScript frontend, a Django product backend, a small Node/Yjs collaboration service, PostgreSQL durability, and an isolated browser execution application. Start with browser practice and instructor assessment; add trusted server grading only behind a separate execution-security gate.</p></header>
+<p><strong>Status:</strong> architecture approved by the project owner on 13 November 2026. This document records the accepted design and milestone scope; approval does not establish that its integrations have passed testing. Implementation proceeds one verified unit at a time, with separate approval before every commit. Architecture changes require approval.</p>
+<p>This design uses the <a href="/private/tmp/code-along-pytogether-investigation-2026-11-12/PyTogether-Technical-Investigation.html">source investigation</a> and <a href="/private/tmp/code-along-pytogether-runtime-2026-11-12/PyTogether-Runtime-Investigation.html">runtime investigation</a>. PyTogether demonstrated the core experience, but also exposed weak authorization, limited persistence, misleading save/execution states and a partial final document in one rapid interaction whose cause remains unresolved. Code Along needs explicit contracts and regression tests; changing a library alone does not prove that those problems are solved.</p>
+<nav><a href="#comparison">1 Features</a><a href="#stack">2 Stack</a><a href="#frontend">3 Frontend</a><a href="#backend">4 Backend</a><a href="#database">5 Database</a><a href="#realtime">6 Real time</a><a href="#execution">7 Execution</a><a href="#auth">8 Identity and permissions</a><a href="#security">9 Security</a><a href="#structure">10 Folder structure</a><a href="#roadmap">11 Roadmap</a></nav>
+<p><strong>Working assumptions:</strong> browser-first, desktop-first coding with responsive reading/review; small study groups and classrooms; one deployment region initially; individual and team projects; Python is the only execution language. An initial validation target is 2–6 simultaneous editors per project and a 30-learner workspace. These are proposed test loads, not measured capacity or guaranteed limits. Institution hierarchy, billing, native desktop apps and AI tutoring are outside the first release.</p>
+<section id="comparison"><h2>1. Reference versus proposed features</h2>
+<table><thead><tr><th>Capability</th><th>Investigated PyTogether</th><th>Code Along first release</th><th>Later extension</th></tr></thead><tbody>
+<tr><td>Collaborative editing</td><td>Custom JSON/base64 Yjs transport; normal two-user flows worked.</td><td>CodeMirror + standard Yjs provider integration; binary durable checkpoints; explicit pending/saved state; reconnect recovery.</td><td>Measured room sharding, larger classrooms.</td></tr>
+<tr><td>Projects</td><td>One source document per project.</td><td>Multiple Python/text files, safe file tree, explicit entrypoint, templates and import/export.</td><td>Git integration and larger datasets.</td></tr>
+<tr><td>Python practice</td><td>Local Pyodide; output is local; large eager package bootstrap.</td><td>Separate runner origin, fresh Worker sessions, stdin, bounded console/plots, lazy reviewed packages, deterministic run snapshots.</td><td>Explicit persistent REPL and additional runtime profiles.</td></tr>
+<tr><td>Groups and permissions</td><td>Flat group membership; important project/group association checks omitted.</td><td>Workspaces, teaching roles and explicit project grants; scoped authorization for every interface.</td><td>Institution SSO and administration.</td></tr>
+<tr><td>Cursors and presence</td><td>Awareness works; content-length gates and multi-tab limits exist.</td><td>Identity-bound awareness, all document lengths, per-connection leases, user aggregation and follow-participant opt-in.</td><td>Instructor presentation/session controls.</td></tr>
+<tr><td>Chat</td><td>Browser-memory history; observed wrong wall-clock timestamps.</td><td>Persisted paginated project chat, UTC timestamps, retry deduplication and reconnect history.</td><td>Threads, moderation and attachments if needed.</td></tr>
+<tr><td>Learning workflow</td><td>Starter templates, including pytest; no inspected assignment/submission model.</td><td>Assignment instructions, staged hints, visible checks, immutable submissions, instructor feedback and derived progress.</td><td>Lesson sequences, rubrics and richer analytics.</td></tr>
+<tr><td>Assessment</td><td>Local execution only.</td><td>Visible practice results and manual instructor assessment, clearly distinguished.</td><td>Authoritative hidden tests on isolated server runners.</td></tr>
+<tr><td>History and sharing</td><td>Current saved-code snippet; bearer links lack enforced expiry/revocation.</td><td>Named immutable revisions; explicit live-project versus snapshot sharing; expiring/revocable grants.</td><td>Review branches and shared run artifacts.</td></tr>
+<tr><td>Drawing</td><td>Collaborative paths are not saved in PostgreSQL.</td><td>Architecture supports a separate durable board document; delivery deferred from the core release.</td><td>Persistent whiteboard and text-linked comments.</td></tr>
+<tr><td>Voice</td><td>STUN-only peer mesh; no TURN relay.</td><td>Deferred so it does not delay reliable editing and learning.</td><td>TURN-backed small calls; SFU only if room sizes require it.</td></tr>
+<tr><td>UI and branding</td><td>Reference product UI.</td><td>Original Code Along visual system, task-focused IDE and distinct learner/instructor experiences.</td><td>Personalization and additional accessibility modes.</td></tr>
+</tbody></table>
+<p><strong>Reason for phasing:</strong> collaborative editing, safe local execution, durable work and meaningful learning feedback form a coherent first product. Voice, drawing, hidden grading and Git each add independent failure/security domains. Their boundaries are planned now; their implementations are not prerequisites for the core pilot unless you change the priorities.</p>
+<p><strong>Independent implementation:</strong> use PyTogether as behavioral evidence, not a codebase to extend. Author Code Along's modules, UI, contracts, tests and assets independently. Shared open-source foundations such as React, Django, Yjs and Pyodide are legitimate dependencies; no reference-specific source, branding, marketing copy or assets are imported. Preserve licenses for dependencies and any deliberately approved future reuse.</p>
+</section>
+<section id="stack"><h2>2. Recommended stack and major decisions</h2>
+<table><thead><tr><th>Layer</th><th>Recommendation</th><th>Reason and tradeoff</th></tr></thead><tbody>
+<tr><td>Frontend</td><td>React + TypeScript + Vite; React Router; TanStack Query.</td><td>A browser IDE does not need server rendering for its core workflow. Typed feature modules and a server-state cache reduce component coupling. A separate public marketing site can be added later if search/SSR requirements justify it.</td></tr>
+<tr><td>UI foundation</td><td>Tailwind CSS, semantic CSS tokens, accessible Radix/shadcn-style primitives; Storybook.</td><td>Ownable design system and consistent states without building dialogs/focus management from scratch. Primitives support rather than dictate branding; accessibility still requires application tests.</td></tr>
+<tr><td>Editor</td><td>CodeMirror 6 + Yjs + compatible y-codemirror binding.</td><td>Modular editor with a direct collaboration integration and controllable footprint. Monaco is viable for a later language-service-heavy IDE; its larger IDE surface is not necessary for beginner Python practice.</td></tr>
+<tr><td>Product backend</td><td>Python 3.13; Django 5.2 LTS at a current supported patch; DRF; Channels.</td><td>ORM, migrations, sessions, permissions and admin fit classroom workflows. A modular monolith keeps domain changes transactional and understandable. Django 5.2's published support extends to April 2028; plan an upgrade before that date. <a href="https://www.djangoproject.com/download/">Django supported releases</a>.</td></tr>
+<tr><td>Collaboration</td><td>Node 24 LTS + TypeScript + a tested stable Hocuspocus/Yjs release.</td><td>Uses the JS CRDT ecosystem directly instead of rebuilding a Python binary protocol or relying on the reference's y-py packaging. Costs one small deployable/runtime. Node 24 remains an LTS line; pin a patched compatible release during foundation work. <a href="https://nodejs.org/en/about/previous-releases">Node release status</a>.</td></tr>
+<tr><td>Durable store</td><td>PostgreSQL 18; psycopg 3 for Django and restricted SQL access for collaboration.</td><td>Relational authorization/learning data and transactional binary checkpoints in one durable system. PostgreSQL 18 is supported through November 2030. <a href="https://www.postgresql.org/support/versioning/">PostgreSQL support policy</a>.</td></tr>
+<tr><td>Transient coordination and jobs</td><td>Redis + Channels; Celery for trusted background jobs.</td><td>Presence, tickets, rate budgets, fanout and job transport are transient responsibilities. Redis is not the only durable copy of source. Use separate production broker/cache instances or failure domains when load warrants; logical DB numbers alone do not isolate memory or outages.</td></tr>
+<tr><td>Browser Python</td><td>Pinned Pyodide/WASM, dedicated Worker, separate runner application/origin.</td><td>Fast local feedback without backend code-execution cost; limited package compatibility and no browser-enforced per-run memory quota.</td></tr>
+<tr><td>Artifacts</td><td>PostgreSQL for bounded text/revision manifests; private S3-compatible storage when attachments/grading artifacts arrive.</td><td>Avoid object-store transactions for every small file edit. Add immutable blobs for larger content with explicit retention and access policies.</td></tr>
+<tr><td>Testing and operations</td><td>Vitest, Testing Library, Playwright, pytest/pytest-django; OpenTelemetry-compatible tracing and structured logs.</td><td>Browser integration and fault/recovery tests are essential after the runtime findings. Unit tests alone do not establish CRDT durability or isolation.</td></tr>
+<tr><td>Deployment</td><td>Docker Compose for reproducible development; simple Linux application deployment initially; separate execution hosts later.</td><td>Fewer operational moving parts. Kubernetes, global event sourcing, GraphQL and a universal plugin system are not first-release requirements.</td></tr>
+</tbody></table>
+<p><strong>Version policy:</strong> choose exact tested versions, image digests and package locks during the first approved milestone. Do not reuse the reference's old patch pins or use floating CDN latest URLs. Hocuspocus provider/server, Yjs and CodeMirror binding compatibility must pass a small proof before the main implementation. This proposal recommends tools; it does not claim that an unbuilt combination has passed integration testing.</p>
+<pre class="diagram">Authenticated app origin
++ React application ── same-origin /api/v1 ── Django / DRF
++ Yjs provider ───────────── /collab ───────── Node / Hocuspocus
++ App event client ───────── /events ───────── Django Channels
+                                               │
+                        PostgreSQL ◄───────────┤ durable domain + CRDT state
+                        Redis ◄────────────────┤ tickets, presence, jobs, fanout
+                        Celery ◄───────────────┘ trusted jobs only
+
+Separate runner site
++ Sandboxed iframe shell ── dedicated Worker ── Pyodide
++ No app credentials or general API access
+
+Later, separate execution infrastructure
++ Job controller ── gVisor sandbox ── untrusted CPython
++ Scoring/controller and app data stay outside the sandbox</pre>
+</section>
+<section id="frontend"><h2>3. Frontend architecture and original UI</h2>
+<p><strong>Information architecture:</strong> Workspace Home → Projects / Assignments → IDE or Learning Session; Instructor Area → assignment authoring / submissions / feedback; Account → sessions and preferences. A learning session combines an instruction panel, file explorer, editor, console/tests and collaboration sidebar. Console, chat and instructions remain independently addressable rather than being hidden behind one overloaded panel.</p>
+<table><thead><tr><th>Frontend module</th><th>Owns</th><th>Boundary</th></tr></thead><tbody>
+<tr><td>app</td><td>Routes, session bootstrap, providers, error boundaries and application shell.</td><td>No editor protocol or grading logic in route components.</td></tr>
+<tr><td>workspaces / projects</td><td>Membership, invitations, project/file metadata and revision navigation.</td><td>REST state through typed API clients and TanStack Query.</td></tr>
+<tr><td>editor</td><td>EditorView lifecycle, language extensions, file tabs, diagnostics and keyboard commands.</td><td>Text belongs to the Y.Doc binding, not a React-controlled value prop on every render.</td></tr>
+<tr><td>collaboration</td><td>Document sessions, provider, recovery, awareness, authorization lease and checkpoint receipts.</td><td>A controller/external store exposes a small reactive view to UI; stable document instances do not get recreated on unrelated renders.</td></tr>
+<tr><td>execution</td><td>Runner bridge, source manifests, run state, console buffers, stdin and plots.</td><td>Communicates only with the isolated runner protocol; never passes app tokens.</td></tr>
+<tr><td>learning / submissions</td><td>Instructions, hints, public checks, submit/review and progress.</td><td>Practice feedback is distinct from instructor/authoritative assessment.</td></tr>
+<tr><td>messaging</td><td>Chat history/cache, pending sends, deduplication and unread state.</td><td>Durable records arrive from REST and app events, not from CRDT text.</td></tr>
+<tr><td>design-system</td><td>Tokens, typography, primitives, patterns, focus/empty/error/loading states.</td><td>Feature modules consume shared primitives; shared UI does not import business features.</td></tr>
+</tbody></table>
+<p><strong>State ownership:</strong> TanStack Query for server metadata; Yjs for collaborative text/board state; a runner supervisor for execution; local React state for panel preferences. Add a small UI store only if cross-route UI state actually requires it. Do not mirror shared text into a second writable global store. Split route error boundaries so an API outage cannot remove the local playground or unsaved editor.</p>
+<p><strong>Code Along identity:</strong> create original typography, semantic tokens, layouts and icon/illustration language. Apply Taste Skill for distinct direction, web-design for hierarchy/accessibility/interaction, and Awesome DESIGN.md as a comparative library. Record the approved choices in a future root DESIGN.md. No reference brand clone or arbitrary mixture of brand systems. Exact palette/type selection belongs to the approved design milestone, not an invented architectural requirement.</p>
+<p><strong>Learning-first UX decisions:</strong> keep Run, Stop, entrypoint and run provenance visible; distinguish Connected, Synced, Saving, Saved and Offline; show output from an older run when source changes; keep hints progressively revealed; provide teacher feedback beside the exact submitted source. Use keyboard-operable split panes and dialogs, visible focus, reduced motion, accessible status text and color-plus-label presence. On narrow screens switch editor/console/instructions into explicit tabs rather than compressing five panes. Marketing animation rules do not dictate the IDE's layout.</p>
+<p><strong>Performance:</strong> lazy-load the editor and runner only when needed; load scientific packages by a reviewed runtime profile; batch console chunks into logical lines; virtualize long output; avoid continuous full React rerenders for cursor movement. Do not add an app-wide service worker until caching, user isolation and update behavior are specified. Offline document recovery can use scoped IndexedDB without caching authenticated API responses.</p>
+</section>
+<section id="backend"><h2>4. Backend architecture</h2>
+<p>Django is the single authority for product policy. Its apps are accounts, workspaces, projects, collaboration access, messaging, learning, submissions, execution control and audit. HTTP views/serializers adapt requests; selectors perform scoped reads; services implement transactional writes; policies answer named actions against authenticated actors and authoritative object relationships. Use ordinary Django models directly rather than placing a generic repository abstraction over every table.</p>
+<p>The Node service owns live CRDT instances and may write only collaboration-state/checkpoint tables through a restricted database role. Django owns their schema/migrations and file/project permissions. Node receives authoritative admission/lease decisions through a private API; it does not invent an alternate role policy. This creates one deliberately narrow service boundary instead of decomposing every feature into a service.</p>
+<table><thead><tr><th>Proposed interface family</th><th>Responsibility</th></tr></thead><tbody>
+<tr><td>/api/v1/auth/* and /me</td><td>Session, verified identity, password/reset/logout and user profile.</td></tr>
+<tr><td>/workspaces, /memberships, /invitations</td><td>Tenant membership and teaching administration.</td></tr>
+<tr><td>/projects, /files, /revisions, /shares</td><td>Scoped metadata/file operations, immutable bundles and access grants.</td></tr>
+<tr><td>/projects/{id}/messages</td><td>Paginated history and idempotent chat creation.</td></tr>
+<tr><td>/assignments, /submissions, /feedback, /progress</td><td>Versioned learning work and assessment workflows.</td></tr>
+<tr><td>/realtime/tickets</td><td>CSRF-protected issuance of short-lived narrowly scoped admission tickets.</td></tr>
+<tr><td>/collab and /events</td><td>Standard CRDT provider protocol versus versioned product event envelopes.</td></tr>
+<tr><td>Private /internal/collaboration/* and /internal/execution/*</td><td>Service-authenticated admission, revalidation, jobs and result reporting; not public browser APIs.</td></tr>
+</tbody></table>
+<p><strong>Transactions:</strong> project + initial files + grants + document records are created atomically; invitation acceptance and ACL-version changes are atomic; chat and outbox events commit together; revision/submission/participant/outbox records commit together; trusted grade and notification records commit together. An outbox dispatcher retries publish/enqueue after commit. Calling a queue only after transaction commit is useful but does not itself make delivery durable if the process dies before dispatch. <a href="https://docs.djangoproject.com/en/5.2/topics/db/transactions/">Django transactions</a>.</p>
+<p>Celery handles email, revision export, notification dispatch and trusted grading orchestration. It never evaluates student Python in the application worker. Payloads carry IDs, not raw credentials or arbitrary browser-provided commands. Jobs and HTTP create actions use idempotency keys where retries could duplicate records.</p>
+<p><strong>Operational design:</strong> one collaboration instance initially, API/Channels plus a trusted job worker, managed or backed-up PostgreSQL, Redis and a reverse proxy. Expose health/readiness separately; use structured request/run/document IDs, checkpoint lag and outbox age metrics. API processes can roll independently; the initial collaboration deployment drains, persists and stops its owner before admitting a replacement. Do not allow overlapping writers until ownership fencing is implemented. Never FLUSHALL Redis to deploy. Use separate service configuration validated at startup, so HTTP/WebSocket hosts and Redis clients cannot silently point at different environments.</p>
+</section>
+
+<section id="database"><h2>5. Database schema and relationships</h2>
+<p>Use UUID primary keys, timezone-aware UTC timestamps and explicit status/version fields. UUIDs are identifiers, not authorization. Workspace is the classroom/team boundary; avoid an unnecessary Organization → Course → Classroom tenant hierarchy. Each project has explicit access grants so workspace membership does not expose every learner's private code.</p>
+<table><thead><tr><th>Entity</th><th>Important fields and relationships</th><th>Purpose and phase</th></tr></thead><tbody>
+<tr><td>User and framework identity/session tables</td><td>User UUID, normalized unique email, display_name, account status; verified identity and server-side sessions.</td><td>Core. Use framework credential/session machinery.</td></tr>
+<tr><td>Workspace</td><td>ID, name, creator, lifecycle state.</td><td>Core classroom/team boundary.</td></tr>
+<tr><td>WorkspaceMembership</td><td>workspace FK, user FK, owner/instructor/learner role, active status; unique workspace/user.</td><td>Core. One active workspace owner; ownership transfer is a service transaction.</td></tr>
+<tr><td>Invitation</td><td>Workspace or project target, token digest, intended role/recipient, expiry, usage limit, revoked_at.</td><td>Core. Replace permanent shared join codes.</td></tr>
+<tr><td>Project</td><td>workspace FK, owner FK, name, entrypoint_file FK, runtime_profile FK, metadata_version, archived_at.</td><td>Core multi-file work. Owner must remain an authorized workspace member.</td></tr>
+<tr><td>ProjectAccess</td><td>project FK, user FK, editor/viewer grant; unique project/user.</td><td>Core. Effective owner access comes from Project.owner; no conflicting duplicate owner grant.</td></tr>
+<tr><td>ProjectFile</td><td>project FK, normalized relative path, file kind, deleted_at, generation, document relation.</td><td>Core. Unique active project/path; stable file IDs survive renames.</td></tr>
+<tr><td>CollaborationDocument</td><td>project FK, optional unique file FK, kind text/board, generation, schema_version.</td><td>Text in core; board later. A text file/document must belong to the same project; board has no text-file binding.</td></tr>
+<tr><td>DocumentState</td><td>Unique document FK, binary Yjs state, durable_revision, byte digest, updated_at, initialization status.</td><td>Core latest durable CRDT state. Source recovery never depends on Redis-only bytes.</td></tr>
+<tr><td>CheckpointReceipt</td><td>document FK, checkpoint UUID, client request identity/observed counter, durable revision, digest and commit time.</td><td>Core idempotent durability acknowledgment; bounded retention. Not a complete version-history table.</td></tr>
+<tr><td>ProjectRevision and RevisionFile</td><td>Source project FK, author, visibility/ownership scope, source provenance, manifest hash, runtime manifest; immutable file paths/content hashes/text or artifact references.</td><td>Core named checkpoints, exports and exact submitted source. Submission-owned snapshots need not appear in shared project history. Every live keystroke does not create a historical revision.</td></tr>
+<tr><td>ShareGrant</td><td>Project or immutable revision target, token digest, view/edit scope, expiry, revocation and optional recipient.</td><td>Core. Live editing and snapshot viewing are distinct grants.</td></tr>
+<tr><td>ChatMessage</td><td>project FK, author FK, text, server UTC timestamp, client_message_id, moderation/deletion status.</td><td>Core. Unique author/client_message_id prevents duplicate retries.</td></tr>
+<tr><td>Assignment and AssignmentVersion</td><td>workspace FK, instructor; immutable prompt, staged hints, starter revision, public-check version, submission/due policy.</td><td>Learning release. Published instructions/test policy cannot silently change old submissions.</td></tr>
+<tr><td>AssignmentTeam and AssignmentParticipation</td><td>Team belongs to an assignment; participation links eligible user to assignment and optional approved team; unique assignment/user, matching team/assignment.</td><td>Learning release. Simple authoritative enrollment/team source; invitations/consent and instructor policy control participation rather than arbitrary client lists.</td></tr>
+<tr><td>Submission and SubmissionParticipant</td><td>assignment_version FK, immutable project_revision FK, submitting actor, attempt, participant user rows and submitted_at.</td><td>Learning release. Freeze team identity and source at submission time.</td></tr>
+<tr><td>InstructorFeedback</td><td>submission FK, instructor FK, comments, assessment status and visibility.</td><td>Learning release. Reviews the submitted snapshot, not mutable live code.</td></tr>
+<tr><td>LearnerProgress</td><td>learner/assignment relation, derived status, supporting submission/assessment reference.</td><td>Learning read model. Client cannot directly set a trusted pass/score.</td></tr>
+<tr><td>RuntimeProfile</td><td>Immutable engine/package manifest, approved capabilities and limits version.</td><td>Core browser profiles; later server profiles.</td></tr>
+<tr><td>TestSuiteVersion, ExecutionRun and Evaluation</td><td>Versioned assessment artifacts; immutable source/runtime references; job state/resource use; trusted result and filtered feedback.</td><td>Later server grading. Hidden artifacts are not accessible through learner APIs or collaborative files.</td></tr>
+<tr><td>OutboxEvent and AuditEvent</td><td>Event ID, aggregate/version, retry state; actor/action/target/outcome and timestamp.</td><td>Core reliable dispatch and security/assessment audit. Do not log source or secrets by default.</td></tr>
+</tbody></table>
+<pre class="diagram">User ──&lt; WorkspaceMembership &gt;── Workspace ──&lt; Project ──&lt; ProjectFile
+User ──&lt; ProjectAccess &gt;───────── Project        │               │
+                                                │               └── CollaborationDocument
+                                                │                     ├── DocumentState
+                                                │                     └── CheckpointReceipt
+                                                ├── ProjectRevision ──&lt; RevisionFile
+                                                ├── ChatMessage
+                                                └── ShareGrant
+
+Workspace ──&lt; Assignment ──&lt; AssignmentVersion ──&lt; Submission
+                 ├── AssignmentTeam                 │
+                 └── AssignmentParticipation ── User │
+                                                    │             ├── ProjectRevision
+                                                    │             ├── Participants
+                                                    │             └── InstructorFeedback
+                                                    └── TestSuiteVersion (later)
+Submission ──&lt; ExecutionRun ── Evaluation (later)</pre>
+<p><strong>Integrity rules:</strong> scope object lookup through authoritative parents; project entrypoint/file/document relationships must match their project. If project/workspace keys are duplicated on children for indexing, enforce matching parent pairs with appropriate unique/composite foreign-key constraints, not an invalid cross-table CHECK. Validate paths against traversal, absolute paths, symlinks, duplicate/colliding imports and quota violations. Archive normal projects/workspaces; preserve submitted records under an explicit retention/deletion policy. <a href="https://www.postgresql.org/docs/current/ddl-constraints.html">PostgreSQL constraints</a>.</p>
+<p>Index active project/path, memberships, chat project/cursor, assignments by workspace, submissions by assignment/learner/time, pending outbox rows and document checkpoint identities. Keep large blobs out of hot list queries. API list endpoints paginate. Local preview runs need not create database rows; store a run artifact only when explicitly shared, saved or used for assessment.</p>
+</section>
+<section id="realtime"><h2>6. Real-time architecture and durability contract</h2>
+<p><strong>Two channels, different ownership:</strong> Hocuspocus/Yjs handles document sync and awareness through /collab. A separate Channels socket at /events carries chat notifications, file-tree/permission changes and submission/job updates. This keeps document protocol changes out of product-event handlers. Use one multiplexed provider connection for the small project's document subscriptions where supported, rather than a new TCP connection per file. File tree/path/permissions remain REST-owned metadata, not an editable Y.Map that could grant access.</p>
+<p>One Y.Doc per text file, addressed by immutable document ID and generation. Small first-release projects load their bounded text-document set before a multi-file Run snapshot; only the active document has an EditorView. A board is a separate persisted document, so drawing points do not consume the text-file budget or lose durability when text is saved.</p>
+<h3>6.1 Admission, editing and reconnect</h3>
+<ol><li>Browser requests a narrow one-use collaboration ticket from the authenticated API using CSRF protection. Issue a fresh ticket for each document subscription/reauthentication, even when providers share one transport; never reuse a consumed ticket across files.</li><li>Provider sends the ticket in its authentication exchange, not a query string. Node asks the private authorization API to validate session, project/file association, generation and allowed actions.</li><li>On first use, one room owner atomically initializes the binary document from an immutable starter exactly once. Later joins load the persisted binary state; no normal reconnect recreates a CRDT from plaintext.</li><li>Standard Yjs sync reconciles changes. Validate schema, size, rate and read-only scope before applying messages. Reject invalid updates without advertising them as accepted.</li><li>Reconnect obtains new authorization, loads canonical state and reconciles pending local updates. A stale generation or revoked permission cannot resurrect a deleted/replaced document; offer an authorized recovery/export path for local work.</li></ol>
+<p>Binary persistence is important: Hocuspocus documents that rebuilding Yjs documents from JSON can cause merging/duplication problems. Its existing persistence hooks are useful, but Code Along must implement its own durability meaning. <a href="https://tiptap.dev/docs/hocuspocus/guides/persistence">Hocuspocus persistence</a>.</p>
+<h3>6.2 Saved means a committed checkpoint</h3>
+<p>Realtime peer delivery is allowed before a database checkpoint completes. The UI must say Pending/Saving during that interval. Hocuspocus's synced event and debounced store hook are not a PostgreSQL commit receipt. Do not promise zero loss of unacknowledged edits on a server crash. <a href="https://tiptap.dev/docs/hocuspocus/provider/events">Provider events</a>, <a href="https://tiptap.dev/docs/hocuspocus/server/configuration">store configuration</a>.</p>
+<ol><li>Client tracks an observed-document revision counter that advances on every Y.Doc change, including remote changes and deletions.</li><li>At a bounded idle interval, explicit Save, or navigation boundary, capture a full binary Yjs state and a unique checkpoint_id with that observed counter. A state vector alone is not a sufficient saved-state proof for deletion-only changes.</li><li>The room coordinator serializes the request, merges/validates it, captures immutable binary and commits a new PostgreSQL durable_revision.</li><li>Only after commit, return a receipt bound to that checkpoint_id, document/generation, durable revision and stored-byte digest.</li><li>Display Saved only if the client's observed counter has not changed since capture. Otherwise retain Saving and checkpoint again. A busy room may remain Saving conservatively; do not mislabel it.</li></ol>
+<p><strong>Every writer uses the same queue:</strong> automatic onStore saves and explicit checkpoints share one per-document persistence coordinator. SQL expected-revision compare-and-swap plus retry/merge prevents delayed autosaves from replacing a newer committed state. Capture bytes before awaiting I/O; later edits stay dirty. Duplicate checkpoint requests return idempotent receipts. This is a custom Hocuspocus extension using supported custom-message/hooks, not a stock feature already proven to meet this contract. A compatibility/fault-injection prototype is an implementation gate. <a href="https://tiptap.dev/docs/hocuspocus/server/hooks">Hocuspocus hooks</a>.</p>
+<p>Commit state, revision and receipt atomically, and define PostgreSQL commit/backup durability in the operations policy. A normal coalescing interval does not bound outage delay: cap pending bytes, frame sizes, logical source and encoded CRDT state. If storage/backpressure limits are reached, stop accepting further live writes and offer visible recovery/export. Run the collaboration process with resource limits. An expired receipt retry resends/merges full state and receives a new receipt; unknown receipt is not proof of save or loss. Preserve validated provenance referenced by retained submissions when pruning receipts.</p>
+<p>Start with the latest durable binary state, bounded receipt records and named immutable revisions. A per-delta durable journal is a later option if requirements demand stronger recovery of unacknowledged changes or measurements justify it; it is not required to turn the entire app into an event-sourced system. Current-state updates do not imply retaining a full snapshot every two seconds forever.</p>
+<p><strong>Offline recovery:</strong> account/project-scoped IndexedDB may retain pending CRDT work, with an explicit shared-device policy and logout cleanup/export. Local recovery is not server durability, and previously downloaded source cannot be retroactively unread after revocation. DB failure means no Saved receipt; queued/local recovery remains visible. An offline local Run may still work; a submission cannot be reported saved until the API transaction commits.</p>
+<h3>6.3 Awareness, chat and scaling</h3>
+<p>Bind awareness client IDs to the admitted connection; validate cursor ranges and stamp identity/display name from server-approved profile data. Do not trust claimed user IDs or expose email by default. Track connection leases individually and aggregate users, so closing one tab does not erase another tab's presence. Awareness is transient, separate from source persistence. <a href="https://docs.yjs.dev/api/about-awareness">Yjs awareness</a>.</p>
+<p>Persist a chat message and outbox event first, then broadcast its stable ID, UTC timestamp and body. The sender reconciles a pending bubble by client_message_id; reconnect fetches history after a cursor and deduplicates events. A channel group is notification delivery, not durable message storage: Channels can drop messages under capacity pressure. <a href="https://channels.readthedocs.io/en/stable/channel_layer_spec.html">Channels delivery semantics</a>.</p>
+<p>One collaboration owner/instance is deliberate in v1. Later introduce document-affinity routing, ownership leases/fencing and measured sharding. The Hocuspocus Redis extension replicates/fans out messages; it is neither persistent storage nor automatic CPU sharding. <a href="https://tiptap.dev/docs/hocuspocus/server/extensions/redis">Redis extension limitations</a>. Scale the API independently, but do not enable multiple state writers until split-brain/recovery tests pass.</p>
+<p>Version product-event envelopes with event_id, type, scope, server timestamp and aggregate version. Treat duplicate events and missing notifications as normal recoverable conditions. On reconnect refresh authoritative metadata/history rather than trusting a socket event stream to be complete.</p>
+</section>
+<section id="execution"><h2>7. Python execution and immutable source</h2>
+<h3>7.1 Browser practice execution</h3>
+<p>Use a small runner application on a different registrable domain, embedded in the main UI through a restricted iframe; it creates a dedicated Pyodide Worker. Example placeholders: app.codealong.example versus run.codealong-lab.example. The authenticated app and runner must not share cookie scope, app storage or API privileges. Worker separation keeps Python CPU work off React; origin/capability separation protects app authority.</p>
+<p>The iframe may require allow-scripts and allow-same-origin for practical Worker/assets support. Use that combination only across the separate runner origin, not for a same-origin app frame. Verify exact cross-origin-isolation/Permissions Policy behavior in supported browsers; do not assume it from top-level headers. <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe">Iframe sandbox behavior</a>.</p>
+<p>A trusted runner supervisor owns the Worker handle, timers and output budget. The app and runner use an origin/source-checked handshake and private MessageChannel. Messages are versioned and bound to a session nonce and run_id; declared operations are run, stdin, cancel, stdout/stderr, plot and terminal result. The runner has no generic parent/API-command bridge. <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage">Cross-origin messaging</a>.</p>
+<p><strong>Run source:</strong> capture an immutable RunManifest containing the client's observed file list/normalized paths, exact UTF-8 source bytes, document generations, entrypoint, stdin mode and metadata version. Copy all source values from authoritative document models in one synchronous main-thread turn before any await, then hash those immutable bytes. Version the serialization/hash format; reject invalid encoding rather than silently changing source. Runtime identity includes engine, Python version and resolved package/profile digest. Do not read rendered editor DOM or keep reading the changing Y.Doc during execution. If remote edits arrive, show that output belongs to an earlier source snapshot. Offline Run is allowed only for a complete cached project or explicit local draft; never silently omit missing files.</p>
+<p><strong>Run lifecycle:</strong> initializing → ready → running → waiting_for_input → running → succeeded / failed / cancelled / timed_out. Exactly one terminal result per run_id; ignore late output from replaced/cancelled runs. Default to fresh interpreter/workspace state per run for reproducibility, accepting initialization cost; a warm isolated worker/runtime pool may optimize startup without retaining user globals across runs.</p>
+<p>Use sequenced stdout/stderr chunks, bounded buffering and logical-line coalescing. Render safe text/constrained ANSI spans and bounded raster plots, not arbitrary HTML/SVG. This directly addresses the observed chunked console behavior. Scientific packages are opt-in reviewed profiles; self-host the pinned runtime/wheels and verify hashes. No unrestricted micropip installation or arbitrary network access in the first release.</p>
+<p>Apply network restrictions to the Worker's own response CSP as well as the iframe shell. Allowed runtime-asset endpoints cannot proxy arbitrary URLs. The trusted supervisor relays only validated output data; it does not pass the app's MessagePort or credentials into Python. Python can forge practice output/terminal events through its JavaScript environment, so these remain untrusted feedback even when presented in the learning UI.</p>
+<p>Interactive input uses a capability-tested stdin bridge, preferably SAB/Atomics when isolation headers work. Provide declared batch stdin when interactive capability is unavailable; avoid coupling it to an app-wide service worker. Soft interrupt is cooperative and may be caught; the supervisor terminates and recreates the Worker after a short grace/deadline. Pyodide documents the Worker/SAB requirements for interrupts. <a href="https://pyodide.org/en/stable/usage/keyboard-interrupts.html">Pyodide interruption</a>, <a href="https://pyodide.org/en/stable/usage/streams.html">standard streams</a>.</p>
+<p><strong>Proposed starting budgets:</strong> 20 bounded text files per small project, 128 KiB source per file, 30 seconds preview wall time, 1 MiB retained console output and bounded plot/virtual-file sizes. Runtime profiles can adjust these after tests. Browser execution does not provide a reliable hard per-run memory quota; malicious code can still exhaust its browser resources. These budgets are product controls to validate, not security/capacity guarantees.</p>
+<h3>7.2 Exact submissions and visible checks</h3>
+<p>Visible checks run against a frozen source/runtime snapshot and provide learning feedback. They are inspectable and editable by the learner, so they cannot establish an authoritative score.</p>
+<p><strong>Submit the source the learner chose:</strong> offer Submit tested version H versus Submit current code H2. Upload the exact captured manifest, validate its project/file/generation/assignment scope, normalized paths and quotas, and recompute hashes on the server. Recheck access, assignment version, eligibility and deadline at commit; server time governs timeliness. Reserve attempt/storage/job budgets atomically and use a user/assignment-scoped idempotency key. For bounded text, commit immutable ProjectRevision/RevisionFile plus Submission/participants/outbox in one transaction. Link a preceding practice run by the same manifest hash. A changed live room cannot silently substitute different peer edits after the learner clicks Submit; stale structural/authorization changes cause an explicit retry/error. This is untrusted learner source accepted for evaluation, not a trusted claim that it is the latest global shared state.</p>
+<p>Record provenance as client-submitted snapshot versus shared-room checkpoint. Store client submissions as submission-owned immutable artifacts linked to the source project; they do not modify live code or appear in shared project history merely because a learner has submission eligibility. Creating a shared named project revision requires that separate project permission. Collaboration receipts are provenance only, not proof that submitted bytes equal a checkpoint or establish authorship.</p>
+<p>Submission artifact access derives from frozen participants and authorized assignment teaching roles, not source-project ownership/read grants. Apply this to revision/file downloads and signed artifact URLs; ordinary project shares cannot publish private submission snapshots. Validate every participant from authoritative assignment enrollment/team policy and freeze that list in the transaction. A viewer, editor or instructor mentor is not automatically a graded teammate, and clients cannot nominate arbitrary users.</p>
+<p>For a named shared-room revision, the coordinator must freeze/copy the requested file payloads and metadata while creating it and retain them until the revision transaction commits. Latest DocumentState plus an old receipt cannot reconstruct an old checkpoint. Define the multi-file capture boundary explicitly; do not claim that unrelated file receipts form one instantaneous global state. Large object-store uploads must be staged/hashed before the database transaction references them; garbage-collect orphan uploads. Hash-based deduplication never authorizes access to someone else's blob. Display the accepted immutable revision/hash and allow viewing that source after submission.</p>
+<h3>7.3 Later authoritative server assessment</h3>
+<p>When hidden tests or non-WASM capabilities are required, add a separate Linux execution plane. The API creates a job for an immutable revision/test-suite/runtime version; a trusted controller obtains narrowly scoped artifacts and starts disposable CPython sandboxes. Django, collaboration and ordinary Celery application workers never run learner code.</p>
+<p>Use gVisor runsc on dedicated runner hosts as the first practical extra isolation boundary, with strict external CPU/memory/PID/wall-time/output/scratch controls, a read-only root, no network, no host mounts/Docker socket/capabilities/app credentials and cleanup on every terminal path. A container alone is not a sufficient design for arbitrary hostile Python. gVisor adds defense but does not replace host/resource/network policy. <a href="https://gvisor.dev/docs/architecture_guide/security/">gVisor security model</a>.</p>
+<p>Start assessment with black-box stdin/stdout tasks: the trusted controller keeps expected outputs/scoring outside the submission sandbox. Hidden inputs necessarily reach submitted code; hidden test files in the same Python process are not reliably secret from it. Function/pytest grading needs a separately documented tampering/disclosure model. Never trust student-emitted passed=true as a grade. A verified result also does not prove individual authorship in collaborative work.</p>
+<p>A native CPython grade does not automatically reproduce Pyodide behavior even with identical source. Align supported Python/packages where practical, show the grading runtime explicitly and test browser/native compatibility. Results always identify their immutable source, engine and assessment version.</p>
+<p>Firecracker is an optional later VM-isolation alternative when requirements and Linux/KVM operations justify it, not a compulsory first-release dependency. <a href="https://github.com/firecracker-microvm/firecracker/blob/main/docs/prod-host-setup.md">Firecracker production requirements</a>.</p>
+</section>
+<section id="auth"><h2>8. Authentication and authorization</h2>
+<p><strong>Browser v1:</strong> prefer Django server-side sessions with Secure, HttpOnly, host-only cookies, same-origin reverse-proxied APIs and CSRF protection. Use established framework flows for email verification, password reset and optional Google/OIDC; validate issuer/audience/nonce/state and local account status. Avoid a hand-written access/refresh JWT lifecycle in browser storage. Mobile/external API tokens can be introduced when there is an actual client requirement. <a href="https://docs.djangoproject.com/en/5.2/topics/http/sessions/">Django sessions</a>.</p>
+<p><strong>Two permission scopes:</strong> workspace owner/instructor/learner govern membership and teaching; project owner/editor/viewer govern live project content. Instructor status permits authoring assignments and reading submitted snapshots in scope, not blanket access to every private live project. Explicit grants enable mentoring/teaching access. Platform operators use audited administrative access.</p>
+<table><thead><tr><th>Action</th><th>Project owner</th><th>Editor</th><th>Viewer</th><th>Instructor role alone</th></tr></thead><tbody>
+<tr><td>Read project / run local copy</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Only if project access is granted.</td></tr>
+<tr><td>Edit source/file tree</td><td>Yes</td><td>Yes</td><td>No</td><td>No implicit live-code access.</td></tr>
+<tr><td>Manage grants/archive project</td><td>Yes</td><td>No</td><td>No</td><td>Only with explicit management authority.</td></tr>
+<tr><td>Submit individual/team assignment</td><td colspan="3">Requires permitted assignment participation and submission policy; viewer access alone is insufficient.</td><td>No implicit learner submission authority.</td></tr>
+<tr><td>Author assignment / review submitted work</td><td colspan="3">Project ownership alone gives no teaching privilege.</td><td>Yes, within the authorized workspace/assignment.</td></tr>
+</tbody></table>
+<p>Centralize named actions and relationship checks, deny by default and scope queries before fetching objects. This applies to REST, tickets, live writes, exports, revisions, chat history, shared links and grading artifacts. Never authorize an arbitrary project by checking membership in a separately supplied group ID. <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html">OWASP authorization guidance</a>.</p>
+<p><strong>Live access:</strong> opaque, one-use admission tickets expire quickly (proposed 30 seconds) and never appear in query strings. Session/ACL versions accompany renewable project leases. Logout/revocation sends invalidation events and forces reauthorization; lease expiry provides a tested bounded fallback if notification is lost. A proposed 30-second maximum stale-authorization window must be validated and accepted; Redis Pub/Sub alone is not instantaneous revocation. Fail closed when a lease cannot be renewed.</p>
+<p>Invitations and shares store token digests, scope, expiry, revocation and optional recipient/usage limits. Public snapshot viewers can receive minimal read-only access to that immutable revision; live editing requires an account in v1. Restoring history initially means creating a new copy, avoiding destructive overwrites of active collaborators; a later replace-current workflow must change generation and handle offline edits explicitly.</p>
+</section>
+<section id="security"><h2>9. Security and privacy boundaries</h2>
+<table><thead><tr><th>Threat</th><th>Architectural control and reason</th></tr></thead><tbody>
+<tr><td>Python reaches application authority</td><td>Different runner site, credential-free messages, separate CSP on shell and Worker, reviewed asset-only network destinations and no authenticated API proxy. Pyodide's JS bridge makes Python import restrictions alone insufficient.</td></tr>
+<tr><td>Infinite loop / resource exhaustion</td><td>Supervisor outside Worker, hard termination fallback, output/files/plot caps. Server grading additionally requires external OS-level budgets and queue quotas. Browser memory remains a residual risk.</td></tr>
+<tr><td>Hidden test leakage or falsified grades</td><td>Never ship hidden suites/keys to browser or live project files. Trusted external controller owns comparison/scoring; filter feedback; record runtime and test versions.</td></tr>
+<tr><td>Cross-tenant / forged identifiers</td><td>Scoped policy checks, invariant constraints, permission-matrix tests, least-privilege service roles and audited grant changes.</td></tr>
+<tr><td>Socket misuse / impersonation</td><td>Origin validation, narrow admission, awareness identity binding, read-only enforcement, rate/size/structure limits and lease revocation.</td></tr>
+<tr><td>XSS / unsafe artifacts</td><td>React text rendering, constrained ANSI spans, sanitized author Markdown, bounded raster plot output, safe download content types. No arbitrary learner HTML/SVG execution in the app origin.</td></tr>
+<tr><td>Credential leakage</td><td>No session/auth tokens in URLs, no broad Domain cookies, log redaction, secret manager/env injection and context-appropriate .dockerignore. Do not bake .env into images.</td></tr>
+<tr><td>Shared-device data exposure</td><td>Explicit local recovery policy, account-scoped storage and logout handling; no shared cache of authenticated API bodies. Minimize collaborator profile data and define source/chat/submission retention.</td></tr>
+<tr><td>Deployment data loss</td><td>Drain and checkpoint, revision/CAS discipline, idempotent outbox/jobs, PostgreSQL backups and restore drills; no blanket Redis flush or unverified saved indicator.</td></tr>
+<tr><td>Supply-chain / runtime drift</td><td>Lockfiles, runtime/image digests, reviewed wheels/assets, patch upgrades and integration/security regression tests.</td></tr>
+</tbody></table>
+<p>No execution boundary is absolute. The first-release promise is limited browser preview with constrained app privileges; authoritative execution stays disabled until isolated hosts, budgets, cleanup and threat-model tests pass. Select retention, regional hosting and school/minor privacy requirements before any institutional deployment rather than assuming self-hosting alone establishes compliance.</p>
+</section>
+
+<section id="structure"><h2>10. Complete proposed folder structure</h2>
+<p>This is the target architectural layout, not an existing scaffold. Create modules only when their milestone needs them. Folders marked later are planned boundaries, not first-release deliverables. pnpm workspaces manage JavaScript packages; uv/pyproject and a lockfile manage Python. A plain workspace is sufficient; Nx/Turborepo is optional only if measured build complexity warrants it.</p>
+<pre class="tree">Code-Along/
+├── AGENTS.md                         # existing project instructions
+├── .design-references/
+│   └── awesome-design-md/            # existing reference library; not production assets
+├── README.md
+├── DESIGN.md                         # approved original visual system and interaction rules
+├── .env.example                      # documented names and safe placeholders
+├── .gitignore
+├── .dockerignore
+├── .python-version
+├── .node-version
+├── pyproject.toml
+├── uv.lock
+├── package.json
+├── pnpm-workspace.yaml
+├── pnpm-lock.yaml
+├── apps/
+│   ├── web/
+│   │   ├── package.json
+│   │   ├── vite.config.ts
+│   │   ├── tsconfig.json
+│   │   ├── index.html
+│   │   ├── public/brand/
+│   │   ├── src/
+│   │   │   ├── app/
+│   │   │   │   ├── main.tsx
+│   │   │   │   ├── router.tsx
+│   │   │   │   ├── providers.tsx
+│   │   │   │   └── AppShell.tsx
+│   │   │   ├── features/
+│   │   │   │   ├── accounts/
+│   │   │   │   ├── workspaces/
+│   │   │   │   ├── projects/
+│   │   │   │   ├── editor/
+│   │   │   │   ├── collaboration/
+│   │   │   │   ├── execution/
+│   │   │   │   ├── messaging/
+│   │   │   │   ├── learning/
+│   │   │   │   ├── submissions/
+│   │   │   │   ├── boards/            # later
+│   │   │   │   └── voice/             # later
+│   │   │   ├── shared/
+│   │   │   │   ├── api/               # generated client adapters, session/CSRF
+│   │   │   │   ├── config/
+│   │   │   │   └── lib/               # genuinely shared browser utilities
+│   │   │   └── styles/
+│   │   │       └── global.css
+│   │   └── tests/
+│   │       ├── e2e/
+│   │       └── accessibility/
+│   ├── api/
+│   │   ├── manage.py
+│   │   ├── config/
+│   │   │   ├── settings/
+│   │   │   │   ├── base.py
+│   │   │   │   ├── development.py
+│   │   │   │   ├── test.py
+│   │   │   │   └── production.py
+│   │   │   ├── urls.py
+│   │   │   ├── asgi.py
+│   │   │   └── celery.py
+│   │   └── code_along/
+│   │       ├── common/               # IDs, errors, pagination, time; no domain dumping
+│   │       ├── accounts/
+│   │       ├── workspaces/
+│   │       ├── projects/
+│   │       │   ├── apps.py
+│   │       │   ├── models.py
+│   │       │   ├── services.py
+│   │       │   ├── selectors.py
+│   │       │   ├── policies.py
+│   │       │   ├── api/
+│   │       │   │   ├── serializers.py
+│   │       │   │   ├── views.py
+│   │       │   │   └── urls.py
+│   │       │   ├── migrations/
+│   │       │   └── tests/
+│   │       ├── collaboration/        # schema, admission and authorization leases
+│   │       ├── messaging/
+│   │       ├── learning/
+│   │       ├── submissions/
+│   │       ├── execution/            # profiles/jobs/results; never student execution
+│   │       └── audit/                # audit and transactional outbox
+│   ├── collaboration/
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── src/
+│   │   │   ├── server.ts
+│   │   │   ├── auth/
+│   │   │   ├── documents/
+│   │   │   ├── persistence/
+│   │   │   ├── presence/
+│   │   │   ├── protocol/
+│   │   │   └── config/
+│   │   └── tests/
+│   │       ├── protocol/
+│   │       ├── durability/
+│   │       ├── recovery/
+│   │       └── authorization/
+│   ├── runner-web/                   # built/deployed on isolated runner site
+│   │   ├── package.json
+│   │   ├── vite.config.ts
+│   │   ├── index.html
+│   │   ├── src/
+│   │   │   ├── bootstrap.ts
+│   │   │   ├── bridge.ts
+│   │   │   ├── supervisor.ts
+│   │   │   ├── worker.ts
+│   │   │   ├── runtime/
+│   │   │   ├── io/
+│   │   │   └── renderers/
+│   │   ├── public/runtime-manifests/
+│   │   └── tests/
+│   └── grading-controller/           # later; trusted controller on runner hosts
+│       ├── pyproject.toml
+│       ├── src/code_along_grader/
+│       │   ├── jobs/
+│       │   ├── sandbox/
+│       │   ├── scoring/
+│       │   └── artifacts/
+│       └── tests/
+├── packages/
+│   ├── design-system/
+│   │   ├── package.json
+│   │   ├── .storybook/
+│   │   └── src/
+│   │       ├── tokens.css
+│   │       ├── primitives/
+│   │       └── patterns/
+│   ├── contracts/
+│   │   ├── openapi/                  # API schema generated from backend contracts
+│   │   ├── events/                   # versioned product-event schemas
+│   │   ├── collaboration/            # checkpoint/auth extension schemas
+│   │   ├── execution/                # manifest and runner bridge schemas
+│   │   └── generated/                # generated clients/types; do not hand-edit
+│   └── runtime-profiles/
+│       ├── manifests/
+│       ├── package-locks/
+│       └── policies/
+├── infra/
+│   ├── compose.yaml
+│   ├── compose.test.yaml
+│   ├── proxy/
+│   ├── docker/
+│   ├── observability/
+│   └── runner-hosts/                 # later; isolated execution provisioning
+├── docs/
+│   ├── architecture/
+│   │   └── decisions/               # accepted ADRs, alternatives and consequences
+│   ├── protocols/
+│   ├── security/
+│   └── operations/
+├── tests/
+│   ├── integration/                 # actual service boundaries
+│   ├── contract/
+│   ├── load/
+│   └── security/
+├── tools/
+│   ├── dev/
+│   ├── contracts/
+│   ├── fixtures/                    # synthetic classroom data
+│   └── assets/                      # reviewed runtime/brand asset preparation
+└── .github/workflows/
+    ├── ci.yml
+    ├── security.yml
+    └── deploy.yml                   # enabled only after deployment approval</pre>
+<p><strong>Repeated module conventions:</strong> each frontend feature uses components/, hooks/, api/, model/ and colocated tests only as needed, exposing a small public index. Each Django domain follows the projects/ pattern above, adding tasks.py or consumers.py only when it has jobs/events. Split large model/service files when they become hard to navigate; do not pre-generate empty files. Shared contracts describe data, not a second copy of backend permissions. Validate JSON schemas on trust boundaries and generate TypeScript clients from the authoritative API schema.</p>
+<p><strong>Dependency direction:</strong> frontend app → features → shared clients/design system; API adapters → services/policies → domain models; Node → narrow collaboration contracts/private policy API; runner → execution contracts/runtime assets only. The runner cannot import app session clients or business features. Keep these rules lintable and document cross-domain service calls rather than hiding them in signals.</p>
+</section>
+<section id="roadmap"><h2>11. Development roadmap and milestone gates</h2>
+<p>These milestones start only after architecture approval. They are ordered by dependency and risk rather than unsupported calendar estimates. Each produces a demonstrable vertical slice with relevant tests, not a large unverified scaffold.</p>
+<table><thead><tr><th>Milestone</th><th>Deliverables</th><th>Acceptance criteria / reason</th></tr></thead><tbody>
+<tr><td>M0 · Accept decisions and prove critical integrations</td><td>Architecture decisions, exact version locks, threat model, original design direction and supported-browser matrix. Small Hocuspocus checkpoint and separate-origin Pyodide/input compatibility proofs.</td><td>Prove delete-only checkpoint acknowledgment, stale-save prevention and reconnection on the chosen versions. Prove Worker startup, output/input and hard cancellation across intended browser/origin headers. Resolve protocol limitations before building the product around them.</td></tr>
+<tr><td>M1 · Product foundation and identity</td><td>Workspace, account/session, invitations, project grants, policy layer, typed API contracts, original UI tokens/primitives, reproducible development stack and CI.</td><td>Two users can authenticate, create a workspace/project and accept a scoped invite. Negative cross-tenant/role tests pass. Cookie/CSRF/Origin behavior is verified. Development secrets are documented safely; no unaudited production deploy.</td></tr>
+<tr><td>M2 · Single-user multi-file Python IDE</td><td>File explorer, stable editor controllers, runtime profiles, isolated runner, frozen RunManifest, stdin, safe console/plots, Stop and local recovery UX.</td><td>Run/import multiple files; repeated runs do not leak globals. Infinite loop, high output, cancellation and input are bounded. A run remains tied to its captured source after editing. Runner cannot call authenticated APIs through its bridge.</td></tr>
+<tr><td>M3 · Reliable collaboration, saves and chat</td><td>Yjs sessions, live cursors/selections, tickets/leases, binary checkpoints/receipts, reconnect, named revisions and persisted chat/outbox/history.</td><td>Two independent users converge after concurrent insert/delete and reconnect. Test empty documents, multi-tab presence, deletion-only Saved, stale autosave, DB outage, crash/restart, revocation and missed chat events. Repeat rapid edit → Run → reload and settled-save tests that exposed the reference discrepancy. Acknowledged checkpoints survive the documented database/server restart scenario.</td></tr>
+<tr><td>M4 · Learning and instructor workflows</td><td>Versioned assignment instructions/starters, staged hints, public checks, exact-version individual/team submissions, manual feedback, snapshot sharing and derived progress.</td><td>A learner can submit tested version H after the live room has changed to H2; reviewer sees H. Assignment version and participants are frozen. Deadline/idempotency rules are enforced online. Instructor review does not grant blanket access to private live work. Practice pass is never mistaken for an authoritative grade.</td></tr>
+<tr><td>M5 · First-release pilot and operational readiness</td><td>Accessibility/browser QA, measured room/classroom loads, rate/storage budgets, observability, backup/restore drills, drain/redeploy and incident/recovery documentation.</td><td>Validate the proposed 2–6-editor room / 30-learner workspace targets on selected infrastructure, document measured latency/cost and revise limits. Restore a backed-up project/submission; verify revocation fallback, safe output rendering and recovery UX. First-release gate includes M1–M4, not just a working editor demo.</td></tr>
+<tr><td>M6 · Optional trusted server assessment</td><td>Dedicated Linux execution hosts, sandbox controller, immutable artifact jobs, versioned black-box test suites, trusted scoring, quotas and filtered feedback.</td><td>Security gate before accepting hostile remote code: no network/credentials/host authority; enforce CPU/RAM/PID/wall/output limits, cancellation, cleanup, retries and tenant isolation. Tampering cannot self-award grades. Run escape/leakage/adversarial fixtures and operational recovery tests. Keep feature disabled if gate is not met.</td></tr>
+<tr><td>M7 · Extended collaborative learning</td><td>Prioritized durable drawing, TURN-backed voice, instructor presentation, threaded review, lesson sequences, Git integration and richer analytics.</td><td>Add one independent capability at a time, with its privacy/resource/access model. Choose voice mesh versus SFU from measured call sizes. Shard collaboration only after ownership fencing and split-brain tests. Promote features from pilot evidence and user priorities.</td></tr>
+</tbody></table>
+<p><strong>First-release scope:</strong> M1–M5 deliver reliable collaborative Python projects, local execution, original UI and useful learning/review. Voice and drawing are planned later parity features. Hidden grading, live remote execution and institutional SSO are later capabilities. If any is essential for launch, explicitly move its work and acceptance gate into the release rather than presenting it as already included.</p>
+<p><strong>Decisions to approve:</strong> independently implemented code/UI; React + Django modular monolith with the narrow Node collaboration service; PostgreSQL binary durability; separate runner site; privacy-preserving project grants; a learning-first first release with manual assessment. These are a coherent recommended baseline, not irreversible technology commitments. The architecture is approved. Subsequent architecture changes require approval before implementation.</p>
+</section>
+<section id="evidence"><h2>Investigation evidence behind the proposal</h2>
+<p>The proposed design is new work. The following reference anchors explain what motivated it; they are evidence of PyTogether's behavior, not files to copy. Reference checkout: <code>2004decbafddca7342699318a2d8e50ba788177a</code>. Full traces, limitations and inventory remain in the linked investigation reports.</p>
+<table><thead><tr><th>Finding / proposed response</th><th>Actual reference source</th></tr></thead><tbody>
+<tr><td>Separate the editor, provider and product state instead of recreating a large page-level lifecycle.</td><td><a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/frontend/reactapp/src/pages/PyIDE.jsx:50"><code>frontend/reactapp/src/pages/PyIDE.jsx:50</code> · PyIDE</a>; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/frontend/reactapp/src/pages/PyIDE.jsx:407"><code>frontend/reactapp/src/pages/PyIDE.jsx:407</code> · updateHandler</a>; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/frontend/reactapp/src/pages/PyIDE.jsx:603"><code>frontend/reactapp/src/pages/PyIDE.jsx:603</code> · CodeMirror integration</a>.</td></tr>
+<tr><td>Standard synchronization, validated acceptance and binary commit receipts replace custom eventual-text save semantics.</td><td><a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/codes/consumers.py:20"><code>backend/codes/consumers.py:20</code> · YjsCodeConsumer</a>; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/codes/consumers.py:329"><code>backend/codes/consumers.py:329</code> · _apply_update_to_redis_ydoc</a>; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/codes/consumers.py:381"><code>backend/codes/consumers.py:381</code> · _get_or_create_ydoc_bytes</a>; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/codes/tasks.py:5"><code>backend/codes/tasks.py:5</code> · snapshot_dirty_projects</a>.</td></tr>
+<tr><td>Central parent/child authorization policy replaces checks against unrelated supplied groups.</td><td><a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/projects/views.py:61"><code>backend/projects/views.py:61</code> · get_project</a> checks the association; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/projects/views.py:98"><code>backend/projects/views.py:98</code> · edit_project</a> omits that check; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/projects/views.py:178"><code>backend/projects/views.py:178</code> · validate_share_link</a> needs the same policy discipline. Source findings are not a claim that every possible production exploit was executed.</td></tr>
+<tr><td>Persist chat with UTC timestamps and reconnect replay.</td><td><a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/codes/consumers.py:223"><code>backend/codes/consumers.py:223</code> · YjsCodeConsumer.receive chat branch</a>; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/codes/consumers.py:243"><code>backend/codes/consumers.py:243</code> · event-loop timestamp</a>. The runtime investigation observed delivery and the wall-clock display defect.</td></tr>
+<tr><td>Isolate Python authority, pin runtime profiles and treat output as chunks.</td><td><a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/frontend/reactapp/src/hooks/usePyRunner.js:4"><code>frontend/reactapp/src/hooks/usePyRunner.js:4</code> · usePyRunner</a>; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/frontend/reactapp/src/pyrunner/Worker.js:146"><code>frontend/reactapp/src/pyrunner/Worker.js:146</code> · Pyodide bootstrap</a>; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/frontend/reactapp/src/pyrunner/Worker.js:205"><code>frontend/reactapp/src/pyrunner/Worker.js:205</code> · runCode worker callback</a>. Runtime evidence exercised local Python and stdin; it does not establish a hostile-code security boundary in the reference.</td></tr>
+<tr><td>Learning/assessment schemas and multi-file projects are additional product capabilities.</td><td><a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/projects/views.py:79"><code>backend/projects/views.py:79</code> · create_project</a>; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/projects/models.py:1"><code>backend/projects/models.py:1</code> · project/share models</a>; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/codes/models.py:1"><code>backend/codes/models.py:1</code> · Code text model</a>. The inspected application has no assignment/submission/grading domain.</td></tr>
+<tr><td>Durable board and reliable connectivity need their own delivery work.</td><td><a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/frontend/reactapp/src/hooks/useVoiceChat.js:3"><code>frontend/reactapp/src/hooks/useVoiceChat.js:3</code> · useVoiceChat</a>; <a class="source" href="/Users/dibyajyoti/Desktop/Projects/pytogether/backend/codes/consumers.py:20"><code>backend/codes/consumers.py:20</code> · YjsCodeConsumer draw/voice message handlers</a>. Voice/TURN and persisted drawing were source-inspected, not validated as full production media behavior.</td></tr>
+</tbody></table>
+<p>Current recommendations were checked against official Django, Node, PostgreSQL, Yjs/Hocuspocus, Channels, Pyodide, browser-platform and sandbox documentation linked next to the relevant decisions. The proposal has not been implemented or benchmarked. Its custom durability extension, browser capabilities and future sandbox configuration need the milestone gates above.</p>
+</section>
+<footer>Approved on 13 November 2026; recorded in Code Along during implementation planning. Machine-local investigation links are historical evidence and may be unavailable on other computers. No application implementation or benchmark results are implied by architecture approval.</footer>
+</main></body></html>
