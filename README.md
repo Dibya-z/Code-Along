@@ -4,7 +4,7 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-Architecture approved on 13 November 2026. M0.1 recorded the design and development plan; M0.2 tooling is complete. M0.3 adds the first shared collaboration checkpoint contract and protocol tests. There is no application UI, database migration or running service yet.
+Architecture approved on 13 November 2026. M0.1 recorded the design and development plan; M0.2 tooling is complete. M0.3 added the shared collaboration checkpoint contract and protocol tests. M0.4a adds disposable PostgreSQL 18 test clusters. There is no application UI, migration or persistent service yet.
 
 - [Approved architecture](docs/architecture/approved-architecture.html): feature comparison, technology decisions, domain/schema relationships, protocols, security boundaries, target folder structure and milestone gates. Open the HTML file in a browser. Some historical investigation links refer to machine-local files and are not portable.
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): task order, dependencies, acceptance criteria, status, review state and commit records.
@@ -111,11 +111,24 @@ The initial sync needs PyPI access; subsequent commands above use the installed/
 
 Direct development versions are exact; the lock also records transitive versions and artifact hashes. `tool.uv.no-build` requires prebuilt wheels and prevents source-distribution builds during these installs. The installed environment uses six third-party packages on macOS; the lock also records Windows-only colorama. No global Python packages or system interpreter changes were made.
 
-For test execution use `uv run --locked --offline pytest -q`. It currently exits **5** because there are no Python product tests; this is expected, not a passing test suite. Python tests will arrive with Python functionality. Root lint/format currently validate available configuration only. Temporary fixtures verified both success and failure paths, and were removed. The clean cached install, stale-lock rejection and wrong-interpreter/uv rejection were also checked.
+Python tests now cover the real PostgreSQL 18 harness as well as prerequisite failures. Run `uv run --locked --offline python -m pytest -q` with CODE_ALONG_POSTGRES_BIN configured as described below. Empty-suite exits are never treated as passing coverage. Temporary M0.2 tool fixtures were removed; the clean cached install and lock/interpreter/version rejection checks remain verified.
 
 Ruff ignores local dependencies/caches and `.design-references/`, including explicit paths via force-exclude. Pytest avoids hidden directories, node_modules and build directories. These settings protect reference material from accidental lint fixes and prevent collecting third-party tests. See [Ruff configuration](https://docs.astral.sh/ruff/configuration/) and [pytest exit codes](https://docs.pytest.org/en/stable/reference/exit-codes.html).
 
 No Python type checker or Django-specific pytest plugin is installed yet; select and verify those when real backend source/framework dependencies are introduced. Tooling is verified on macOS arm64 only. PyPI's version metadata reported no published advisories for the seven locked third-party versions when checked on 13 November 2026; this is a point-in-time metadata check, not a claim that all vulnerabilities are known or that `uv sync` performs a CVE audit.
+
+### PostgreSQL 18 test clusters
+
+Read [PostgreSQL test setup and lifecycle](docs/operations/postgres-tests.md). Supply a trusted PostgreSQL 18 bin directory; the full Python suite starts only disposable private Unix-socket clusters, with TCP disabled and durability settings on:
+
+```sh
+export CODE_ALONG_POSTGRES_BIN="/absolute/path/to/postgresql-18/bin"
+uv run --locked --offline python -m pytest -q
+```
+
+The path is a placeholder for your installation. PostgreSQL 18.7 was compiled and verified outside the repository on this machine; no global service or reference database was changed. The harness validates tool versions, strips inherited PG connection settings, propagates child failures and cleans up after normal/error/handled-interrupt paths. Unit-only prerequisite checks can run with `-m 'not postgres'`, explicitly excluding integration coverage.
+
+The first Python suite has **28 tests** (19 prerequisite/unit cases and 9 real-cluster integration cases). The tests verify version/settings, transaction rollback, isolation and process cleanup. M0.4b/M0.4c still need to prove the CRDT writer, atomic receipts and actual Hocuspocus transport. The tests leave no running application/database service or preview URL.
 
 No credentials belong in documentation or source control. PyTogether remains a read-only technical reference; its code, assets and branding are not imported into the application.
 
