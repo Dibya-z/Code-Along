@@ -15,6 +15,7 @@ INSTALLED_APPS = [
     "channels",
     "code_along.accounts.apps.AccountsConfig",
     "code_along.workspaces.apps.WorkspacesConfig",
+    "code_along.projects.apps.ProjectsConfig",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -101,4 +102,4 @@ PASSWORD_RESET_TIMEOUT = 60 * 30
 PUBLIC_APP_ORIGIN = ""
 DEFAULT_FROM_EMAIL = "Code Along <noreply@code-along.localhost>"
 
-DATA_UPLOAD_MAX_MEMORY_SIZE = 256 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 512 * 1024

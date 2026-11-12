@@ -1,8 +1,11 @@
 from django.urls import path
 
+from code_along.projects.api import ProjectListView
+
 from . import api, invitation_api
 
 urlpatterns = [
+    path("<uuid:workspace_id>/projects/", ProjectListView.as_view()),
     path(
         "<uuid:workspace_id>/invitations/", invitation_api.InvitationListView.as_view()
     ),

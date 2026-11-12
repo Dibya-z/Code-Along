@@ -86,6 +86,9 @@ def update_member(
             }
         )
     if remove:
+        from code_along.projects.services import guard_member_removal
+
+        guard_member_removal(workspace, user_id)
         member.active = False
         WorkspaceInvitation.objects.filter(
             workspace=workspace,

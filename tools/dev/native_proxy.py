@@ -27,6 +27,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         self.handle_request()
 
+    def do_PUT(self) -> None:
+        self.handle_request()
+
     def do_PATCH(self) -> None:
         self.handle_request()
 

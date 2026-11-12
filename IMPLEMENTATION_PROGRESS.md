@@ -267,3 +267,9 @@ M1.5 verification: 147 full Python cases pass, including fresh migration/reversa
 Status: Completed. M1.5 committed/pushed as `f19c900`. Recipient-bound single-use invitations store only SHA-256 digests, default 72-hour/max seven-day expiry. Acceptance, revocation, removal and owner-transfer invalidation share the workspace lock. Project scope is added with project models in M1.7.
 
 M1.6 verification: 31 workspace/invitation/migration cases pass, including actual concurrent accepts and accept/revoke ordering. All six product Chromium/WebKit cases pass. 159 regular JS cases, strict mypy on 47 files, lint/format/types and frontend build pass. Shared guard/pagination/types were extracted when a second feature needed them, avoiding feature import cycles. Proposed commit: `feat: add workspace invitations`.
+
+## M1.7 projects and scoped access
+
+Status: In Progress. M1.6 committed/pushed as `a420cf4`. M1.7a: project/runtime/file/document/grant schema, parent/generation constraints, scoped policy/services/APIs and negative tests. M1.7b: project UI and project invitations. Source remains immutable starter content until the M2/M3 editor/persistence work.
+
+M1.7a status: Completed. Thirty focused project cases and 59 project/workspace/invitation/migration regressions pass, including real SQL parent/generation failures, atomic seed rollback, source/path/quota guards, role/scope attacks, ownership/removal and concurrent metadata CAS. Strict API typing and Ruff pass; runtime profile is frozen from the owned M0 inventory. Starter text is immutable data; no editor/live save/execution feature is claimed. Proposed commit: `feat: add project permissions and files`. M1.7b remains pending.
