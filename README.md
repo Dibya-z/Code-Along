@@ -4,7 +4,7 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-Architecture approved on 13 November 2026. M0.1 recorded the design and development plan; M0.2 tooling is complete. M0.3 added the shared collaboration checkpoint contract and protocol tests. M0.4a adds disposable PostgreSQL 18 test clusters. There is no application UI, migration or persistent service yet.
+Architecture approved on 13 November 2026. M0.1 recorded the design and development plan; M0.2 tooling is complete. M0.3 added the shared collaboration checkpoint contract and protocol tests. M0.4a added disposable PostgreSQL 18 clusters; M0.4b implements and tests the binary checkpoint store. There is no application UI, migration or persistent service yet.
 
 - [Approved architecture](docs/architecture/approved-architecture.html): feature comparison, technology decisions, domain/schema relationships, protocols, security boundaries, target folder structure and milestone gates. Open the HTML file in a browser. Some historical investigation links refer to machine-local files and are not portable.
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): task order, dependencies, acceptance criteria, status, review state and commit records.
@@ -55,7 +55,7 @@ The first install needs access to the npm registry. Dependency lifecycle scripts
 | `corepack pnpm check`        | Runs lint, format check and typecheck; run `test` separately for behavioral checks                              |
 | `corepack pnpm test`         | Runs the protocol test suite, including actual Yjs deletion/remote-update cases; empty suites still fail        |
 
-The first real test suite is in `packages/contracts/tests/checkpoints.test.ts`: **122 protocol tests** passed in the development tree and a clean cached install. No pass-with-no-tests bypass is enabled. These verify contract validation and receipt eligibility, not a live server/database commit. M0.2's temporary tool fixtures were removed after verification.
+The regular JavaScript suite has **133 tests**: 122 protocol cases in `packages/contracts/tests/checkpoints.test.ts` and 11 binary-state validation cases. A separate native-database suite has **20 integration tests**. These passed in the development tree and a clean cached workspace. No pass-with-no-tests bypass is enabled. The regular suite verifies contract/binary validation; the separate integration suite verifies real transactions and receipts in a disposable PostgreSQL fixture. Neither is a live browser/provider proof. M0.2's temporary tool fixtures were removed after verification.
 
 ### Pinned JavaScript tools
 
@@ -73,7 +73,7 @@ TypeScript 6.0.3 satisfies the selected parser's declared `<6.1.0` peer range; T
 
 The initial audit identified [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) in minimatch 10.2.6. Workspace overrides resolve only the affected ESLint, @eslint/config-array and @typescript-eslint/typescript-estree dependency edges to patched **11.0.1**. This is a deliberate cross-major substitution: frozen-install and lint positive/negative checks were rerun, and the resulting audit reported no known vulnerabilities. Remove these temporary overrides when the parent packages adopt patched versions, rerunning the checks rather than widening unrelated dependencies. Audit results describe the check date, not a guarantee against undiscovered issues.
 
-Root tooling and the first private workspace, `@code-along/contracts`, now exist. The workspace still reserves apps/* without creating empty applications. Yjs 13.6.33 is a **test-only** dependency of contracts; the exported runtime contract has no third-party dependencies. No React, Hocuspocus server or database packages are installed yet. Python tooling is documented below. macOS arm64 was verified; browsers and other operating systems have not been tested.
+Root tooling and the first private workspace, `@code-along/contracts`, now exist. The workspace still reserves apps/* without creating empty applications. Yjs 13.6.33 is test-only in contracts; the exported runtime contract has no third-party dependencies. The collaboration storage package uses Yjs 13.6.33 and pg 8.23.1 with @types/pg 8.23.1. No React or Hocuspocus server is installed yet. Python tooling is documented below. macOS arm64 was verified; browsers and other operating systems have not been tested.
 
 ### Collaboration checkpoint contract
 
@@ -83,7 +83,20 @@ Read the [v1 protocol specification](docs/protocols/collaboration-checkpoints.md
 - `receiptCoversObservedState` matches a trusted parsed receipt to the immutable pending request and current observed document/session/generation/counter. Older receipts, errors, remote edits and deletion-only changes cannot incorrectly mark the current observation Saved.
 - The package exports source TypeScript via `@code-along/contracts/collaboration`. Source is typechecked without Node globals; tests have their own Node/DOM declarations because Yjs's XML types refer to DOM interfaces. Native Node 24 import and the Vitest package export were verified. This does not claim a browser runtime test.
 
-Run `corepack pnpm test` locally to exercise the first protocol behavior. Real save persistence, idempotent storage, auth integration and Hocuspocus transport are the separate M0.4/M3 work. There is no localhost application preview or start command yet. Provider sync is never a commit receipt; a checksum is not an authentication mechanism or named source revision.
+Run `corepack pnpm test` locally to exercise the first protocol behavior. The storage proof below now verifies real save transactions/idempotency; auth integration, Hocuspocus transport and restart behavior remain M0.4c/M3 work. There is no localhost application preview or start command yet. Provider sync is never a commit receipt; a checksum is not an authentication mechanism or named source revision.
+
+### Binary checkpoint storage proof
+
+The [persistence proof guide](docs/architecture/checkpoint-persistence-proof.md) explains the new `apps/collaboration/src/persistence/` component. It initializes canonical binary state once, merges autosaves/checkpoints through the same queue, uses revision compare-and-swap to preserve competing edits, and returns receipts after an atomic PostgreSQL commit. Retries return the original receipt; conflicting checkpoint-key reuse is rejected.
+
+Run the real database suite through the private harness:
+
+```sh
+uv run --locked --offline python tools/dev/postgres_cluster.py -- \
+  corepack pnpm --filter @code-along/collaboration test:integration
+```
+
+Set CODE_ALONG_POSTGRES_BIN as described below first. `corepack pnpm test` runs the regular suite only; it explicitly excludes `*.integration.test.ts`. The separate native command runs all 20 integration tests and fails without the required harness. Django still owns production schema/migrations; the SQL fixture is not a product migration. This is a storage component with no public server, authorization integration or preview URL.
 
 ### Python tooling
 
@@ -128,7 +141,7 @@ uv run --locked --offline python -m pytest -q
 
 The path is a placeholder for your installation. PostgreSQL 18.7 was compiled and verified outside the repository on this machine; no global service or reference database was changed. The harness validates tool versions, strips inherited PG connection settings, propagates child failures and cleans up after normal/error/handled-interrupt paths. Unit-only prerequisite checks can run with `-m 'not postgres'`, explicitly excluding integration coverage.
 
-The first Python suite has **28 tests** (19 prerequisite/unit cases and 9 real-cluster integration cases). The tests verify version/settings, transaction rollback, isolation and process cleanup. M0.4b/M0.4c still need to prove the CRDT writer, atomic receipts and actual Hocuspocus transport. The tests leave no running application/database service or preview URL.
+The first Python suite has **28 tests** (19 prerequisite/unit cases and 9 real-cluster integration cases). The tests verify version/settings, transaction rollback, isolation and process cleanup. The separate M0.4b suite now proves storage/receipt transactions; M0.4c still needs actual Hocuspocus transport and process-restart evidence. The tests leave no running application/database service or preview URL.
 
 No credentials belong in documentation or source control. PyTogether remains a read-only technical reference; its code, assets and branding are not imported into the application.
 

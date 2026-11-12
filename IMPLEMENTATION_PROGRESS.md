@@ -148,7 +148,7 @@ Milestone status: **Not Started**. Prioritize extensions after pilot evidence; d
 
 ## M0.2 implementation units
 
-M0.2 is split into independently verified commits. All three sub-units are now implemented, verified and committed; M0.2c has not been pushed. Repository hygiene alone did not establish reproducible dependency installs; the JavaScript/Python checks below complete that tooling gate.
+M0.2 is split into independently verified commits. All three sub-units are implemented, verified, committed and pushed. Repository hygiene alone did not establish reproducible dependency installs; the JavaScript/Python checks below complete that tooling gate.
 
 | Unit  | Scope                                                                                       | Depends on      | Status    | Review / verification                                                                                         |
 | ----- | ------------------------------------------------------------------------------------------- | --------------- | --------- | ------------------------------------------------------------------------------------------------------------- |
@@ -158,52 +158,55 @@ M0.2 is split into independently verified commits. All three sub-units are now i
 
 ## M0.4 implementation units
 
-Keep the database prerequisite, persistence writer and transport/fault proof independently reviewable. Only M0.4a is in scope now.
+Keep the database prerequisite, persistence writer and transport/fault proof independently reviewable. M0.4a is committed; M0.4b is the current scope.
 
-| Unit  | Scope                                                                                                        | Depends on      | Status      | Verification gate                                                                                 |
-| ----- | ------------------------------------------------------------------------------------------------------------ | --------------- | ----------- | ------------------------------------------------------------------------------------------------- |
-| M0.4a | Disposable PostgreSQL 18 test-cluster harness, lifecycle/error tests and verified native setup documentation | M0.3 committed  | Completed   | PostgreSQL 18.7 native build and 28 Python tests verified; commit approval pending                |
-| M0.4b | Serialized binary checkpoint persistence and atomic receipt/idempotency storage proof                        | M0.4a committed | Not Started | Real PostgreSQL transactions, stale-save CAS/merge, duplicate/conflict and DB-failure tests       |
-| M0.4c | Hocuspocus/provider adapter and concurrent/reconnect/crash/security transport proof                          | M0.4b committed | Not Started | No peer-forged receipts, rejected writes never accepted, init/restart/cold-start/failure evidence |
+| Unit  | Scope                                                                                                        | Depends on      | Status      | Verification gate                                                                                                             |
+| ----- | ------------------------------------------------------------------------------------------------------------ | --------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| M0.4a | Disposable PostgreSQL 18 test-cluster harness, lifecycle/error tests and verified native setup documentation | M0.3 committed  | Completed   | Committed as `910a4e3`; 28 Python/122 protocol tests passed; pushed after explicit approval                                   |
+| M0.4b | Serialized binary checkpoint persistence and atomic receipt/idempotency storage proof                        | M0.4a committed | Completed   | 133 regular JS tests and 20 real PG18 integration cases verified; clean install/native import passed; commit approval pending |
+| M0.4c | Hocuspocus/provider adapter and concurrent/reconnect/crash/security transport proof                          | M0.4b committed | Not Started | No peer-forged receipts, rejected writes never accepted, init/restart/cold-start/failure evidence                             |
 
-## Current unit: M0.4a
+## Current unit: M0.4b
 
-- Task status: **Completed** (native database test harness verified; commit approval pending).
-- Scope: (1) verified PostgreSQL 18 native prerequisite, (2) disposable cluster/command harness, (3) unit/integration lifecycle tests and setup docs. No application schema, checkpoint writer, Hocuspocus adapter or UI.
-- New files: `tools/dev/postgres_cluster.py`, `tests/python/test_postgres_cluster.py`, `tests/python/test_postgres_cluster_integration.py`, `docs/operations/postgres-tests.md`.
-- Updated files: `pyproject.toml` (registered postgres marker only), `README.md`, `AGENTS.md`, `IMPLEMENTATION_PROGRESS.md` (including prior approved M0.3 hash).
-- Native prerequisite: official PostgreSQL 18.7 source archive/SHA-256 verified, compiled outside both repositories with a private prefix. No global installation or service configuration. The earlier reference PostgreSQL 15 is not used.
-- Implemented behavior: matching stable PostgreSQL 18 tools, private owner-only temporary data/socket directory, TCP disabled, child PG settings scrubbed/replaced, preserved fsync/synchronous_commit/full_page_writes, SQL diagnostic redaction, bounded readiness/query/shutdown operations, and owned-process cleanup on normal/error/handled CLI signals.
-- Verification: 28 Python tests (19 unit/prerequisite cases, 9 real native-cluster integration cases) cover versions/config errors, real settings, commit/rollback, separate simultaneous clusters, error/startup cleanup, nonzero child exit, SIGTERM child/server cleanup and timeout diagnostic redaction. CLI version query returns 18.7. Existing 122 contract tests and JS/type/format/Python lint/lock checks rerun; staged paths/secret/metadata/reference checks reviewed.
-- Limits: macOS arm64 verified; Linux/POSIX path targeted but not tested, Windows not supported by this native harness. SIGKILL/power loss cannot execute cleanup; foreground commands only. No persistence/authorization/CRDT durability claim and no capacity benchmark.
-- Proposed commit: `test: add PostgreSQL test harness`.
-- Review state: **Awaiting user approval**. M0.3 was committed as `4819a2d328affa4a2bfa6b989898349dc229e354`; no new commit/push/merge/deployment performed. M0.2c and M0.3 remain local, unpushed commits.
-- Next unit after approval/commit/progress update: **M0.4b**, the binary checkpoint writer and atomic receipt/idempotency proof on this real database harness. M0.4 remains In Progress.
+- Task status: **Completed** (storage proof verified; commit approval pending).
+- Bundle: binary source validation/serialized writer, atomic PostgreSQL receipt/idempotency behavior, and real transaction/concurrency/failure tests.
+- New files: collaboration package/tsconfig/integration config, `src/persistence/binary-state.ts`, `src/persistence/checkpoint-store.ts`, binary unit tests, checkpoint integration tests, test-only `schema.sql`, and `docs/architecture/checkpoint-persistence-proof.md`.
+- Updated files: root lock/test configuration, README, AGENTS and tracker (including the prior approved M0.4a hash/status update).
+- Implemented behavior: validated source-only binary state, immutable input capture/defensive copies, canonical seed-once initialization, shared per-document queues, bounded CAS reload/merge, atomic state/receipt commits, retry/conflict/retention semantics, generation/checksum checks, bigint precision and generic driver failure handling with broken-client disposal.
+- Verification: 133 regular JS tests (122 prior protocol + 11 binary cases), 20 real PostgreSQL 18.7 cases (forced CAS overlap, deferred COMMIT visibility, insert/commit failure rollback, killed backend/retry, stale deleted-source autosave, initialization races, lost-response retry, conflicting keys, pruning, bigint, corruption, grants and queue capacity); lint/format/source/test types; clean cached three-package install and repeated tests; native Node source import. npm audit reported no known vulnerabilities. All 28 existing Python harness tests passed as well.
+- Schema boundary: fixture DDL only; Django still owns production schema/migrations and the generation/history/retention model. No public server, provider adapter or learner authorization implemented. No application port opened; all DB tests use owned temporary Unix-socket clusters.
+- Limits: proof-stage state/structure/queue/retry/time budgets are not capacity/security guarantees. Yjs pending-fragment validation uses pinned internals. A reconstructed object is not process restart; Hocuspocus, network ordering, auth/revocation and actual process/DB restart remain M0.4c/M3.
+- Proposed commit: `feat: persist code checkpoints`.
+- Review state: **Awaiting user approval**. No new commit, push, merge or deployment performed. M0.4a remains the last approved/pushed commit: `910a4e330d31abf287aa422757693cc9b5bd7be5`.
+- Next unit after approval/commit/progress update: **M0.4c**, provider integration and transport/restart/failure proof. M0.4 remains In Progress.
 
 ## Commit ledger
 
-| Unit  | Commit                                     | Review state                                                                        |
-| ----- | ------------------------------------------ | ----------------------------------------------------------------------------------- |
-| M0.1  | `6a38d545ffee3381bc15f9d03ac32706ef657153` | Committed after explicit user approval; documentation checks passed                 |
-| M0.2a | `a44ba44835b37e1ad5a8d92ef136bc4c3f053d11` | Committed after explicit approval; hygiene checks passed                            |
-| M0.2b | `f1a18e7374878c439ae46c732861c07df157c5c9` | Committed after explicit approval; pushed with M0.1/M0.2a on explicit authorization |
-| M0.2c | `3a73db2465cb6a8a22a90d29f83ff3685d2c6673` | Committed after explicit approval; Python tooling verified; not pushed              |
-| M0.3  | `4819a2d328affa4a2bfa6b989898349dc229e354` | Committed after explicit approval; contract checks passed; not pushed               |
-| M0.4a | Pending approval                           | Proposed PostgreSQL harness bundle; not executed                                    |
+| Unit  | Commit                                     | Review state                                                                           |
+| ----- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| M0.1  | `6a38d545ffee3381bc15f9d03ac32706ef657153` | Committed after explicit user approval; documentation checks passed                    |
+| M0.2a | `a44ba44835b37e1ad5a8d92ef136bc4c3f053d11` | Committed after explicit approval; hygiene checks passed                               |
+| M0.2b | `f1a18e7374878c439ae46c732861c07df157c5c9` | Committed after explicit approval; pushed with M0.1/M0.2a on explicit authorization    |
+| M0.2c | `3a73db2465cb6a8a22a90d29f83ff3685d2c6673` | Committed after explicit approval; Python tooling verified; pushed with M0.4a          |
+| M0.3  | `4819a2d328affa4a2bfa6b989898349dc229e354` | Committed after explicit approval; contract checks passed; pushed with M0.4a           |
+| M0.4a | `910a4e330d31abf287aa422757693cc9b5bd7be5` | Committed and pushed after explicit authorization; 28 Python/122 protocol tests passed |
+| M0.4b | Pending approval                           | Proposed binary checkpoint persistence bundle; not executed                            |
 
 After an approved commit, replace the pending entry with its actual hash. A commit cannot contain its own final hash: record that hash in the next tracker change and include it in the next approved unit. Do not amend commits or create automatic bookkeeping commits. Record completed units, tests and remaining issues before presenting each subsequent commit.
 
 ## Pending work, known issues and technical debt
 
-- M0.1/M0.2a/M0.2b are committed and pushed to `origin/main`. M0.2c is committed locally; M0.2 tooling is Completed. M0.3 is committed locally; M0.4a is verified and awaiting commit approval. M0.4b and later tasks remain Not Started. Tooling verification does not establish application/runtime compatibility or capacity.
+- All approved commits through M0.4a are pushed to `origin/main`, verified at `910a4e3`. M0.2/M0.3/M0.4a are Completed; M0.4 remains In Progress. M0.4b is verified and awaiting commit approval; M0.4c and later tasks are Not Started. Storage transactions are tested; full collaborative transport/restart/capacity gates remain open.
 - JavaScript/Python tooling, locks and a real shared protocol/test suite now exist; application services and database durability proof do not. Docker/Redis are not on the current PATH. PostgreSQL 18.7 was built into a private temporary prefix and verified through CODE_ALONG_POSTGRES_BIN; it is not a global PATH/system-service installation. The optional temporary prefix may disappear; provide a trusted PostgreSQL 18 toolset to rerun integration tests. No system/global package installation was made; project caches/dependencies remain ignored.
 - Critical open validation: Hocuspocus receipt extension and binary durability; runner origin/header/browser/stdin compatibility. Raise an architecture approval request if these proofs require a design change.
 - Existing `AGENTS.md` is intentionally updated in M0.2a to reflect the approved architecture and commit-review workflow; its engineering/security principles are retained.
 - Existing design references remain preserved as an ignored local reference library. They are not production assets or vendored dependencies. Any future vendoring/reuse needs deliberate licensing and scope review; never force-add them implicitly.
 - Historical machine-local links in the archived architecture may be unavailable elsewhere. The design itself is retained in this repository; evidence reports remain outside it and are not required to read the architecture or plan.
 - GitHub `main` was created by the explicitly authorized push on 13 November 2026; local `main` now tracks `origin/main`. Future pushes still require explicit approval.
-- TypeScript checks include the actual contract source and test suite; Python type checking is deferred until backend source is introduced. Python has 28 harness/prerequisite tests and JavaScript has 122 protocol tests. Neither establishes collaborative checkpoint durability; native-cluster integration needs the documented PostgreSQL 18 prerequisite. Performance targets, preview budgets and the bounded live-authorization fallback require measurement/acceptance tests before claiming guarantees.
+- TypeScript checks include the actual contract source and test suite; Python type checking is deferred until backend source is introduced. Python has 28 harness/prerequisite tests and JavaScript has 133 regular tests plus 20 explicit database integration cases. The separate 20-case storage suite proves transaction behavior in the private fixture; native integration needs PostgreSQL 18. Full collaborative transport/restart behavior remains unverified. Performance targets, preview budgets and the bounded live-authorization fallback require measurement/acceptance tests before claiming guarantees.
 
 - Temporary dependency maintenance: remove the three scoped minimatch 11.0.1 overrides once ESLint/config-array/typescript-estree adopt a patched version. This tested cross-major substitution is limited to development tooling; rerun lint/type/tool fixtures and audit when removing it.
 
 - Protocol limits and single-in-flight policy need validation with the actual provider/storage adapter in M0.4. Contract code is portable by API/type checks and native Node import; browser runtime compatibility remains unverified. No claim that schema validation proves a full/valid CRDT state or a real database commit.
+
+- Production table mapping/migrations and retention/generation history are not supplied by the checkpoint_proof fixture. The application bootstrap must configure pool acquisition timeouts/idle errors, authenticate writes and enforce process/transport limits. Internal Yjs field usage and hard proof ceilings require revalidation before provider rollout.

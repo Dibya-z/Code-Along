@@ -8,6 +8,7 @@ export default defineConfig({
       'packages/**/*.test.ts',
       'tests/**/*.test.ts',
     ],
+    exclude: ['**/node_modules/**', '**/.git/**', '**/*.integration.test.ts'],
     passWithNoTests: false,
     testTimeout: 10_000,
   },
