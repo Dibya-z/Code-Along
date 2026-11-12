@@ -3,18 +3,28 @@ name = "code-along"
 version = "0.0.0"
 description = "Collaborative Python learning and development platform"
 requires-python = ">=3.13,<3.14"
-dependencies = []
+dependencies = ["code-along-api==0.0.0"]
 
 [dependency-groups]
 dev = [
     "pytest==9.2.0",
     "ruff==0.17.5",
+    "pytest-django==4.14.0",
+    "mypy==1.19.1",
+    "django-stubs[compatible-mypy]==5.2.9",
+    "django-stubs-ext==5.2.9",
 ]
 
 [tool.uv]
 package = false
 required-version = "==0.10.9"
 no-build = true
+
+[tool.uv.workspace]
+members = ["apps/api"]
+
+[tool.uv.sources]
+code-along-api = { workspace = true }
 
 [tool.ruff]
 target-version = "py313"
@@ -28,5 +38,26 @@ select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers", "--import-mode=importlib"]
 norecursedirs = [".*", "node_modules", "venv", "dist", "build"]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+django_find_project = false
+pythonpath = ["apps/api"]
 
 markers = ["postgres: requires native PostgreSQL 18 binaries; creates a private temporary cluster"]
+
+[tool.mypy]
+python_version = "3.13"
+plugins = ["mypy_django_plugin.main"]
+mypy_path = "$MYPY_CONFIG_FILE_DIR/apps/api"
+files = ["apps/api/config", "apps/api/code_along", "apps/api/manage.py", "apps/api/conftest.py"]
+exclude = ["/migrations/"]
+strict = true
+# Only these upstream APIs lack callable annotations; own code remains strict.
+untyped_calls_exclude = ["asgiref.testing", "channels.routing.ProtocolTypeRouter"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings.test"
+strict_settings = true
+
+[[tool.mypy.overrides]]
+module = ["channels.*"]
+follow_untyped_imports = true

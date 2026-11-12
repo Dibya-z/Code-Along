@@ -23,7 +23,7 @@ The owner explicitly authorized completing the remaining M0 tasks as one bundle 
 | Milestone                               | Status      | Depends on                       | Exit gate                                                                                                |
 | --------------------------------------- | ----------- | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | M0 — Baseline and integration proofs    | Completed   | Architecture approval (received) | Durable-save and isolated-runner compatibility demonstrated; exact dependencies and contracts documented |
-| M1 — Product foundation and identity    | Not Started | M0                               | Two authenticated users can create/join scoped workspaces/projects; negative permission tests pass       |
+| M1 — Product foundation and identity    | In Progress | M0                               | Two authenticated users can create/join scoped workspaces/projects; negative permission tests pass       |
 | M2 — Multi-file Python IDE              | Not Started | M1; M0 runner proof              | Exact-source local runs, input/output and cancellation work with isolation and resource budgets          |
 | M3 — Collaboration, durability and chat | Not Started | M2; M0 collaboration proof       | Concurrent/reconnect/crash save behavior and durable chat pass integration tests                         |
 | M4 — Learning and instructor workflows  | Not Started | M3                               | Versioned assignments, exact-source submissions and scoped review/progress work                          |
@@ -35,7 +35,7 @@ Dependencies are explicit sequencing gates, not a request to implement tasks in 
 
 ## M0 — Baseline and integration proofs
 
-Milestone status: **Completed** (implementation/proof gates verified for declared Chromium/WebKit baseline; final bundle commit approved; execution pending). Firefox launcher/support gate remains explicitly unverified.
+Milestone status: **Completed** (implementation/proof gates verified for declared Chromium/WebKit baseline; final bundle committed as `ffd4a4a` after explicit approval). Firefox launcher/support gate remains explicitly unverified.
 
 | ID   | Task and sub-tasks                                                                                                                                | Depends on        | Status    | Verification / exit criteria                                                                                                                             |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -51,18 +51,18 @@ Initial implementation sequence after the documentation commit: **M0.2 → M0.3 
 
 ## M1 — Product foundation and identity
 
-Milestone status: **Not Started**.
+Milestone status: **In Progress**.
 
-| ID   | Task and sub-tasks                                                                                                                     | Depends on | Status      | Verification / exit criteria                                                                   |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------- | ---------------------------------------------------------------------------------------------- |
-| M1.1 | Django modular backend, initial custom user model before first auth migrations, validated settings, ASGI and safe environment examples | M0         | Not Started | Startup/configuration failure cases and clean database migration checks                        |
-| M1.2 | Reproducible Compose stack, same-origin proxy, isolated runner-site routing, documented native fallback and health checks              | M1.1       | Not Started | Documented fresh setup works; services agree on storage/hosts; secrets excluded from images    |
-| M1.3 | React routing/providers, typed API/CSRF client, design primitives and Storybook                                                        | M1.2       | Not Started | Type/lint/component checks, keyboard/focus states and error boundaries                         |
-| M1.4 | User authentication/session flows, registration/verification, login/logout and password reset                                          | M1.3       | Not Started | Session/CSRF/Origin/expiry tests, rate limits and non-disclosing reset behavior                |
-| M1.5 | Workspace/membership/ownership schema, policies and create/list/update interfaces                                                      | M1.4       | Not Started | Migrations, policy matrix, membership removal and ownership-transfer tests                     |
-| M1.6 | Expiring invitations, acceptance/revocation and scoped membership UI                                                                   | M1.5       | Not Started | Digest storage, recipient/expiry/use limits and retry/race tests                               |
-| M1.7 | Project/file metadata, initial document records, explicit grants and policy-controlled APIs/UI                                         | M1.6       | Not Started | Atomic creation; parent association, traversal/collision/quota and cross-tenant negative tests |
-| M1.8 | API schema generation, CI gates and foundation end-to-end flow                                                                         | M1.7       | Not Started | Two users authenticate/create/join only allowed resources; CI checks introduced functionality  |
+| ID   | Task and sub-tasks                                                                                                                     | Depends on | Status      | Verification / exit criteria                                                                                                   |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| M1.1 | Django modular backend, initial custom user model before first auth migrations, validated settings, ASGI and safe environment examples | M0         | Completed   | Verified 68 backend cases plus all M0 regressions; initial user migration/reversal and startup proven; commit approval pending |
+| M1.2 | Reproducible Compose stack, same-origin proxy, isolated runner-site routing, documented native fallback and health checks              | M1.1       | Not Started | Documented fresh setup works; services agree on storage/hosts; secrets excluded from images                                    |
+| M1.3 | React routing/providers, typed API/CSRF client, design primitives and Storybook                                                        | M1.2       | Not Started | Type/lint/component checks, keyboard/focus states and error boundaries                                                         |
+| M1.4 | User authentication/session flows, registration/verification, login/logout and password reset                                          | M1.3       | Not Started | Session/CSRF/Origin/expiry tests, rate limits and non-disclosing reset behavior                                                |
+| M1.5 | Workspace/membership/ownership schema, policies and create/list/update interfaces                                                      | M1.4       | Not Started | Migrations, policy matrix, membership removal and ownership-transfer tests                                                     |
+| M1.6 | Expiring invitations, acceptance/revocation and scoped membership UI                                                                   | M1.5       | Not Started | Digest storage, recipient/expiry/use limits and retry/race tests                                                               |
+| M1.7 | Project/file metadata, initial document records, explicit grants and policy-controlled APIs/UI                                         | M1.6       | Not Started | Atomic creation; parent association, traversal/collision/quota and cross-tenant negative tests                                 |
+| M1.8 | API schema generation, CI gates and foundation end-to-end flow                                                                         | M1.7       | Not Started | Two users authenticate/create/join only allowed resources; CI checks introduced functionality                                  |
 
 Each schema/migration, API behavior and associated UI may be split into separate verified units when appropriate; do not combine M1 into one commit.
 
@@ -163,49 +163,73 @@ The owner requested one completion bundle after the approved M0.4b commit. Depen
 | Unit  | Scope                                                                                        | Status    | Evidence                                                                                                                                |
 | ----- | -------------------------------------------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | M0.4a | Disposable PostgreSQL 18 harness                                                             | Completed | `910a4e3`, already approved/pushed                                                                                                      |
-| M0.4b | Binary persistence and atomic receipts                                                       | Completed | `e7ee8f4`, approved/committed; not pushed                                                                                               |
+| M0.4b | Binary persistence and atomic receipts                                                       | Completed | `e7ee8f4`, approved/committed; manually pushed                                                                                          |
 | M0.4c | Hocuspocus/provider adapter, checkpoint controller, transport/restart/fault proof            | Completed | 13 real-provider/PG cases; process SIGKILL recovery; fresh Node process after actual PostgreSQL immediate shutdown/WAL recovery         |
 | M0.5  | Threat model, strict execution/manifest contracts, two-site test topology and browser matrix | Completed | Versioned/hash-verified immutable source; nonce/run/capability validation; explicit no-credential boundary and fallback                 |
 | M0.6  | Pinned Pyodide Worker proof and browser/CodeMirror integration                               | Completed | 13 browser cases per measured engine; fresh interpreter/files, stdin/stdout, isolation/negative cases, hard Stop/deadline/output limits |
 | M0.7  | Original design direction, semantic tokens, ADRs and proof consolidation                     | Completed | DESIGN.md, light/dark contrast checks, decisions and M0 validation report                                                               |
 
-## Current unit: remaining M0 bundle
+## Completed M0 bundle
 
-- Task status: **Completed**; final bundle commit approved; execution pending. M1 is **Not Started**.
+- Task status: **Completed**; final bundle committed as `ffd4a4a` after explicit approval. M1 is **In Progress**.
 - New scope: collaboration transport/controller and fixtures, binary DB-restart probe, execution contracts/tests, isolated runner, owned browser tests/HTTPS fixture, hash inventory, original design tokens/DESIGN.md, architecture decisions and consolidated proof report.
 - Existing files updated: workspace/lock/configuration, shared exports/typecheck scopes, README, AGENTS, tracker and existing proof operations documentation.
 - Verification: 153 regular JavaScript tests, 20 native storage cases, 13 native transport cases, 29 Python tests; Chromium 158.0.8127.18 and WebKit 27.2 exercised across the declared 13-case runner matrix. Lint/format/source/test type checks, both fixture builds, runtime asset hashes and dependency audit passed. Clean frozen offline six-workspace install, builds, regular/native tests, native source imports and lock preservation also passed; a mismatched runtime hash was rejected and temporary TLS cleanup verified.
 - Measured browser scope: embedded SAB/interactive stdin and explicit non-isolated batch fallback pass in Chromium and WebKit. Firefox 159.0 installation succeeded but its owned launcher cannot find fresh profile directories in three tested locations; no Firefox runtime support is claimed. `test:firefox` and `test:all` remain visible gates. Retail/mobile/product certification remains M2/M5.
 - Schema/security boundary: all DDL/admission/HTTPS routing is test-only. No real auth, production migrations, public collaboration server, deployable runtime asset packaging, grade authority or hard browser memory quota. No reference code/branding copied or reference repository changed. See `docs/architecture/m0-validation.md` for evidence and limitations.
-- Proposed commit: `completed M0 foundation`.
-- Review state: **Approved by the user** with exact message `completed M0 foundation`; execution pending. The user authorized the M0.4b commit, which is now `e7ee8f499031ff0166285965f635b50cae088bab`. Push is reserved for the user to execute manually; no push, merge or deployment performed. Last pushed hash remains `910a4e330d31abf287aa422757693cc9b5bd7be5`.
-- Next unit after approval/commit/progress update: M1.1, Django foundation and initial custom user before auth migrations. Do not start it as part of the M0 bundle.
+- Committed message: `completed M0 foundation`.
+- Review state: **Committed after explicit user approval** as `ffd4a4a788e3e3258b745a78922dff83774d0aaa` with exact message `completed M0 foundation`. The user authorized the M0.4b commit, which is now `e7ee8f499031ff0166285965f635b50cae088bab`. The user manually pushed both local commits; GitHub main was verified read-only at `ffd4a4a788e3e3258b745a78922dff83774d0aaa`. No agent push, merge or deployment was performed.
+- Following unit: M1.1 backend foundation, authorized separately and tracked below.
 
 ## Commit ledger
 
-| Unit         | Commit                                     | Review state                                                                                    |
-| ------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| M0.1         | `6a38d545ffee3381bc15f9d03ac32706ef657153` | Committed after explicit user approval; documentation checks passed                             |
-| M0.2a        | `a44ba44835b37e1ad5a8d92ef136bc4c3f053d11` | Committed after explicit approval; hygiene checks passed                                        |
-| M0.2b        | `f1a18e7374878c439ae46c732861c07df157c5c9` | Committed after explicit approval; pushed with M0.1/M0.2a on explicit authorization             |
-| M0.2c        | `3a73db2465cb6a8a22a90d29f83ff3685d2c6673` | Committed after explicit approval; Python tooling verified; pushed with M0.4a                   |
-| M0.3         | `4819a2d328affa4a2bfa6b989898349dc229e354` | Committed after explicit approval; contract checks passed; pushed with M0.4a                    |
-| M0.4a        | `910a4e330d31abf287aa422757693cc9b5bd7be5` | Committed and pushed after explicit authorization; 28 Python/122 protocol tests passed          |
-| M0.4b        | `e7ee8f499031ff0166285965f635b50cae088bab` | Committed after explicit approval; verified persistence proof; not pushed                       |
-| M0 remainder | Pending commit                             | M0.4c/M0.5/M0.6/M0.7 bundle explicitly approved as `completed M0 foundation`; execution pending |
+| Unit         | Commit                                     | Review state                                                                                                                                               |
+| ------------ | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M0.1         | `6a38d545ffee3381bc15f9d03ac32706ef657153` | Committed after explicit user approval; documentation checks passed                                                                                        |
+| M0.2a        | `a44ba44835b37e1ad5a8d92ef136bc4c3f053d11` | Committed after explicit approval; hygiene checks passed                                                                                                   |
+| M0.2b        | `f1a18e7374878c439ae46c732861c07df157c5c9` | Committed after explicit approval; pushed with M0.1/M0.2a on explicit authorization                                                                        |
+| M0.2c        | `3a73db2465cb6a8a22a90d29f83ff3685d2c6673` | Committed after explicit approval; Python tooling verified; pushed with M0.4a                                                                              |
+| M0.3         | `4819a2d328affa4a2bfa6b989898349dc229e354` | Committed after explicit approval; contract checks passed; pushed with M0.4a                                                                               |
+| M0.4a        | `910a4e330d31abf287aa422757693cc9b5bd7be5` | Committed and pushed after explicit authorization; 28 Python/122 protocol tests passed                                                                     |
+| M0.4b        | `e7ee8f499031ff0166285965f635b50cae088bab` | Committed after explicit approval; verified persistence proof; manually pushed; GitHub main verified at `ffd4a4a`                                          |
+| M0 remainder | `ffd4a4a788e3e3258b745a78922dff83774d0aaa` | M0.4c/M0.5/M0.6/M0.7 bundle committed after explicit approval as `completed M0 foundation`; manually pushed by the user; GitHub main verified at `ffd4a4a` |
+| M1.1         | Pending approval                           | Verified Django backend foundation; proposed commit `feat: add Django backend` not executed                                                                |
 
 After an approved commit, replace the pending entry with its actual hash. A commit cannot contain its own final hash: record that hash in the next tracker change and include it in the next approved unit. Do not amend commits or create automatic bookkeeping commits. Record completed units, tests and remaining issues before presenting each subsequent commit.
 
 ## Pending work, known issues and technical debt
 
-- Commits through M0.4a are pushed and verified at `910a4e3`. M0.4b (`e7ee8f4`) is local only. The remaining M0 bundle is verified but not committed. Never infer push permission from milestone implementation authorization.
+- All M0 commits through `ffd4a4a788e3e3258b745a78922dff83774d0aaa` were manually pushed by the user and verified read-only against GitHub main. Further commits and pushes still need explicit approval.
 - Firefox's installed owned engine cannot find fresh profile folders here. Its suite is unverified, not skipped/passed; fix the launcher and execute all cases before claiming support. Chromium/WebKit results do not certify retail browsers, mobile or deployed headers.
-- No product app/API, identity, migrations, real admission/revalidation/revocation or UI flows exist. M1 begins the product foundation. Later provider/UI, persistent chat, revisions, submission, learning and operations milestones retain their original gates.
+- M1.1 adds backend identity/configuration/migrations/bootstrap only. No user-facing authentication, real collaboration admission/revalidation/revocation, workspace/project APIs or frontend UI exists. Later units retain their original gates.
 - The `checkpoint_proof` schema is disposable fixture DDL, not Django production mapping/history/retention. The one-instance proof is not multi-writer sharding, capacity testing, backup/restore or zero loss of unacknowledged edits. Yjs pending-fragment checks use pinned internals; upgrades need compatibility tests.
 - PostgreSQL 18.7 was built in an external private temporary prefix. It is not a global service, may disappear, and must be replaced with a trusted native toolset to rerun tests. Docker/Redis are not available on the current PATH; Compose and image pins belong to M1.2. Python's binary-recovery test now requires installed Node workspace dependencies.
 - Runner asset hashes are verified by the fixture, which serves the pinned package's assets. The shell build is not a deployable distribution; production packaging, distinct domains/TLS/cookie/header policies and resource controls remain M1/M2. Browser Workers cannot enforce a hard memory quota, and practice feedback can be forged. Extra packages, plots/data export and server grading remain disabled/not implemented.
 - Proof-stage state/source/queue/deadline limits are measured test controls, not security/capacity guarantees. Declared 2–6 editors/room and 30 learners/workspace targets require later load tests. Authentication leases, privacy/retention and deployed-browser security gates are unresolved product work.
 - DESIGN.md/tokens are original source, not completed product UI. Storybook, keyboard/screen-reader/responsive checks and rendered design approval remain M1.3/M5. Reference design files are ignored/preserved and not vendored; do not add assets without licensing review.
-- Framework versions not exercised by M0 and deployment image digests are selected/verified in their owning M1 unit. Python framework/type checking is deferred until backend source exists. The approved architecture HTML and existing PyTogether source remain unchanged.
+- M1.1 now pins and tests Django/DRF/Channels/Daphne/psycopg plus pytest-django and compatible mypy/Django stubs. Remaining frontend/job framework pins and image digests belong to their owning M1 units. The approved architecture HTML and PyTogether source remain unchanged.
 - Remove the three scoped minimatch 11.0.1 overrides after their lint-tool parents adopt patched versions, then rerun checks/audit. Current dependency audit has no known advisories; that is a point-in-time result, not a security guarantee.
 - Historical links in archived architecture may refer to unavailable machine-local investigation artifacts. Repository-hosted decisions and proof reports are the current portable evidence.
+
+## Current unit: M1.1 backend foundation
+
+Status: **Completed** (implemented and verified; commit approval pending). User authorized M1.1 after the verified M0 push. Prior tracker bookkeeping is preserved. M1 remains In Progress; M1.2 is Not Started.
+
+1. **Completed** — API workspace/pins and validated development/production settings; configuration failure cases pass.
+2. **Completed** — UUID user model, canonical email/display name/framework passwords and first migration; user and database invariants pass.
+3. **Completed** — HTTP/ASGI bootstrap, actual ephemeral Daphne startup/cleanup, fresh migration/reversal and regression checks.
+
+Scope: apps/api/pyproject.toml, manage.py, config/settings and environment/bootstrap modules, code_along/accounts model/manager/migrations/tests; root Python workspace/lock/type/test settings; test DB fixture; README/backend setup and tracker/guidance. No login, registration, frontend UI, Compose/proxy, workspace/project APIs or production deployment in this unit. Commit approval remains required.
+
+- Verification: **97 Python tests** (29 prior + 68 backend), **153 regular JavaScript tests**, and **20 storage + 13 transport** native collaboration cases pass. Ruff lint/format, strict mypy on 24 API source/test/entrypoint/fixture files, JS lint/format/types, frozen offline clean-workspace installs/tests and both lock-preservation checks pass. PyPI metadata reports no known advisories for all 45 exact third-party Python lock entries.
+- Database boundary: PostgreSQL 18.7 private disposable clusters only; UUID account table created without stock auth_user; accounts migration reversed and reapplied; no schema drift. Existing/reference/shared databases were not migrated. Config/HTTP/startup tests need no existing DB service. No server left running.
+- Review fixes: preserved Django's normalized TEST dictionary in the DB fixture; corrected the targeted migration reversal command; normalized bracketed IPv6 for libpq; framework full_clean receives ValidationError for invalid email. Added only the ignored Python cache to ESLint exclusions after Django vendor JS exposed the missing boundary; application source remains checked.
+- Deferred: user-facing auth/verification/session flows (M1.4), Compose/proxy/readiness and trusted-header/HSTS policy (M1.2), production mail, workspace/project APIs and frontend UI. Expected production deployment-check warning is security.W004 until HSTS policy is reviewed. Nothing is deployed or advertised as production ready. Runner/browser runtime source is unchanged, so its prior 26-case evidence was retained rather than re-run as backend coverage.
+- Changes: apps/api source/config/migration/test package and placeholder environment template; root pyproject.toml/uv.lock; one ESLint cache exclusion; README, AGENTS, backend setup guide and this tracker (including the verified M0 manual push).
+- Proposed commit: `feat: add Django backend`.
+- Review state: **Approved under the owner’s M1 authorization**. M1.1 commit/push pending. Baseline HEAD is `ffd4a4a788e3e3258b745a78922dff83774d0aaa`.
+- Next after approved commit/progress update: M1.2 development stack/proxy/readiness. Do not start that unit before completing this review workflow.
+
+## M1 autonomous authorization
+
+The owner authorized completing all M1 tasks with verified granular commits and pushes, without further per-task approval prompts. This includes the reviewed M1.1 bundle. Architecture changes and deployment still require separate approval; preserve all unrelated work. Commit/push only after relevant checks and diff review, then record hashes in the next unit.

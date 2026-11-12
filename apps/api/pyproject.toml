@@ -1,0 +1,17 @@
+[project]
+name = "code-along-api"
+version = "0.0.0"
+description = "Code Along product policy and HTTP/ASGI backend"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "Django==5.2.19",
+    "djangorestframework==3.18.3",
+    "channels==4.3.2",
+    "daphne==4.2.3",
+    "psycopg[binary]==3.3.9",
+]
+
+# This is a runnable Django application, not a published Python library.
+# Keep uv 0.10.9's existing wheel-only third-party installation policy.
+[tool.uv]
+package = false

@@ -13,6 +13,7 @@ export default defineConfig(
       '**/test-results/**',
       '**/.venv/**',
       '**/.pnpm-store/**',
+      '**/.uv-cache/**',
       '.design-references/**',
     ],
   },

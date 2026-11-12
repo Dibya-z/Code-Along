@@ -4,7 +4,7 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-Architecture approved on 13 November 2026. M0 now has verified collaboration checkpoint/storage/transport proofs, a separate-site Pyodide Worker proof, execution contracts and original design tokens. There is no Django/React product UI, production migration or deployable application yet. The remaining M0 bundle is prepared for review; only approved commits have been executed.
+Architecture approved on 13 November 2026. M0 integration proofs and design tokens are committed/pushed. M1.1 now adds the Django backend foundation: custom UUID/email user, validated settings, initial migration, ASGI bootstrap and process liveness. There is no product frontend, signup/login/project API or deployed service yet. The M1.1 implementation is under review.
 
 - [Approved architecture](docs/architecture/approved-architecture.html): feature comparison, technology decisions, domain/schema relationships, protocols, security boundaries, target folder structure and milestone gates. Open the HTML file in a browser. Some historical investigation links refer to machine-local files and are not portable.
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): task order, dependencies, acceptance criteria, status, review state and commit records.
@@ -73,7 +73,7 @@ TypeScript 6.0.3 satisfies the selected parser's declared `<6.1.0` peer range; T
 
 The initial audit identified [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) in minimatch 10.2.6. Workspace overrides resolve only the affected ESLint, @eslint/config-array and @typescript-eslint/typescript-estree dependency edges to patched **11.0.1**. This is a deliberate cross-major substitution: frozen-install and lint positive/negative checks were rerun, and the resulting audit reported no known vulnerabilities. Remove these temporary overrides when the parent packages adopt patched versions, rerunning the checks rather than widening unrelated dependencies. Audit results describe the check date, not a guarantee against undiscovered issues.
 
-The six workspaces are the root, contracts, collaboration, runner-web, browser-proofs and design-system. Only modules required by these proofs exist. Yjs 13.6.33 is test-only in contracts; the exported runtime contract has no third-party dependencies. The collaboration storage package uses Yjs 13.6.33 and pg 8.23.1 with @types/pg 8.23.1. Hocuspocus server/provider 4.8.0, Pyodide 314.0.7 and CodeMirror binding dependencies are now pinned for the proofs. No React product exists yet. The exact stack and measured browser scope are in the [M0 report](docs/architecture/m0-validation.md).
+The six JavaScript workspaces are the root, contracts, collaboration, runner-web, browser-proofs and design-system; the Python workspace now adds apps/api. Only modules required by these proofs exist. Yjs 13.6.33 is test-only in contracts; the exported runtime contract has no third-party dependencies. The collaboration storage package uses Yjs 13.6.33 and pg 8.23.1 with @types/pg 8.23.1. Hocuspocus server/provider 4.8.0, Pyodide 314.0.7 and CodeMirror binding dependencies are now pinned for the proofs. No React product exists yet. The exact stack and measured browser scope are in the [M0 report](docs/architecture/m0-validation.md).
 
 ### Collaboration checkpoint contract
 
@@ -83,7 +83,7 @@ Read the [v1 protocol specification](docs/protocols/collaboration-checkpoints.md
 - `receiptCoversObservedState` matches a trusted parsed receipt to the immutable pending request and current observed document/session/generation/counter. Older receipts, errors, remote edits and deletion-only changes cannot incorrectly mark the current observation Saved.
 - The package exports source TypeScript via `@code-along/contracts/collaboration`. Source is typechecked without Node globals; tests have their own Node/DOM declarations because Yjs's XML types refer to DOM interfaces. Native Node 24 import and the Vitest package export were verified. The separate browser proof exercises the execution package and CodeMirror/Yjs binding; it is not a complete browser-to-server IDE.
 
-Run `corepack pnpm test` locally to exercise the first protocol behavior. The storage proof below now verifies real save transactions/idempotency; real Hocuspocus transport and restart tests are also supplied below; production auth remains M1/M3 work. The product has no localhost preview/start command; browser proof commands are listed below. Provider sync is never a commit receipt; a checksum is not an authentication mechanism or named source revision.
+Run `corepack pnpm test` locally to exercise the first protocol behavior. The storage proof below now verifies real save transactions/idempotency; real Hocuspocus transport and restart tests are also supplied below; production auth remains M1/M3 work. The product frontend has no preview yet; backend startup and browser proof commands are listed below. Provider sync is never a commit receipt; a checksum is not an authentication mechanism or named source revision.
 
 ### Binary checkpoint storage proof
 
@@ -126,7 +126,7 @@ The design system currently exports only original semantic CSS tokens. Primitive
 
 ### Python tooling
 
-Use Python **3.13.12** (recorded in `.python-version`) and uv **0.10.9**. The root project requires Python `>=3.13,<3.14`, and `tool.uv.required-version` pins the tested uv release. It is a non-packaged development project: no Django application or distribution is created or installed yet. Runtime/framework dependencies will be added by their owning task.
+Use Python **3.13.12** (recorded in `.python-version`) and uv **0.10.9**. The root project requires Python `>=3.13,<3.14`, and `tool.uv.required-version` pins the tested uv release. The root and apps/api form a non-packaged uv workspace: dependencies are installed, while Django runs from its application source directory. The API dependencies are pinned in apps/api/pyproject.toml and share the root uv.lock.
 
 From the repository root, with those prerequisites already installed:
 
@@ -137,6 +137,7 @@ uv sync --locked --no-python-downloads
 uv lock --check --offline
 uv run --locked --offline ruff check .
 uv run --locked --offline ruff format --check .
+uv run --locked --offline mypy
 ```
 
 The initial sync needs PyPI access; subsequent commands above use the installed/cached tools. `--no-python-downloads` requires the pinned interpreter to be available, rather than silently downloading another Python. Use `--locked` to reject stale dependency metadata: uv's `--frozen` instead trusts the existing lock without checking it against the manifest. [uv locking/syncing documentation](https://docs.astral.sh/uv/concepts/projects/sync/).
@@ -148,13 +149,28 @@ The initial sync needs PyPI access; subsequent commands above use the installed/
 | Ruff   | 0.17.5; Python linting, import ordering, modernization checks and formatting |
 | pytest | 9.2.0; strict configuration/markers and importlib-based test imports         |
 
-Direct development versions are exact; the lock also records transitive versions and artifact hashes. `tool.uv.no-build` requires prebuilt wheels and prevents source-distribution builds during these installs. The installed environment uses six third-party packages on macOS; the lock also records Windows-only colorama. No global Python packages or system interpreter changes were made.
+Direct development versions are exact; the lock also records transitive versions and artifact hashes. `tool.uv.no-build` requires prebuilt wheels and prevents source-distribution builds during these installs. The expanded backend lock contains 45 third-party entries across supported platforms. No global Python packages or system interpreter changes were made.
 
-Python tests now cover the real PostgreSQL 18 harness as well as prerequisite failures. Run `uv run --locked --offline python -m pytest -q` with CODE_ALONG_POSTGRES_BIN configured as described below. Empty-suite exits are never treated as passing coverage. Temporary M0.2 tool fixtures were removed; the clean cached install and lock/interpreter/version rejection checks remain verified.
+Python tests now cover the backend, real PostgreSQL 18 harness and prerequisite failures. Run `uv run --locked --offline python -m pytest -q` with CODE_ALONG_POSTGRES_BIN configured as described below. Empty-suite exits are never treated as passing coverage. Temporary M0.2 tool fixtures were removed; the clean cached install and lock/interpreter/version rejection checks remain verified.
 
 Ruff ignores local dependencies/caches and `.design-references/`, including explicit paths via force-exclude. Pytest avoids hidden directories, node_modules and build directories. These settings protect reference material from accidental lint fixes and prevent collecting third-party tests. See [Ruff configuration](https://docs.astral.sh/ruff/configuration/) and [pytest exit codes](https://docs.pytest.org/en/stable/reference/exit-codes.html).
 
-No Python type checker or Django-specific pytest plugin is installed yet; select and verify those when real backend source/framework dependencies are introduced. Tooling is verified on macOS arm64 only. PyPI's version metadata reported no published advisories for the seven locked third-party versions when checked on 13 November 2026; this is a point-in-time metadata check, not a claim that all vulnerabilities are known or that `uv sync` performs a CVE audit.
+pytest-django 4.14.0 and mypy 1.19.1 with Django stubs/ext 5.2.9 now verify the real backend; run `uv run --locked --offline mypy`. Tooling is verified on macOS arm64 only. PyPI's version metadata reported no published advisories for all 45 locked third-party entries when checked on 13 November 2026; this is a point-in-time metadata check, not a claim that all vulnerabilities are known or that `uv sync` performs a CVE audit.
+
+### Django backend
+
+Read [backend setup, configuration and verification](docs/operations/backend-development.md). M1.1 introduces the first product migration and account model, with Django 5.2.19, DRF 3.18.3, Channels 4.3.2, Daphne 4.2.3 and psycopg 3.3.9. Use `apps/api/.env.example` as a placeholder reference; the app does not automatically load dotenv files or provide default credentials.
+
+With your own local PostgreSQL database and development variables configured:
+
+```sh
+export DJANGO_SETTINGS_MODULE=config.settings.development
+uv run --locked --offline python apps/api/manage.py check
+uv run --locked --offline python apps/api/manage.py migrate
+uv run --locked --offline --directory apps/api daphne -b 127.0.0.1 -p 8000 config.asgi:application
+```
+
+GET `http://127.0.0.1:8000/health/live/` returns process liveness only. It is not database readiness or a user-facing UI. The full test suite provisions its own private databases and ephemeral server; no persistent service, account, database or migration outside those owned fixtures was created during implementation. Login/registration and real email delivery remain M1.4; Compose/proxy and production header/HSTS configuration remain M1.2. No deployment is authorized by these commands.
 
 ### PostgreSQL 18 test clusters
 
@@ -167,7 +183,7 @@ uv run --locked --offline python -m pytest -q
 
 The path is a placeholder for your installation. PostgreSQL 18.7 was compiled and verified outside the repository on this machine; no global service or reference database was changed. The harness validates tool versions, strips inherited PG connection settings, propagates child failures and cleans up after normal/error/handled-interrupt paths. Unit-only prerequisite checks can run with `-m 'not postgres'`, explicitly excluding integration coverage.
 
-The Python suite has **29 tests** (19 prerequisite/unit cases and 10 real-cluster cases). The binary-recovery case additionally requires Node and the installed pnpm workspace. The tests verify version/settings, transaction rollback, isolation and process cleanup. The separate M0.4b suite now proves storage/receipt transactions; M0.4c adds real Hocuspocus transport and process-restart evidence. The tests leave no running application/database service or preview URL.
+The Python suite now has **97 tests**, including the original 29 plus 68 backend cases. The binary-recovery case additionally requires Node and the installed pnpm workspace. The tests verify version/settings, transaction rollback, isolation and process cleanup. The separate M0.4b suite now proves storage/receipt transactions; M0.4c adds real Hocuspocus transport and process-restart evidence. The tests leave no running application/database service or preview URL.
 
 No credentials belong in documentation or source control. PyTogether remains a read-only technical reference; its code, assets and branding are not imported into the application.
 
