@@ -6,9 +6,9 @@ Updated: 13 November 2026 (Asia/Kolkata).
 
 The project owner approved the [architecture](docs/architecture/approved-architecture.html) on 13 November 2026. Follow that design, its release boundaries and its integration/security gates. Any architectural change requires approval before implementation. PyTogether is a read-only behavioral/source reference; implement Code Along independently.
 
-Task and milestone status values: **Not Started**, **In Progress**, **Completed**, **Blocked**. Review/commit state is tracked separately. Verification can complete a task before commit approval, but the next logical task starts only after the current unit is verified, approved, committed and its progress recorded. A blocked task must state the actual blocker; future dependencies alone are not failures.
+Task and milestone status values: **Not Started**, **In Progress**, **Completed**, **Blocked**. Review/commit state is tracked separately. Verification can complete a task before commit approval. During foundation work, 2–3 closely related tasks may form one reviewable unit: declare its scope, implement and verify each task sequentially, then request one approval for the combined commit. The next independent unit starts only after the current unit is verified, approved, committed and its progress recorded. Substantial protocol, persistence, authentication and execution-security changes remain separate; milestone order is unchanged. A blocked task must state the actual blocker; future dependencies alone are not failures.
 
-Every task below is a candidate implementation unit, not permission to build an entire milestone at once. Break it down further at its start when one task contains independently testable behavior. Before each unit, state the exact files and checks. Use focused conventional commits, with explicit approval before each commit. No pushes, merges or deployments without separate explicit approval.
+Every task below is a candidate implementation unit, not permission to build an entire milestone at once. Group related small foundation tasks as described above, or break a task down further when it contains independently testable behavior. Commit boundaries follow coherent purpose rather than a fixed task count. Before each unit, state the exact files and checks. Use focused conventional commits, with explicit approval before each commit. No pushes, merges or deployments without separate explicit approval.
 
 ## Repository baseline
 
@@ -40,7 +40,7 @@ Milestone status: **In Progress**.
 | ID   | Task and sub-tasks                                                                                                                                | Depends on        | Status      | Verification / exit criteria                                                                                                                             |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | M0.1 | Record approved architecture; create README and complete implementation tracker; inspect/preserve Git baseline                                    | Approval received | Completed   | Verified documentation, roadmap coverage and intended diff; committed as `6a38d54` after user approval                                                   |
-| M0.2 | Add minimum workspace/tooling and safe ignore rules; verify installed prerequisites; select compatible patches and create locks for the proofs    | M0.1 committed    | In Progress | Reproducible install and appropriate lint/type/test commands; secrets/local caches/build outputs ignored; no placeholder application scaffold            |
+| M0.2 | Add minimum workspace/tooling and safe ignore rules; verify installed prerequisites; select compatible patches and create locks for the proofs    | M0.1 committed    | Completed   | Tooling sub-units verified; M0.2c awaits commit approval. Runtime integration proofs remain M0.3–M0.6.                                                   |
 | M0.3 | Define versioned collaboration checkpoint/receipt contract and focused test harness                                                               | M0.2              | Not Started | Tests specify delete-only coverage, idempotency, pending/saved meaning and stale-state handling                                                          |
 | M0.4 | Prove Hocuspocus/Yjs binary persistence against PostgreSQL with serialized/CAS writes and atomic receipts                                         | M0.3              | Not Started | Concurrent edits/deletes, duplicate requests, delayed stale save, reconnect and database/process failure tests; rejected writes receive no Saved receipt |
 | M0.5 | Define runner threat model, manifest/message contract, supported-browser matrix and separate-site test environment                                | M0.4              | Not Started | Origin/cookie/CSP/iframe/Worker boundaries and explicit browser support/fallback criteria documented                                                     |
@@ -148,46 +148,47 @@ Milestone status: **Not Started**. Prioritize extensions after pilot evidence; d
 
 ## M0.2 implementation units
 
-M0.2 is split into independently verified commits. It remains In Progress until all sub-units pass; repository hygiene alone does not establish a reproducible dependency installation.
+M0.2 is split into independently verified commits. All three sub-units are now implemented and verified; M0.2c awaits commit approval. Repository hygiene alone did not establish reproducible dependency installs; the JavaScript/Python checks below complete that tooling gate.
 
-| Unit  | Scope                                                                                       | Depends on      | Status      | Review / verification                                                                                                                    |
-| ----- | ------------------------------------------------------------------------------------------- | --------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| M0.2a | Git exclusions, current repository guidance, README/tracker updates                         | M0.1 committed  | Completed   | Committed as `a44ba44` after approval; 66 ignore-policy checks passed                                                                    |
-| M0.2b | Minimum pnpm workspace and JavaScript collaboration-proof tooling with exact versions/locks | M0.2a committed | Completed   | Registry/docs checked; clean cached frozen install, mismatch rejection and tool positive/negative checks passed; commit approval pending |
-| M0.2c | Minimum Python tooling/lock and documented prerequisites for later Django/runner work       | M0.2b committed | Not Started | Python 3.13 selection, reproducible sync and relevant checks; no application scaffold                                                    |
+| Unit  | Scope                                                                                       | Depends on      | Status    | Review / verification                                                                                                        |
+| ----- | ------------------------------------------------------------------------------------------- | --------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| M0.2a | Git exclusions, current repository guidance, README/tracker updates                         | M0.1 committed  | Completed | Committed as `a44ba44` after approval; 66 ignore-policy checks passed                                                        |
+| M0.2b | Minimum pnpm workspace and JavaScript collaboration-proof tooling with exact versions/locks | M0.2a committed | Completed | Committed as `f1a18e7` after approval; frozen install, quality checks and tool positive/negative cases passed                |
+| M0.2c | Minimum Python tooling/lock and documented prerequisites for later Django/runner work       | M0.2b committed | Completed | Python 3.13.12, locked install/mismatch rejection, Ruff/pytest positive and negative cases verified; commit approval pending |
 
-## Current unit: M0.2b
+## Current unit: M0.2c
 
-- Task status: **Completed** (toolchain verified; commit approval pending).
-- Scope: root pnpm workspace and exact JavaScript tooling, TypeScript/ESLint/Prettier/Vitest configs, generated lockfile and verified setup/check commands. No product code or protocol implementation yet.
-- New files: `.node-version`, `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `tsconfig.base.json`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`, `vitest.config.ts`.
-- Updated files: `AGENTS.md`, `README.md`, `IMPLEMENTATION_PROGRESS.md`. Markdown formatting is normalized by the new formatter; the approved architecture archive is unchanged.
-- Version decisions: Node 24.22.3; pnpm 12.18.0; TypeScript 6.0.3; ESLint 10.14.0; @eslint/js 10.0.1; typescript-eslint 8.72.2; Prettier 3.10.0; Vitest 5.1.0; Vite 8.3.8; Node types 24.19.2. TypeScript satisfies the parser's declared peer range. No broad peer overrides or release-age exceptions. Scoped minimatch 11.0.1 overrides address GHSA-g3hv-75wg-m249 on the three audited lint-tool edges; compatibility and clean audit were rechecked.
-- Verification: lint, formatting and config typecheck; clean cached frozen install and manifest/lock mismatch rejection; temporary Vitest pass/fail fixtures; lint/type/format positive and negative cases; documented empty-suite failure after removing fixtures; intended-file/secret/generated-artifact review and preserved-reference checks; dependency audit reported no known vulnerabilities after the scoped minimatch fix.
-- Limitation: no product test suite or application exists yet. `pnpm test` reports no tests with a nonzero exit until M0.3; no pass-with-no-tests bypass. Root typecheck currently covers tooling configuration only. macOS arm64 verified; other platforms and actual collaboration/runtime compatibility are unverified.
-- Proposed commit: `chore: set up JavaScript tooling`.
-- Review state: **Awaiting user approval**. M0.2a was committed as `a44ba44835b37e1ad5a8d92ef136bc4c3f053d11`; no third commit, push, merge or deployment performed.
-- Next unit after approval/commit/progress update: **M0.2c** (minimal Python tooling). M0.2 remains In Progress until that sub-unit is verified.
+- Task status: **Completed** (Python tooling verified; commit approval pending).
+- Scope: Python 3.13.12, uv 0.10.9, Ruff 0.17.5 and pytest 9.2.0 in a locked, non-packaged development project; no application, Django or database packages.
+- New files: `.python-version`, `pyproject.toml`, `uv.lock`.
+- Updated files: `AGENTS.md`, `README.md`, `IMPLEMENTATION_PROGRESS.md` (including the prior approved commit hash/status update and the user-approved foundation task-batching workflow).
+- Verification: clean cached locked installation using the pinned Python; lock/manifest mismatch rejection without lock rewrite; wrong Python/uv rejection; Ruff lint/format positive and negative fixtures; pytest passing/failing assertions, strict unknown markers and excluded dependency/reference discovery; real empty-suite exit 5 after temporary fixture cleanup; existing JavaScript lint/format/config typecheck and staged content/secret/reference checks.
+- Dependency metadata: exact-version PyPI advisory fields were empty for all seven locked third-party packages (six installed on macOS, plus Windows-only colorama), checked on 13 November 2026. `uv sync` checks dependency consistency, not CVE safety; no full Python vulnerability scanner is claimed.
+- Limitations: no product tests, Python application/type-checker or browser/database runtime verification. macOS arm64 only; other platforms remain untested. No new global installation, source-distribution build, migration or service startup.
+- Proposed commit: `chore: set up Python tooling`.
+- Review state: **Awaiting user approval**. No new commit or push performed; earlier push authorization applied only to the three approved commits already on GitHub.
+- Next unit after approval/commit/progress update: **M0.3**, the versioned collaboration checkpoint contract and first real protocol tests. M0.2 tooling is implemented/verified; M0 remains In Progress until its integration/design gates pass.
 
 ## Commit ledger
 
-| Unit  | Commit                                     | Review state                                                        |
-| ----- | ------------------------------------------ | ------------------------------------------------------------------- |
-| M0.1  | `6a38d545ffee3381bc15f9d03ac32706ef657153` | Committed after explicit user approval; documentation checks passed |
-| M0.2a | `a44ba44835b37e1ad5a8d92ef136bc4c3f053d11` | Committed after explicit approval; hygiene checks passed            |
-| M0.2b | Pending approval                           | Proposed JavaScript-tooling commit; not executed                    |
+| Unit  | Commit                                     | Review state                                                                        |
+| ----- | ------------------------------------------ | ----------------------------------------------------------------------------------- |
+| M0.1  | `6a38d545ffee3381bc15f9d03ac32706ef657153` | Committed after explicit user approval; documentation checks passed                 |
+| M0.2a | `a44ba44835b37e1ad5a8d92ef136bc4c3f053d11` | Committed after explicit approval; hygiene checks passed                            |
+| M0.2b | `f1a18e7374878c439ae46c732861c07df157c5c9` | Committed after explicit approval; pushed with M0.1/M0.2a on explicit authorization |
+| M0.2c | Pending approval                           | Proposed Python-tooling commit; not executed                                        |
 
 After an approved commit, replace the pending entry with its actual hash. A commit cannot contain its own final hash: record that hash in the next tracker change and include it in the next approved unit. Do not amend commits or create automatic bookkeeping commits. Record completed units, tests and remaining issues before presenting each subsequent commit.
 
 ## Pending work, known issues and technical debt
 
-- M0.1/M0.2a are committed. M0.2b tooling is verified and awaiting commit approval; M0.2 remains In Progress. M0.2c and later tasks are Not Started. Architecture approval does not imply runtime compatibility or capacity results.
-- JavaScript tooling/locks and commands now exist; Python setup and application checks do not. Python 3.13.12 and uv 0.10.9 were found; Docker, PostgreSQL and Redis executables were not found on the current PATH. This is not proof that no installation exists elsewhere. No system/global package installation was made; project caches/dependencies remain ignored.
+- M0.1/M0.2a/M0.2b are committed and pushed to `origin/main`. M0.2c is verified and awaiting commit approval; M0.2 tooling implementation is Completed. M0.3 and later tasks remain Not Started. Tooling verification does not establish application/runtime compatibility or capacity.
+- JavaScript/Python tooling, locks and verification commands now exist; application checks and services do not. Docker, PostgreSQL and Redis executables were not found on the current PATH. This is not proof that no installation exists elsewhere; resolve the local PostgreSQL prerequisite before the persistence proof. No system/global package installation was made; project caches/dependencies remain ignored.
 - Critical open validation: Hocuspocus receipt extension and binary durability; runner origin/header/browser/stdin compatibility. Raise an architecture approval request if these proofs require a design change.
 - Existing `AGENTS.md` is intentionally updated in M0.2a to reflect the approved architecture and commit-review workflow; its engineering/security principles are retained.
 - Existing design references remain preserved as an ignored local reference library. They are not production assets or vendored dependencies. Any future vendoring/reuse needs deliberate licensing and scope review; never force-add them implicitly.
 - Historical machine-local links in the archived architecture may be unavailable elsewhere. The design itself is retained in this repository; evidence reports remain outside it and are not required to read the architecture or plan.
-- The local upstream reference is unresolved; no GitHub synchronization has been attempted. Verify remote state before future approved publishing work.
-- Root typecheck covers only the current tooling config; expand to actual packages when introduced. No product tests exist; do not describe the empty-suite exit as passing application tests. Performance targets, preview budgets and the bounded live-authorization fallback require measurement/acceptance tests before claiming guarantees.
+- GitHub `main` was created by the explicitly authorized push on 13 November 2026; local `main` now tracks `origin/main`. Future pushes still require explicit approval.
+- Root TypeScript checks cover only tooling config; Python type checking is deferred until backend source is introduced. No product tests exist; do not describe empty-suite exits as passing application tests. Performance targets, preview budgets and the bounded live-authorization fallback require measurement/acceptance tests before claiming guarantees.
 
 - Temporary dependency maintenance: remove the three scoped minimatch 11.0.1 overrides once ESLint/config-array/typescript-estree adopt a patched version. This tested cross-major substitution is limited to development tooling; rerun lint/type/tool fixtures and audit when removing it.

@@ -4,7 +4,7 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-Architecture approved on 13 November 2026. M0.1 recorded the design and development plan; M0.2 is establishing repository hygiene and tooling. The pinned JavaScript tooling is installed and verified. There is no application, database migration, runnable service or product test suite yet.
+Architecture approved on 13 November 2026. M0.1 recorded the design and development plan; M0.2 is establishing repository hygiene and tooling. The pinned JavaScript and Python tooling is installed and verified. There is no application, database migration, runnable service or product test suite yet.
 
 - [Approved architecture](docs/architecture/approved-architecture.html): feature comparison, technology decisions, domain/schema relationships, protocols, security boundaries, target folder structure and milestone gates. Open the HTML file in a browser. Some historical investigation links refer to machine-local files and are not portable.
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): task order, dependencies, acceptance criteria, status, review state and commit records.
@@ -73,7 +73,39 @@ TypeScript 6.0.3 satisfies the selected parser's declared `<6.1.0` peer range; T
 
 The initial audit identified [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) in minimatch 10.2.6. Workspace overrides resolve only the affected ESLint, @eslint/config-array and @typescript-eslint/typescript-estree dependency edges to patched **11.0.1**. This is a deliberate cross-major substitution: frozen-install and lint positive/negative checks were rerun, and the resulting audit reported no known vulnerabilities. Remove these temporary overrides when the parent packages adopt patched versions, rerunning the checks rather than widening unrelated dependencies. Audit results describe the check date, not a guarantee against undiscovered issues.
 
-Only root tooling exists. The workspace reserves apps/* and packages/* without creating empty application modules. No React, Hocuspocus, Yjs or database packages are installed yet; add them when the owning task needs them. Python setup follows in M0.2c. There are no application start, migration or build commands yet. macOS arm64 tooling was verified; other operating systems and browsers have not been tested.
+Only root tooling exists. The workspace reserves apps/* and packages/* without creating empty application modules. No React, Hocuspocus, Yjs or database packages are installed yet; add them when the owning task needs them. Python setup is documented below. There are no application start, migration or build commands yet. macOS arm64 tooling was verified; other operating systems and browsers have not been tested.
+
+### Python tooling
+
+Use Python **3.13.12** (recorded in `.python-version`) and uv **0.10.9**. The root project requires Python `>=3.13,<3.14`, and `tool.uv.required-version` pins the tested uv release. It is a non-packaged development project: no Django application or distribution is created or installed yet. Runtime/framework dependencies will be added by their owning task.
+
+From the repository root, with those prerequisites already installed:
+
+```sh
+# Keep uv's package cache local and ignored; .venv is ignored as well.
+export UV_CACHE_DIR="$PWD/.uv-cache"
+uv sync --locked --no-python-downloads
+uv lock --check --offline
+uv run --locked --offline ruff check .
+uv run --locked --offline ruff format --check .
+```
+
+The initial sync needs PyPI access; subsequent commands above use the installed/cached tools. `--no-python-downloads` requires the pinned interpreter to be available, rather than silently downloading another Python. Use `--locked` to reject stale dependency metadata: uv's `--frozen` instead trusts the existing lock without checking it against the manifest. [uv locking/syncing documentation](https://docs.astral.sh/uv/concepts/projects/sync/).
+
+| Tool   | Version / responsibility                                                     |
+| ------ | ---------------------------------------------------------------------------- |
+| Python | 3.13.12; isolated project interpreter                                        |
+| uv     | 0.10.9; `uv.lock`, environment and dependency management                     |
+| Ruff   | 0.17.5; Python linting, import ordering, modernization checks and formatting |
+| pytest | 9.2.0; strict configuration/markers and importlib-based test imports         |
+
+Direct development versions are exact; the lock also records transitive versions and artifact hashes. `tool.uv.no-build` requires prebuilt wheels and prevents source-distribution builds during these installs. The installed environment uses six third-party packages on macOS; the lock also records Windows-only colorama. No global Python packages or system interpreter changes were made.
+
+For test execution use `uv run --locked --offline pytest -q`. It currently exits **5** because there are no Python product tests; this is expected, not a passing test suite. Python tests will arrive with Python functionality. Root lint/format currently validate available configuration only. Temporary fixtures verified both success and failure paths, and were removed. The clean cached install, stale-lock rejection and wrong-interpreter/uv rejection were also checked.
+
+Ruff ignores local dependencies/caches and `.design-references/`, including explicit paths via force-exclude. Pytest avoids hidden directories, node_modules and build directories. These settings protect reference material from accidental lint fixes and prevent collecting third-party tests. See [Ruff configuration](https://docs.astral.sh/ruff/configuration/) and [pytest exit codes](https://docs.pytest.org/en/stable/reference/exit-codes.html).
+
+No Python type checker or Django-specific pytest plugin is installed yet; select and verify those when real backend source/framework dependencies are introduced. Tooling is verified on macOS arm64 only. PyPI's version metadata reported no published advisories for the seven locked third-party versions when checked on 13 November 2026; this is a point-in-time metadata check, not a claim that all vulnerabilities are known or that `uv sync` performs a CVE audit.
 
 No credentials belong in documentation or source control. PyTogether remains a read-only technical reference; its code, assets and branding are not imported into the application.
 
@@ -86,6 +118,8 @@ No credentials belong in documentation or source control. PyTogether remains a r
 Use `git status --short`, `git diff --cached --check` and `git diff --cached` to inspect a proposed unit. A file being eligible for Git is not approval to include it.
 
 ## Development workflow
+
+During foundation work, group 2–3 closely related tasks into one reviewable unit when they share a coherent purpose. Implement and verify each task sequentially before starting the next task in that bundle. Review the combined diff and request one commit approval. Keep substantial protocol, persistence, authentication and execution-security changes separate. Milestone order remains unchanged; the task count is a guideline.
 
 For each independently reviewable unit:
 
