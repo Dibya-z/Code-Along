@@ -51,3 +51,17 @@ Foreground Ctrl-C stops only owned API/proxy/Redis/PostgreSQL processes. It bind
 On 13 November 2026 the digest-pinned Compose stack built and ran in a project-owned Lima Linux VM with only this repository mounted read-only. DB/Redis/API became healthy, migration completed and proxy readiness returned 200. A probe row survived PostgreSQL restart; the probe table was removed. Stopping Redis changed readiness to 503; restarting it restored 200. The runner rejected `/api/` and unknown hosts received 421. The native fallback also returned readiness 200 and rejected product API access on its runner site. No shared database or existing VM was changed.
 
 The VM is an optional local tool, not a repository prerequisite. On this workstation it lives under ignored `.runtime/lima/`, with SSH over loopback because vsock forwarding failed. An attempted project-owned Multipass VM was stopped after its private SSH route was unreachable. Neither workaround changes global firewall or trust settings. Production TLS/domain/mail/HSTS and operational hardening remain separate release/deployment work.
+
+## Frontend and component library
+
+The proxy now serves the React build from `apps/web/dist`. Rebuild containers after frontend changes. For quick UI-only iteration, `corepack pnpm --filter @code-along/web dev` starts Vite; authenticated integration uses the HTTPS proxy above, so no cross-origin credentials/CORS workaround is needed.
+
+```sh
+corepack pnpm --filter @code-along/web build
+corepack pnpm --filter @code-along/design-system storybook
+# Build the library before its local rendered/keyboard checks:
+STORYBOOK_DISABLE_TELEMETRY=1 corepack pnpm --filter @code-along/design-system build-storybook
+corepack pnpm --filter @code-along/browser-proofs test:foundation
+```
+
+Storybook serves on loopback 6006. Its build and the frontend build stay ignored. The design package uses strict source/stories checks with `skipLibCheck` limited to its third-party declaration files because Storybook 10.6.7 declarations conflict with TypeScript's exact optional properties; application source remains checked. The browser gate uses fresh owned Chromium/WebKit contexts, checks 320–1440px reflow, the skip link, routing, dialog focus trapping/Escape/return. Safari's macOS default link navigation uses Option-Tab, as documented by [Apple](https://support.apple.com/en-lamr/guide/safari/cpsh003/mac). This is automated keyboard/layout evidence, not a screen-reader audit or retail-browser certification.

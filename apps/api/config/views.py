@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import connection
 from django.http import HttpRequest, JsonResponse
+from django.middleware.csrf import get_token
 from django.views.decorators.http import require_safe
 from redis import Redis
 
@@ -19,6 +20,13 @@ def not_found(request: HttpRequest, exception: Exception) -> JsonResponse:
 
 def server_error(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"error": "internal_error"}, status=500)
+
+
+@require_safe
+def csrf_token(request: HttpRequest) -> JsonResponse:
+    return JsonResponse(
+        {"csrfToken": get_token(request)}, headers={"Cache-Control": "no-store"}
+    )
 
 
 @require_safe

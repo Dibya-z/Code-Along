@@ -4,7 +4,7 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-Architecture approved on 13 November 2026. M0 integration proofs and design tokens are committed/pushed. M1.1 adds the Django backend foundation. M1.2 adds a verified local Compose stack, HTTPS proxy, DB/Redis readiness, isolated runner assets and a disposable native fallback. Signup/login/project APIs and the product UI are the next M1 units. Nothing is deployed. See [local development setup](docs/operations/development-stack.md).
+Architecture approved on 13 November 2026. M0 integration proofs and design tokens are committed/pushed. M1.1 adds the Django backend foundation. M1.2 adds a verified local Compose stack, HTTPS proxy, DB/Redis readiness, isolated runner assets and a disposable native fallback. M1.3 adds a responsive React shell, typed CSRF-aware client, reusable accessible primitives and Storybook. Account and workspace/project behavior follow in the next M1 units. Nothing is deployed. See [local development setup](docs/operations/development-stack.md).
 
 - [Approved architecture](docs/architecture/approved-architecture.html): feature comparison, technology decisions, domain/schema relationships, protocols, security boundaries, target folder structure and milestone gates. Open the HTML file in a browser. Some historical investigation links refer to machine-local files and are not portable.
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): task order, dependencies, acceptance criteria, status, review state and commit records.

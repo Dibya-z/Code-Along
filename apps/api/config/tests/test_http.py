@@ -30,6 +30,17 @@ def test_csrf_middleware_remains_enabled() -> None:
     assert client.post("/health/live/").status_code == 403
 
 
+def test_csrf_bootstrap_returns_masked_token_with_private_cookie(
+    client: Client,
+) -> None:
+    response = client.get("/api/v1/csrf/")
+    assert response.status_code == 200
+    assert len(response.json()["csrfToken"]) == 64
+    assert response["Cache-Control"] == "no-store"
+    assert response.cookies["csrftoken"]["samesite"] == "Lax"
+    assert response.cookies["csrftoken"]["domain"] == ""
+
+
 def test_invalid_hosts_are_rejected(client: Client) -> None:
     assert client.get("/health/live/", HTTP_HOST="attacker.invalid").status_code == 400
 
