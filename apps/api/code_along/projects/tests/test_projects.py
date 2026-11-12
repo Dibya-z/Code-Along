@@ -346,11 +346,12 @@ def test_api_rejects_identity_generation_source_and_runtime_mass_assignment() ->
         )
     project = services.create_project(owner, workspace.id, "Project")
     path = f"/api/v1/projects/{project.id}/files/{project.entrypoint_file_id}/"
-    for change in [
+    changes: list[dict[str, object]] = [
         {"initial_source": "overwrite"},
         {"generation": 2},
         {"project_id": str(project.id)},
-    ]:
+    ]
+    for change in changes:
         assert (
             client.patch(
                 path, {"expected_version": 1, **change}, content_type="application/json"
