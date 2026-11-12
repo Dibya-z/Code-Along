@@ -6,7 +6,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 
 from code_along.accounts.models import User
 
-from .models import Workspace, WorkspaceMembership
+from .models import Workspace, WorkspaceInvitation, WorkspaceMembership
 from .policies import require_membership
 
 
@@ -87,6 +87,12 @@ def update_member(
         )
     if remove:
         member.active = False
+        WorkspaceInvitation.objects.filter(
+            workspace=workspace,
+            recipient_email=member.user.email,
+            accepted_at__isnull=True,
+            revoked_at__isnull=True,
+        ).update(revoked_at=timezone.now())
     elif role in {
         WorkspaceMembership.Role.INSTRUCTOR,
         WorkspaceMembership.Role.LEARNER,
@@ -115,6 +121,9 @@ def transfer_ownership(
         ) from None
     if old.id == target.id:
         return workspace
+    WorkspaceInvitation.objects.filter(
+        workspace=workspace, accepted_at__isnull=True, revoked_at__isnull=True
+    ).update(revoked_at=timezone.now())
     old.role = WorkspaceMembership.Role.INSTRUCTOR
     old.save(update_fields=["role"])
     target.role = WorkspaceMembership.Role.OWNER

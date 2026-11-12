@@ -1,9 +1,15 @@
 from code_along.accounts.api import CurrentUserView
+from code_along.workspaces.invitation_api import (
+    InvitationAcceptView,
+    InvitationPreviewView,
+)
 from django.urls import include, path
 
 from .views import csrf_token, liveness, readiness
 
 urlpatterns = [
+    path("api/v1/invitations/preview/", InvitationPreviewView.as_view()),
+    path("api/v1/invitations/accept/", InvitationAcceptView.as_view()),
     path("api/v1/workspaces/", include("code_along.workspaces.urls")),
     path("api/v1/auth/", include("allauth.headless.urls")),
     path("api/v1/me/", CurrentUserView.as_view(), name="current-user"),

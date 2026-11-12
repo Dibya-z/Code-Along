@@ -60,7 +60,7 @@ Milestone status: **In Progress**.
 | M1.3 | React routing/providers, typed API/CSRF client, design primitives and Storybook                                                        | M1.2       | Completed   | Type/lint/component checks, keyboard/focus states and error boundaries                                                         |
 | M1.4 | User authentication/session flows, registration/verification, login/logout and password reset                                          | M1.3       | Completed   | Session/CSRF/Origin/expiry tests, rate limits and non-disclosing reset behavior                                                |
 | M1.5 | Workspace/membership/ownership schema, policies and create/list/update interfaces                                                      | M1.4       | Completed   | Migrations, policy matrix, membership removal and ownership-transfer tests                                                     |
-| M1.6 | Expiring invitations, acceptance/revocation and scoped membership UI                                                                   | M1.5       | Not Started | Digest storage, recipient/expiry/use limits and retry/race tests                                                               |
+| M1.6 | Expiring invitations, acceptance/revocation and scoped membership UI                                                                   | M1.5       | Completed   | Digest storage, recipient/expiry/use limits and retry/race tests                                                               |
 | M1.7 | Project/file metadata, initial document records, explicit grants and policy-controlled APIs/UI                                         | M1.6       | Not Started | Atomic creation; parent association, traversal/collision/quota and cross-tenant negative tests                                 |
 | M1.8 | API schema generation, CI gates and foundation end-to-end flow                                                                         | M1.7       | Not Started | Two users authenticate/create/join only allowed resources; CI checks introduced functionality                                  |
 
@@ -261,3 +261,9 @@ M1.4 final review: digest-pinned Compose rebuild/migrations/readiness pass and A
 Status: Completed. M1.4 committed/pushed as `c0ca532`. Scope: workspace/membership migration, scoped selectors, serialized workspace-lock services, REST APIs and create/list/settings UI. Owner transfer preserves exactly one active owner; private project access remains separate.
 
 M1.5 verification: 147 full Python cases pass, including fresh migration/reversal and real concurrent ownership transfer; 15 focused workspace cases pass. Four authenticated product browser cases pass across Chromium/WebKit. Strict mypy (44 files), frontend lint/format/types/build and DB constraint review pass. List queries fetch workspace and caller role together; roster excludes emails. Proposed commit: `feat: add workspace management`.
+
+## M1.6 workspace invitations
+
+Status: Completed. M1.5 committed/pushed as `f19c900`. Recipient-bound single-use invitations store only SHA-256 digests, default 72-hour/max seven-day expiry. Acceptance, revocation, removal and owner-transfer invalidation share the workspace lock. Project scope is added with project models in M1.7.
+
+M1.6 verification: 31 workspace/invitation/migration cases pass, including actual concurrent accepts and accept/revoke ordering. All six product Chromium/WebKit cases pass. 159 regular JS cases, strict mypy on 47 files, lint/format/types and frontend build pass. Shared guard/pagination/types were extracted when a second feature needed them, avoiding feature import cycles. Proposed commit: `feat: add workspace invitations`.

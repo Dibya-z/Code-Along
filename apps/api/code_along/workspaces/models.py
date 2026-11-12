@@ -65,3 +65,57 @@ class WorkspaceMembership(models.Model):
             models.Index(fields=["user", "active"], name="workspace_member_user_active")
         ]
         ordering = ["joined_at", "id"]
+
+
+class WorkspaceInvitation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workspace = models.ForeignKey(
+        Workspace, on_delete=models.PROTECT, related_name="invitations"
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="created_invitations",
+    )
+    recipient_email = models.EmailField(max_length=254)
+    role = models.CharField(
+        max_length=12, choices=[("instructor", "Instructor"), ("learner", "Learner")]
+    )
+    token_digest = models.CharField(max_length=64, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    accepted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="accepted_invitations",
+    )
+
+    class Meta:
+        ordering = ["-created_at", "id"]
+        indexes = [
+            models.Index(
+                fields=["workspace", "recipient_email"],
+                name="invitation_workspace_recipient",
+            )
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(role__in=["instructor", "learner"]),
+                name="invitation_valid_role",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(accepted_at__isnull=True, accepted_by__isnull=True)
+                    | models.Q(accepted_at__isnull=False, accepted_by__isnull=False)
+                ),
+                name="invitation_acceptance_pair",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(expires_at__gt=models.F("created_at")),
+                name="invitation_expiry_after_create",
+            ),
+        ]

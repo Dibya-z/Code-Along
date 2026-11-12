@@ -1,7 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Button, Field, Notice } from '@code-along/design-system';
-import { authenticate, authErrors, replaceSession } from './session.ts';
+import {
+  authenticate,
+  authErrors,
+  replaceSession,
+  safeDestination,
+} from './session.ts';
 type Kind = 'login' | 'signup' | 'forgot' | 'reset' | 'verify';
 const content = {
   login: {
@@ -34,6 +39,8 @@ const content = {
 export function AccountPage({ kind }: { kind: Kind }) {
   const [params] = useSearchParams();
   const key = params.get('key') ?? '';
+  const next = safeDestination(params.get('next'));
+  const nextQuery = `?next=${encodeURIComponent(next)}`;
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [failure, setFailure] = useState('');
@@ -50,7 +57,7 @@ export function AccountPage({ kind }: { kind: Kind }) {
       if (kind === 'login') {
         const result = await authenticate('login', { email, password });
         if (result.meta?.is_authenticated) {
-          await replaceSession();
+          await replaceSession(next);
           return;
         }
         setMessage(
@@ -100,7 +107,7 @@ export function AccountPage({ kind }: { kind: Kind }) {
       {message ? (
         <>
           <Notice tone="success">{message}</Notice>
-          <Link className="button" to="/login">
+          <Link className="button" to={`/login${nextQuery}`}>
             Go to sign in
           </Link>
         </>
@@ -113,7 +120,7 @@ export function AccountPage({ kind }: { kind: Kind }) {
           {kind === 'reset' ? (
             <Link to="/auth/forgot">Request a password reset</Link>
           ) : (
-            <Link to="/login">Return to sign in</Link>
+            <Link to={`/login${nextQuery}`}>Return to sign in</Link>
           )}
         </>
       ) : (
@@ -168,13 +175,15 @@ export function AccountPage({ kind }: { kind: Kind }) {
         <div className="form-stack">
           <Link to="/auth/forgot">Forgot your password?</Link>
           <p className="muted">
-            New here? <Link to="/auth/signup">Create an account</Link>
+            New here?{' '}
+            <Link to={`/auth/signup${nextQuery}`}>Create an account</Link>
           </p>
         </div>
       )}
       {kind === 'signup' && (
         <p className="muted">
-          Already have an account? <Link to="/login">Sign in</Link>
+          Already have an account?{' '}
+          <Link to={`/login${nextQuery}`}>Sign in</Link>
         </p>
       )}
     </div>

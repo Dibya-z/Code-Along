@@ -1,4 +1,7 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { SignedIn } from '../auth/guard.tsx';
+import { Pagination } from '../../components/pagination.tsx';
+import type { Workspace, Member, Page } from './types.ts';
+import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button, Dialog, Field, Notice } from '@code-along/design-system';
@@ -6,48 +9,7 @@ import { api } from '../../api/client.ts';
 import { Failure } from '../../api/feedback.tsx';
 import { queryClient } from '../../app/providers.tsx';
 import { useIdentity } from '../auth/session.ts';
-export interface Workspace {
-  id: string;
-  name: string;
-  role: 'owner' | 'instructor' | 'learner';
-  archived: boolean;
-  acl_version: string;
-}
-export interface Member {
-  user_id: string;
-  display_name: string;
-  role: Workspace['role'];
-}
-export interface Page<T> {
-  items: T[];
-  count: number;
-}
-export function SignedIn({ children }: { children: ReactNode }) {
-  const identity = useIdentity();
-  if (identity.isPending)
-    return (
-      <div className="page">
-        <Notice>Loading your account…</Notice>
-      </div>
-    );
-  if (identity.error)
-    return (
-      <div className="page">
-        <Failure error={identity.error} />
-      </div>
-    );
-  if (!identity.data)
-    return (
-      <div className="page narrow">
-        <h1>Sign in to continue.</h1>
-        <p>Your workspaces are only visible to your account.</p>
-        <Link className="button" to="/login">
-          Sign in
-        </Link>
-      </div>
-    );
-  return children;
-}
+import { InvitationsPanel } from '../invitations/pages.tsx';
 export function WorkspacesPage() {
   return (
     <SignedIn>
@@ -158,40 +120,6 @@ function WorkspaceList() {
         </p>
       </div>
     </div>
-  );
-}
-export function Pagination({
-  offset,
-  count,
-  limit,
-  onChange,
-}: {
-  offset: number;
-  count: number;
-  limit: number;
-  onChange: (n: number) => void;
-}) {
-  if (count <= limit) return null;
-  return (
-    <nav aria-label="Pagination" className="actions content-section">
-      <Button
-        variant="secondary"
-        disabled={offset === 0}
-        onClick={() => onChange(Math.max(0, offset - limit))}
-      >
-        Previous page
-      </Button>
-      <span>
-        {offset + 1}–{Math.min(offset + limit, count)} of {count}
-      </span>
-      <Button
-        variant="secondary"
-        disabled={offset + limit >= count}
-        onClick={() => onChange(offset + limit)}
-      >
-        Next page
-      </Button>
-    </nav>
   );
 }
 export function WorkspacePage() {
@@ -367,6 +295,7 @@ function WorkspaceDetail() {
           />
         )}
       </section>
+      {owner && <InvitationsPanel workspace={workspace} />}
       {owner ? (
         <section className="content-section" aria-labelledby="settings-heading">
           <h2 id="settings-heading">Workspace settings</h2>
