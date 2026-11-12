@@ -9,6 +9,8 @@ dependencies = [
     "channels==4.3.2",
     "daphne==4.2.3",
     "psycopg[binary]==3.3.9",
+    "redis==8.1.0",
+    "channels-redis==4.3.0",
 ]
 
 # This is a runnable Django application, not a published Python library.

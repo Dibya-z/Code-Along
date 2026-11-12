@@ -56,7 +56,7 @@ Milestone status: **In Progress**.
 | ID   | Task and sub-tasks                                                                                                                     | Depends on | Status      | Verification / exit criteria                                                                                                   |
 | ---- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | M1.1 | Django modular backend, initial custom user model before first auth migrations, validated settings, ASGI and safe environment examples | M0         | Completed   | Verified 68 backend cases plus all M0 regressions; initial user migration/reversal and startup proven; commit approval pending |
-| M1.2 | Reproducible Compose stack, same-origin proxy, isolated runner-site routing, documented native fallback and health checks              | M1.1       | Not Started | Documented fresh setup works; services agree on storage/hosts; secrets excluded from images                                    |
+| M1.2 | Reproducible Compose stack, same-origin proxy, isolated runner-site routing, documented native fallback and health checks              | M1.1       | Completed   | Documented fresh setup works; services agree on storage/hosts; secrets excluded from images                                    |
 | M1.3 | React routing/providers, typed API/CSRF client, design primitives and Storybook                                                        | M1.2       | Not Started | Type/lint/component checks, keyboard/focus states and error boundaries                                                         |
 | M1.4 | User authentication/session flows, registration/verification, login/logout and password reset                                          | M1.3       | Not Started | Session/CSRF/Origin/expiry tests, rate limits and non-disclosing reset behavior                                                |
 | M1.5 | Workspace/membership/ownership schema, policies and create/list/update interfaces                                                      | M1.4       | Not Started | Migrations, policy matrix, membership removal and ownership-transfer tests                                                     |
@@ -193,17 +193,17 @@ The owner requested one completion bundle after the approved M0.4b commit. Depen
 | M0.4a        | `910a4e330d31abf287aa422757693cc9b5bd7be5` | Committed and pushed after explicit authorization; 28 Python/122 protocol tests passed                                                                     |
 | M0.4b        | `e7ee8f499031ff0166285965f635b50cae088bab` | Committed after explicit approval; verified persistence proof; manually pushed; GitHub main verified at `ffd4a4a`                                          |
 | M0 remainder | `ffd4a4a788e3e3258b745a78922dff83774d0aaa` | M0.4c/M0.5/M0.6/M0.7 bundle committed after explicit approval as `completed M0 foundation`; manually pushed by the user; GitHub main verified at `ffd4a4a` |
-| M1.1         | Pending approval                           | Verified Django backend foundation; proposed commit `feat: add Django backend` not executed                                                                |
+| M1.1         | `0a9824c`                                  | Verified Django foundation; committed and pushed under M1 authorization                                                                                    |
 
 After an approved commit, replace the pending entry with its actual hash. A commit cannot contain its own final hash: record that hash in the next tracker change and include it in the next approved unit. Do not amend commits or create automatic bookkeeping commits. Record completed units, tests and remaining issues before presenting each subsequent commit.
 
 ## Pending work, known issues and technical debt
 
-- All M0 commits through `ffd4a4a788e3e3258b745a78922dff83774d0aaa` were manually pushed by the user and verified read-only against GitHub main. Further commits and pushes still need explicit approval.
+- All M0 commits through `ffd4a4a788e3e3258b745a78922dff83774d0aaa` were manually pushed by the user and verified read-only against GitHub main. All M1 commits and pushes are authorized; ordinary approval gates resume after M1.
 - Firefox's installed owned engine cannot find fresh profile folders here. Its suite is unverified, not skipped/passed; fix the launcher and execute all cases before claiming support. Chromium/WebKit results do not certify retail browsers, mobile or deployed headers.
 - M1.1 adds backend identity/configuration/migrations/bootstrap only. No user-facing authentication, real collaboration admission/revalidation/revocation, workspace/project APIs or frontend UI exists. Later units retain their original gates.
 - The `checkpoint_proof` schema is disposable fixture DDL, not Django production mapping/history/retention. The one-instance proof is not multi-writer sharding, capacity testing, backup/restore or zero loss of unacknowledged edits. Yjs pending-fragment checks use pinned internals; upgrades need compatibility tests.
-- PostgreSQL 18.7 was built in an external private temporary prefix. It is not a global service, may disappear, and must be replaced with a trusted native toolset to rerun tests. Docker/Redis are not available on the current PATH; Compose and image pins belong to M1.2. Python's binary-recovery test now requires installed Node workspace dependencies.
+- PostgreSQL 18.7 was built in an external private temporary prefix. It is not a global service, may disappear, and must be replaced with a trusted native toolset to rerun tests. M1.2 verifies Docker/Redis in a project-owned Linux VM, and a native Redis build outside Git. Python's binary-recovery test now requires installed Node workspace dependencies.
 - Runner asset hashes are verified by the fixture, which serves the pinned package's assets. The shell build is not a deployable distribution; production packaging, distinct domains/TLS/cookie/header policies and resource controls remain M1/M2. Browser Workers cannot enforce a hard memory quota, and practice feedback can be forged. Extra packages, plots/data export and server grading remain disabled/not implemented.
 - Proof-stage state/source/queue/deadline limits are measured test controls, not security/capacity guarantees. Declared 2–6 editors/room and 30 learners/workspace targets require later load tests. Authentication leases, privacy/retention and deployed-browser security gates are unresolved product work.
 - DESIGN.md/tokens are original source, not completed product UI. Storybook, keyboard/screen-reader/responsive checks and rendered design approval remain M1.3/M5. Reference design files are ignored/preserved and not vendored; do not add assets without licensing review.
@@ -213,13 +213,13 @@ After an approved commit, replace the pending entry with its actual hash. A comm
 
 ## Current unit: M1.1 backend foundation
 
-Status: **Completed** (implemented and verified; commit approval pending). User authorized M1.1 after the verified M0 push. Prior tracker bookkeeping is preserved. M1 remains In Progress; M1.2 is Not Started.
+Status: **Completed**, committed and pushed as `0a9824c` under the owner’s M1 authorization. M1 remains In Progress.
 
 1. **Completed** — API workspace/pins and validated development/production settings; configuration failure cases pass.
 2. **Completed** — UUID user model, canonical email/display name/framework passwords and first migration; user and database invariants pass.
 3. **Completed** — HTTP/ASGI bootstrap, actual ephemeral Daphne startup/cleanup, fresh migration/reversal and regression checks.
 
-Scope: apps/api/pyproject.toml, manage.py, config/settings and environment/bootstrap modules, code_along/accounts model/manager/migrations/tests; root Python workspace/lock/type/test settings; test DB fixture; README/backend setup and tracker/guidance. No login, registration, frontend UI, Compose/proxy, workspace/project APIs or production deployment in this unit. Commit approval remains required.
+Scope: apps/api/pyproject.toml, manage.py, config/settings and environment/bootstrap modules, code_along/accounts model/manager/migrations/tests; root Python workspace/lock/type/test settings; test DB fixture; README/backend setup and tracker/guidance. No login, registration, frontend UI, Compose/proxy, workspace/project APIs or production deployment in this unit. M1 commit/push authorization applies.
 
 - Verification: **97 Python tests** (29 prior + 68 backend), **153 regular JavaScript tests**, and **20 storage + 13 transport** native collaboration cases pass. Ruff lint/format, strict mypy on 24 API source/test/entrypoint/fixture files, JS lint/format/types, frozen offline clean-workspace installs/tests and both lock-preservation checks pass. PyPI metadata reports no known advisories for all 45 exact third-party Python lock entries.
 - Database boundary: PostgreSQL 18.7 private disposable clusters only; UUID account table created without stock auth_user; accounts migration reversed and reapplied; no schema drift. Existing/reference/shared databases were not migrated. Config/HTTP/startup tests need no existing DB service. No server left running.
@@ -227,9 +227,15 @@ Scope: apps/api/pyproject.toml, manage.py, config/settings and environment/boots
 - Deferred: user-facing auth/verification/session flows (M1.4), Compose/proxy/readiness and trusted-header/HSTS policy (M1.2), production mail, workspace/project APIs and frontend UI. Expected production deployment-check warning is security.W004 until HSTS policy is reviewed. Nothing is deployed or advertised as production ready. Runner/browser runtime source is unchanged, so its prior 26-case evidence was retained rather than re-run as backend coverage.
 - Changes: apps/api source/config/migration/test package and placeholder environment template; root pyproject.toml/uv.lock; one ESLint cache exclusion; README, AGENTS, backend setup guide and this tracker (including the verified M0 manual push).
 - Proposed commit: `feat: add Django backend`.
-- Review state: **Approved under the owner’s M1 authorization**. M1.1 commit/push pending. Baseline HEAD is `ffd4a4a788e3e3258b745a78922dff83774d0aaa`.
+- Review state: **Approved under the owner’s M1 authorization**. M1.1 committed/pushed as `0a9824c`.
 - Next after approved commit/progress update: M1.2 development stack/proxy/readiness. Do not start that unit before completing this review workflow.
 
 ## M1 autonomous authorization
 
 The owner authorized completing all M1 tasks with verified granular commits and pushes, without further per-task approval prompts. This includes the reviewed M1.1 bundle. Architecture changes and deployment still require separate approval; preserve all unrelated work. Commit/push only after relevant checks and diff review, then record hashes in the next unit.
+
+## M1.2 development infrastructure
+
+Status: Completed. M1.1 was verified, committed as `0a9824c` and pushed under the owner's M1 authorization. M1.2 adds digest-pinned Compose images, explicit proxy/Redis configuration, readiness, isolated runner static assets with hash validation, TLS generation and an owned native fallback. Linux Compose is tested in a separately owned project-scoped Lima VM; an initial owned Multipass VM could not be reached and was stopped. No existing VM or reference repository was changed.
+
+M1.2 verification: Compose build/start and migrations passed; PostgreSQL restart retained a probe row (removed afterwards), Redis outage produced readiness 503 and recovery restored 200. Runner API routing and unknown-host rejection passed. Native fallback readiness/isolation passed. 105 Python tests, Ruff lint/format and strict mypy (26 files) passed; JavaScript lint/format/type checks passed. No application feature beyond infrastructure is claimed. Proposed commit: `feat: add development stack`.

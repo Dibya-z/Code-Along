@@ -29,7 +29,7 @@ code-along-api = { workspace = true }
 [tool.ruff]
 target-version = "py313"
 line-length = 88
-extend-exclude = [".design-references", ".pnpm-store", ".uv-cache"]
+extend-exclude = [".design-references", ".pnpm-store", ".uv-cache", ".runtime"]
 force-exclude = true
 
 [tool.ruff.lint]

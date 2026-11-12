@@ -14,6 +14,7 @@ export default defineConfig(
       '**/.venv/**',
       '**/.pnpm-store/**',
       '**/.uv-cache/**',
+      '**/.runtime/**',
       '.design-references/**',
     ],
   },

@@ -1,6 +1,7 @@
 import os
 
 from config.environment import load_environment
+from config.services import service_settings
 
 from .base import *  # noqa: F403
 
@@ -16,3 +17,4 @@ CSRF_COOKIE_SECURE = False
 SECURE_SSL_REDIRECT = False
 SECURE_HSTS_SECONDS = 0
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+globals().update(service_settings(os.environ))

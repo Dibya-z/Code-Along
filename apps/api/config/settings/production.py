@@ -1,6 +1,7 @@
 import os
 
 from config.environment import load_environment
+from config.services import service_settings
 
 from .base import *  # noqa: F403
 
@@ -17,3 +18,4 @@ SECURE_SSL_REDIRECT = True
 # Deployment-domain/HSTS policy is finalized with the proxy in M1.2.
 SECURE_HSTS_SECONDS = 0
 EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
+globals().update(service_settings(os.environ))

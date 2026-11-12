@@ -49,3 +49,6 @@ celerybeat-schedule*
 .DS_Store
 .idea/
 /.design-references/
+
+# Owned local development state, certificates and runtime downloads.
+/.runtime/

@@ -1,0 +1,61 @@
+server_tokens off;
+access_log off;
+server {
+  listen 8443 ssl default_server;
+  server_name _;
+  ssl_certificate /certs/cert.pem;
+  ssl_certificate_key /certs/key.pem;
+  return 421;
+}
+server {
+  listen 8443 ssl;
+  server_name 127.0.0.1;
+  ssl_certificate /certs/cert.pem;
+  ssl_certificate_key /certs/key.pem;
+  client_max_body_size 2m;
+  root /srv/web;
+  add_header X-Content-Type-Options nosniff always;
+  add_header Referrer-Policy same-origin always;
+  add_header Cross-Origin-Opener-Policy same-origin always;
+  add_header Cross-Origin-Embedder-Policy require-corp always;
+  add_header Permissions-Policy 'cross-origin-isolated=(self "${RUNNER_ORIGIN}"), camera=(), microphone=()' always;
+  add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src ${RUNNER_ORIGIN}; worker-src 'none'; base-uri 'none'; frame-ancestors 'none'" always;
+  location /api/ {
+    proxy_pass http://api:8000;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Host "";
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+  location /health/ {
+    proxy_pass http://api:8000;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto https;
+  }
+  location / { try_files $uri $uri/ /index.html; }
+}
+server {
+  listen 8443 ssl;
+  server_name localhost;
+  ssl_certificate /certs/cert.pem;
+  ssl_certificate_key /certs/key.pem;
+  root /srv/runner;
+  add_header Cross-Origin-Opener-Policy same-origin always;
+  add_header Cross-Origin-Embedder-Policy require-corp always;
+  add_header Cross-Origin-Resource-Policy cross-origin always;
+  add_header Permissions-Policy 'cross-origin-isolated=(self), camera=(), microphone=()' always;
+  add_header X-Content-Type-Options nosniff always;
+  add_header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; worker-src 'self'; frame-ancestors ${APP_ORIGIN}; base-uri 'none'; form-action 'none'" always;
+  location ~ ^/assets/worker-[A-Za-z0-9_-]+\.js$ {
+    add_header Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'none'" always;
+    add_header Cross-Origin-Embedder-Policy require-corp always;
+    add_header Cross-Origin-Resource-Policy cross-origin always;
+    add_header X-Content-Type-Options nosniff always;
+    try_files $uri =404;
+  }
+  location /api/ { return 404; }
+  location /runtime/ { try_files $uri =404; }
+  location /assets/ { try_files $uri =404; }
+  location = / { try_files /index.html =404; }
+  location / { return 404; }
+}

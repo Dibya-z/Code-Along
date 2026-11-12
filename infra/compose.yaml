@@ -1,0 +1,77 @@
+name: code-along-dev
+x-api: &api
+  build:
+    context: ..
+    dockerfile: infra/docker/api.Dockerfile
+  environment: &api-env
+    DJANGO_SETTINGS_MODULE: config.settings.development
+    CODE_ALONG_DEBUG: 'false'
+    CODE_ALONG_SECRET_KEY: ${CODE_ALONG_SECRET_KEY:?Generate .env with tools/dev/init_development.py}
+    CODE_ALONG_ALLOWED_HOSTS: 127.0.0.1,localhost,api
+    CODE_ALONG_DB_NAME: code_along
+    CODE_ALONG_DB_USER: code_along
+    CODE_ALONG_DB_PASSWORD: ${CODE_ALONG_DB_PASSWORD:?Generate .env first}
+    CODE_ALONG_DB_HOST: db
+    CODE_ALONG_REDIS_URL: redis://redis:6379/0
+    CODE_ALONG_TRUST_PROXY: 'true'
+  networks: [backend]
+  depends_on:
+    db: { condition: service_healthy }
+    redis: { condition: service_healthy }
+services:
+  db:
+    image: postgres:18.7-bookworm@sha256:ece55f7868da684e400f82f1030a050718adbdd65c23aa500c486f6e2950dc0f
+    environment:
+      POSTGRES_DB: code_along
+      POSTGRES_USER: code_along
+      POSTGRES_PASSWORD: ${CODE_ALONG_DB_PASSWORD:?Generate .env first}
+    volumes: [database:/var/lib/postgresql]
+    networks: [backend]
+    healthcheck:
+      test:
+        [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:8.4.5-alpine@sha256:bd4a0d37e7cd830117ffec9329052b4a1887afa060c265e1768f82b177ff6f43
+    command: [redis-server, --save, '', --appendonly, 'no']
+    networks: [backend]
+    healthcheck:
+      { test: [CMD, redis-cli, ping], interval: 3s, timeout: 3s, retries: 20 }
+  migrate:
+    <<: *api
+    command: [/app/.venv/bin/python, manage.py, migrate, --noinput]
+  api:
+    <<: *api
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test:
+        [
+          CMD,
+          /app/.venv/bin/python,
+          -c,
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready/')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  proxy:
+    build:
+      context: ..
+      dockerfile: infra/docker/assets.Dockerfile
+    environment:
+      APP_ORIGIN: https://127.0.0.1:${CODE_ALONG_HTTPS_PORT:-8443}
+      RUNNER_ORIGIN: https://localhost:${CODE_ALONG_HTTPS_PORT:-8443}
+    ports: ['127.0.0.1:${CODE_ALONG_HTTPS_PORT:-8443}:8443']
+    volumes: ['../.runtime/certs:/certs:ro']
+    networks: [backend]
+    depends_on:
+      api: { condition: service_healthy }
+networks:
+  backend:
+volumes:
+  database:

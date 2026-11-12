@@ -62,3 +62,4 @@ REST_FRAMEWORK = {
 }
 # No in-memory substitute for Redis and no product WebSocket subscriptions yet.
 CHANNEL_LAYERS: dict[str, object] = {}
+REDIS_CONNECTION_SECRET: str | None = None
