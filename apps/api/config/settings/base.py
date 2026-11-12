@@ -14,6 +14,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "channels",
     "code_along.accounts.apps.AccountsConfig",
+    "code_along.workspaces.apps.WorkspacesConfig",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

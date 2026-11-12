@@ -4,6 +4,7 @@ from django.urls import include, path
 from .views import csrf_token, liveness, readiness
 
 urlpatterns = [
+    path("api/v1/workspaces/", include("code_along.workspaces.urls")),
     path("api/v1/auth/", include("allauth.headless.urls")),
     path("api/v1/me/", CurrentUserView.as_view(), name="current-user"),
     path("api/v1/csrf/", csrf_token, name="csrf-token"),

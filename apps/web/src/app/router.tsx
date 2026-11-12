@@ -9,6 +9,10 @@ import {
 } from 'react-router';
 import { AccountPage, AccountActions } from '../features/auth/pages.tsx';
 import { useIdentity } from '../features/auth/session.ts';
+import {
+  WorkspacesPage,
+  WorkspacePage,
+} from '../features/workspaces/pages.tsx';
 function Shell() {
   const location = useLocation();
   const identity = useIdentity();
@@ -58,6 +62,8 @@ function Shell() {
   );
 }
 function Home() {
+  const identity = useIdentity();
+  if (identity.data) return <WorkspacesPage />;
   return (
     <div className="page">
       <p className="eyebrow">A PLACE TO WORK TOGETHER</p>
@@ -125,7 +131,8 @@ const router = createBrowserRouter([
     errorElement: <Missing />,
     children: [
       { index: true, element: <Home /> },
-      { path: 'workspaces', element: <Home /> },
+      { path: 'workspaces', element: <WorkspacesPage /> },
+      { path: 'workspaces/:workspaceId', element: <WorkspacePage /> },
       { path: 'login', element: <AccountPage key="login" kind="login" /> },
       {
         path: 'auth/signup',
