@@ -4,11 +4,11 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-Architecture approved on 13 November 2026. The first implementation unit records the design and development plan. There is no application, dependency installation, database migration, runnable service or test framework yet.
+Architecture approved on 13 November 2026. M0.1 recorded the design and development plan; M0.2 is establishing repository hygiene and tooling. There is no application, dependency installation, database migration, runnable service or test framework yet.
 
 - [Approved architecture](docs/architecture/approved-architecture.html): feature comparison, technology decisions, domain/schema relationships, protocols, security boundaries, target folder structure and milestone gates. Open the HTML file in a browser. Some historical investigation links refer to machine-local files and are not portable.
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): task order, dependencies, acceptance criteria, status, review state and commit records.
-- `AGENTS.md`: existing local engineering guidance; currently outside the proposed initial commit.
+- [Repository instructions](AGENTS.md): engineering, security, verification and commit-approval rules.
 
 ## Approved architecture
 
@@ -36,6 +36,14 @@ M6 adds optional trusted server grading behind a security gate. M7 adds prioriti
 There are no install, development, migration, build or application-test commands yet. Do not treat planned folders or stack choices as runnable functionality. Verified commands, prerequisites, safe environment examples and service URLs will be added with the unit that introduces each tool or service.
 
 No credentials belong in documentation or source control. PyTogether remains a read-only technical reference; its code, assets and branding are not imported into the application.
+
+## Repository hygiene
+
+`.gitignore` excludes local environment/credential files, dependency directories, virtual environments, caches, test reports, build outputs and local databases. Root `.env.example`, nested `.env.example`, `.env.test.example`, Python/JavaScript source and dependency lockfiles remain eligible for Git. Examples must contain placeholders only. Git ignore rules do not remove already tracked secrets; review the staged diff before each commit.
+
+`.design-references/` remains an ignored local design library, preserved on disk and excluded from Git. It must not be included in future production images or asset bundles. The existing clone has not been imported or modified.
+
+Use `git status --short`, `git diff --cached --check` and `git diff --cached` to inspect a proposed unit. A file being eligible for Git is not approval to include it.
 
 ## Development workflow
 

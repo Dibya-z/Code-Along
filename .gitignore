@@ -1,0 +1,51 @@
+# Local environment and credential material; examples must contain placeholders.
+.env
+.env.*
+*.env
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+/secrets/
+/.aws/
+
+# JavaScript dependencies, builds and tool caches.
+node_modules/
+dist/
+build/
+.vite/
+.turbo/
+.pnpm-store/
+*.tsbuildinfo
+
+# Python environments, bytecode and tool caches.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.uv-cache/
+
+# Test reports and runtime artifacts.
+coverage/
+.coverage
+.coverage.*
+htmlcov/
+playwright-report/
+test-results/
+*.log
+*.pid
+*.pid.lock
+*.sqlite3
+*.sqlite3-*
+celerybeat-schedule*
+
+# Machine-local files and reference material (not application source).
+.DS_Store
+.idea/
+/.design-references/

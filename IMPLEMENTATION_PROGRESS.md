@@ -39,8 +39,8 @@ Milestone status: **In Progress**.
 
 | ID | Task and sub-tasks | Depends on | Status | Verification / exit criteria |
 | --- | --- | --- | --- | --- |
-| M0.1 | Record approved architecture; create README and complete implementation tracker; inspect/preserve Git baseline | Approval received | Completed | Check document structure/links, roadmap coverage, approved scope, diff and intended staged files; commit still awaits approval |
-| M0.2 | Add minimum workspace/tooling and safe ignore rules; verify installed prerequisites; select compatible patches and create locks for the proofs | M0.1 committed | Not Started | Reproducible install and appropriate lint/type/test commands; secrets/local caches/build outputs ignored; no placeholder application scaffold |
+| M0.1 | Record approved architecture; create README and complete implementation tracker; inspect/preserve Git baseline | Approval received | Completed | Verified documentation, roadmap coverage and intended diff; committed as `6a38d54` after user approval |
+| M0.2 | Add minimum workspace/tooling and safe ignore rules; verify installed prerequisites; select compatible patches and create locks for the proofs | M0.1 committed | In Progress | Reproducible install and appropriate lint/type/test commands; secrets/local caches/build outputs ignored; no placeholder application scaffold |
 | M0.3 | Define versioned collaboration checkpoint/receipt contract and focused test harness | M0.2 | Not Started | Tests specify delete-only coverage, idempotency, pending/saved meaning and stale-state handling |
 | M0.4 | Prove Hocuspocus/Yjs binary persistence against PostgreSQL with serialized/CAS writes and atomic receipts | M0.3 | Not Started | Concurrent edits/deletes, duplicate requests, delayed stale save, reconnect and database/process failure tests; rejected writes receive no Saved receipt |
 | M0.5 | Define runner threat model, manifest/message contract, supported-browser matrix and separate-site test environment | M0.4 | Not Started | Origin/cookie/CSP/iframe/Worker boundaries and explicit browser support/fallback criteria documented |
@@ -146,32 +146,42 @@ Milestone status: **Not Started**. Prioritize extensions after pilot evidence; d
 | M7.5 | Git integration and larger project/data workflows | M5; approved feature design | Not Started | Narrow credential scope, conflict handling and bounded import/export |
 | M7.6 | Measured collaboration sharding or additional execution profiles | M5; demonstrated need and approved design | Not Started | Ownership fencing/split-brain recovery or profile-specific security/compatibility gates |
 
-## Current unit: M0.1
+## M0.2 implementation units
 
-- Task status: **Completed** (documentation implemented and verified; commit approval pending).
-- Files: `README.md`, `IMPLEMENTATION_PROGRESS.md`, `docs/architecture/approved-architecture.html`.
-- Completed functionality: persistent approved design, full task/dependency/acceptance breakdown, truthful current-state/setup documentation and approval workflow. No application functionality introduced.
-- Verification: documentation/local-link and HTML structure checks; milestone/status/task/dependency coverage; reviewed staged diff/paths and content for unintended secrets/generated artifacts. No application tests exist or were claimed to run.
-- Proposed commit: `docs: record approved architecture and implementation roadmap`.
-- Review state: **Awaiting user approval**. No commit, push, merge or deployment performed.
-- Commit hash: **Pending approval**; no HEAD exists yet.
-- Next unit after approval/commit/progress update: **M0.2**. Recheck installed tools and current primary documentation before selecting exact dependency versions.
+M0.2 is split into independently verified commits. It remains In Progress until all sub-units pass; repository hygiene alone does not establish a reproducible dependency installation.
+
+| Unit | Scope | Depends on | Status | Review / verification |
+| --- | --- | --- | --- | --- |
+| M0.2a | Git exclusions, current repository guidance, README/tracker updates | M0.1 committed | Completed | Ignore-policy checks, preserved-file checks and staged review passed; awaiting commit approval |
+| M0.2b | Minimum pnpm workspace and JavaScript collaboration-proof tooling with exact versions/locks | M0.2a committed | Not Started | Check current primary documentation; reproducible frozen install, relevant lint/type/test tooling |
+| M0.2c | Minimum Python tooling/lock and documented prerequisites for later Django/runner work | M0.2b committed | Not Started | Python 3.13 selection, reproducible sync and relevant checks; no application scaffold |
+
+## Current unit: M0.2a
+
+- Task status: **Completed** (repository hygiene verified; commit approval pending).
+- Files: `.gitignore`, existing `AGENTS.md`, `README.md`, `IMPLEMENTATION_PROGRESS.md`.
+- Completed functionality: ignore rules for local credentials, dependencies, caches and generated artifacts; updated guidance for the approved stack and incremental approval workflow; M0.1 hash recorded.
+- Verification: Git ignore behavior against representative sensitive/generated files and legitimate source/lock/example paths; Markdown links/status references; staged whitespace/content/path review; preserved design-reference and PyTogether content. No application tests exist or were claimed to run.
+- Proposed commit: `chore: establish repository hygiene and engineering guidance`.
+- Review state: **Awaiting user approval**. No second commit, push, merge or deployment performed.
+- Next unit after approval/commit/progress update: **M0.2b**. Exact dependency versions are not selected yet.
 
 ## Commit ledger
 
 | Unit | Commit | Review state |
 | --- | --- | --- |
-| M0.1 | Pending approval | Proposed documentation commit; no commit executed |
+| M0.1 | `6a38d545ffee3381bc15f9d03ac32706ef657153` | Committed after explicit user approval; documentation checks passed |
+| M0.2a | Pending approval | Proposed repository-hygiene commit; not executed |
 
 After an approved commit, replace the pending entry with its actual hash. A commit cannot contain its own final hash: record that hash in the next tracker change and include it in the next approved unit. Do not amend commits or create automatic bookkeeping commits. Record completed units, tests and remaining issues before presenting each subsequent commit.
 
 ## Pending work, known issues and technical debt
 
-- Every task after M0.1 is Not Started; architecture approval does not imply compatibility or capacity results.
-- No exact dependency locks, runnable setup or automated application checks exist yet. M0.2 introduces the minimal required tooling; README will document only verified commands.
+- M0.1 is committed; M0.2 is In Progress with only its hygiene sub-unit verified. Later tasks remain Not Started. Architecture approval does not imply compatibility or capacity results.
+- No exact dependency locks, runnable setup or automated application checks exist yet. M0.2b/M0.2c introduce minimal tooling; README will document only verified commands. Installed Node 24.22.3, Python 3.13 and uv were found; pnpm, Docker, PostgreSQL and Redis executables were not found on the current PATH. This is not proof that no installation exists elsewhere.
 - Critical open validation: Hocuspocus receipt extension and binary durability; runner origin/header/browser/stdin compatibility. Raise an architecture approval request if these proofs require a design change.
-- Existing `AGENTS.md` describes the pre-architecture state and remains untouched in this unit. Reconcile its current-state section in a later focused documentation/tooling unit while retaining its engineering/approval rules.
-- Existing design references remain preserved and untracked. Decide on deliberate vendoring/licensing treatment before adding them; never stage them through blanket `git add .`.
+- Existing `AGENTS.md` is intentionally updated in M0.2a to reflect the approved architecture and commit-review workflow; its engineering/security principles are retained.
+- Existing design references remain preserved as an ignored local reference library. They are not production assets or vendored dependencies. Any future vendoring/reuse needs deliberate licensing and scope review; never force-add them implicitly.
 - Historical machine-local links in the archived architecture may be unavailable elsewhere. The design itself is retained in this repository; evidence reports remain outside it and are not required to read the architecture or plan.
 - The local upstream reference is unresolved; no GitHub synchronization has been attempted. Verify remote state before future approved publishing work.
 - No application technical debt has been introduced. Performance targets, preview budgets and the bounded live-authorization fallback require measurement/acceptance tests before claiming guarantees.
