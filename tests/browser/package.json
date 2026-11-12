@@ -1,0 +1,24 @@
+{
+  "name": "@code-along/browser-proofs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:browser": "playwright test --project=chromium --project=webkit",
+    "build": "vite build",
+    "typecheck": "tsc --project tsconfig.json",
+    "test:firefox": "playwright test --project=firefox",
+    "test:all": "playwright test"
+  },
+  "dependencies": {
+    "@code-along/contracts": "workspace:*",
+    "@codemirror/view": "6.43.15",
+    "@codemirror/state": "6.7.6",
+    "y-codemirror.next": "0.3.6",
+    "yjs": "13.6.33",
+    "y-protocols": "1.0.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  }
+}

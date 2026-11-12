@@ -3,5 +3,9 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["collaboration/**/*.ts", "tests/**/*.test.ts"]
+  "include": [
+    "collaboration/**/*.ts",
+    "execution/**/*.ts",
+    "tests/**/*.test.ts"
+  ]
 }

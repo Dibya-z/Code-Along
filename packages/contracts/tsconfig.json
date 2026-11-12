@@ -5,5 +5,5 @@
     "types": [],
     "allowImportingTsExtensions": true
   },
-  "include": ["collaboration/**/*.ts"]
+  "include": ["collaboration/**/*.ts", "execution/**/*.ts"]
 }

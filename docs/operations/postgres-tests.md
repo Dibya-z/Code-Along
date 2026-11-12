@@ -1,6 +1,6 @@
 # Disposable PostgreSQL 18 tests
 
-M0.4a provides a native test-cluster harness. It creates no application database/schema and does not implement the checkpoint writer. The separate [M0.4b storage proof](../architecture/checkpoint-persistence-proof.md) now tests binary persistence and atomic receipts; actual provider/restart behavior remains M0.4c.
+M0.4a provides a native test-cluster harness. It creates no application database/schema and does not implement the checkpoint writer. The separate [M0.4b storage proof](../architecture/checkpoint-persistence-proof.md) now tests binary persistence and atomic receipts; the completed M0.4c transport/restart evidence is linked below.
 
 ## Prerequisites and commands
 
@@ -86,4 +86,15 @@ Set CODE_ALONG_PG_PREFIX to your chosen private installation location before tho
 
 The M0.4a suite verifies version/discovery failures, actual server settings/private permissions, commit/rollback, separation of two simultaneous clusters, SQL diagnostic redaction, cleanup on body/startup failure, child exit propagation and SIGTERM cleanup of both child and database. Commands and real server execution were verified with PostgreSQL 18.7.
 
-These are database-harness tests. They do not establish CRDT convergence, checkpoint idempotency, atomic receipt transactions, stale-save protection, restart recovery or authorization. The separate M0.4b suite now covers storage transactions/CAS/idempotency; full provider and restart coverage remains M0.4c. There is no application URL or persistent local service after the tests finish. See [PostgreSQL initdb](https://www.postgresql.org/docs/18/app-initdb.html) and [connection settings](https://www.postgresql.org/docs/18/runtime-config-connection.html) for native server behavior.
+These are database-harness tests. They do not establish CRDT convergence, checkpoint idempotency, atomic receipt transactions, stale-save protection, restart recovery or authorization. The separate M0.4b suite now covers storage transactions/CAS/idempotency; M0.4c now adds provider/restart fixture evidence as described below; full product authorization remains M1/M3. There is no application URL or persistent local service after the tests finish. See [PostgreSQL initdb](https://www.postgresql.org/docs/18/app-initdb.html) and [connection settings](https://www.postgresql.org/docs/18/runtime-config-connection.html) for native server behavior.
+
+## Additional M0 integration gates
+
+The Hocuspocus transport suite runs through a **separate fresh cluster**, because each explicit integration suite creates its own fixture schema/role:
+
+```sh
+uv run --locked --offline python tools/dev/postgres_cluster.py -- \
+  corepack pnpm --filter @code-along/collaboration test:transport
+```
+
+The Python suite now has 29 cases and additionally requires Node plus the installed pnpm workspace for `test_checkpoint_recovery.py`. That case saves a real binary checkpoint/receipt, requests immediate shutdown of its owned PostgreSQL postmaster, starts the same owned data directory for WAL recovery, and verifies exact source/idempotency from a fresh Node process. It cleans both process lifetimes/data on success or failure. It does not kill a shared database or claim power-loss/backup/HA coverage. See the [M0 record](../architecture/m0-validation.md).

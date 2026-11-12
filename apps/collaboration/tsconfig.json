@@ -5,5 +5,10 @@
     "types": ["node"],
     "allowImportingTsExtensions": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "vitest.integration.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "vitest.integration.config.ts",
+    "vitest.transport.config.ts"
+  ]
 }

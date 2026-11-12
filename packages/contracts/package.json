@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./collaboration": "./collaboration/checkpoints.ts"
+    "./collaboration": "./collaboration/checkpoints.ts",
+    "./execution": "./execution/runner.ts"
   },
   "scripts": {
     "typecheck": "tsc --project tsconfig.json && tsc --project tsconfig.test.json"

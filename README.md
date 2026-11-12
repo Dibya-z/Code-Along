@@ -4,7 +4,7 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-Architecture approved on 13 November 2026. M0.1 recorded the design and development plan; M0.2 tooling is complete. M0.3 added the shared collaboration checkpoint contract and protocol tests. M0.4a added disposable PostgreSQL 18 clusters; M0.4b implements and tests the binary checkpoint store. There is no application UI, migration or persistent service yet.
+Architecture approved on 13 November 2026. M0 now has verified collaboration checkpoint/storage/transport proofs, a separate-site Pyodide Worker proof, execution contracts and original design tokens. There is no Django/React product UI, production migration or deployable application yet. The remaining M0 bundle is prepared for review; only approved commits have been executed.
 
 - [Approved architecture](docs/architecture/approved-architecture.html): feature comparison, technology decisions, domain/schema relationships, protocols, security boundaries, target folder structure and milestone gates. Open the HTML file in a browser. Some historical investigation links refer to machine-local files and are not portable.
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): task order, dependencies, acceptance criteria, status, review state and commit records.
@@ -23,7 +23,7 @@ Architecture approved on 13 November 2026. M0.1 recorded the design and developm
 | Design system                         | Original semantic tokens and accessible primitives, guided by Taste Skill, web-design and Awesome DESIGN.md |
 | Later authoritative grading           | Separate Linux execution hosts, sandbox controller and external trusted scoring                             |
 
-Exact compatible patches, dependency locks and image digests will be verified in M0. A peer-sync event is not a durable save acknowledgment. Local practice results are not trusted grades. Submissions preserve the exact accepted source/runtime manifest. Workspace teaching roles do not grant blanket access to private live projects.
+Critical proof dependencies are pinned and measured in M0; product framework pins and deployment image digests are verified when introduced in M1. A peer-sync event is not a durable save acknowledgment. Local practice results are not trusted grades. Submissions preserve the exact accepted source/runtime manifest. Workspace teaching roles do not grant blanket access to private live projects.
 
 ## Release scope
 
@@ -55,7 +55,7 @@ The first install needs access to the npm registry. Dependency lifecycle scripts
 | `corepack pnpm check`        | Runs lint, format check and typecheck; run `test` separately for behavioral checks                              |
 | `corepack pnpm test`         | Runs the protocol test suite, including actual Yjs deletion/remote-update cases; empty suites still fail        |
 
-The regular JavaScript suite has **133 tests**: 122 protocol cases in `packages/contracts/tests/checkpoints.test.ts` and 11 binary-state validation cases. A separate native-database suite has **20 integration tests**. These passed in the development tree and a clean cached workspace. No pass-with-no-tests bypass is enabled. The regular suite verifies contract/binary validation; the separate integration suite verifies real transactions and receipts in a disposable PostgreSQL fixture. Neither is a live browser/provider proof. M0.2's temporary tool fixtures were removed after verification.
+The regular JavaScript suite has **153 tests**: 122 checkpoint protocol, 11 binary validation, 2 checkpoint controller, 16 execution contract and 2 theme contrast cases. Separate native suites have **20 storage** and **13 transport** cases. Browser and Python gates are listed below. No empty-suite bypass is enabled; each gate reports its actual scope rather than claiming whole-product coverage.
 
 ### Pinned JavaScript tools
 
@@ -69,11 +69,11 @@ The regular JavaScript suite has **133 tests**: 122 protocol cases in `packages/
 | Vitest / Vite       | 5.1.0 / 8.3.8    |
 | @types/node         | 24.19.2          |
 
-TypeScript 6.0.3 satisfies the selected parser's declared `<6.1.0` peer range; TypeScript 7 does not. [Parser release metadata](https://registry.npmjs.org/typescript-eslint/8.72.2). Vite is an explicit Vitest peer dependency, not an implemented frontend. Prettier 3.10.0 avoids the newer patch's release-age exception. Exact direct versions and the pnpm-generated lockfile preserve the tested dependency graph; pnpm's strict engine/peer checks remain enabled. The workspace uses [current pnpm settings](https://pnpm.io/settings) and [ESLint flat configuration](https://typescript-eslint.io/getting-started/).
+TypeScript 6.0.3 satisfies the selected parser's declared `<6.1.0` peer range; TypeScript 7 does not. [Parser release metadata](https://registry.npmjs.org/typescript-eslint/8.72.2). Vite is a Vitest peer and now builds the two browser/runner fixtures; a React product frontend is not implemented. Prettier 3.10.0 avoids the newer patch's release-age exception. Exact direct versions and the pnpm-generated lockfile preserve the tested dependency graph; pnpm's strict engine/peer checks remain enabled. The workspace uses [current pnpm settings](https://pnpm.io/settings) and [ESLint flat configuration](https://typescript-eslint.io/getting-started/).
 
 The initial audit identified [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) in minimatch 10.2.6. Workspace overrides resolve only the affected ESLint, @eslint/config-array and @typescript-eslint/typescript-estree dependency edges to patched **11.0.1**. This is a deliberate cross-major substitution: frozen-install and lint positive/negative checks were rerun, and the resulting audit reported no known vulnerabilities. Remove these temporary overrides when the parent packages adopt patched versions, rerunning the checks rather than widening unrelated dependencies. Audit results describe the check date, not a guarantee against undiscovered issues.
 
-Root tooling and the first private workspace, `@code-along/contracts`, now exist. The workspace still reserves apps/* without creating empty applications. Yjs 13.6.33 is test-only in contracts; the exported runtime contract has no third-party dependencies. The collaboration storage package uses Yjs 13.6.33 and pg 8.23.1 with @types/pg 8.23.1. No React or Hocuspocus server is installed yet. Python tooling is documented below. macOS arm64 was verified; browsers and other operating systems have not been tested.
+The six workspaces are the root, contracts, collaboration, runner-web, browser-proofs and design-system. Only modules required by these proofs exist. Yjs 13.6.33 is test-only in contracts; the exported runtime contract has no third-party dependencies. The collaboration storage package uses Yjs 13.6.33 and pg 8.23.1 with @types/pg 8.23.1. Hocuspocus server/provider 4.8.0, Pyodide 314.0.7 and CodeMirror binding dependencies are now pinned for the proofs. No React product exists yet. The exact stack and measured browser scope are in the [M0 report](docs/architecture/m0-validation.md).
 
 ### Collaboration checkpoint contract
 
@@ -81,9 +81,9 @@ Read the [v1 protocol specification](docs/protocols/collaboration-checkpoints.md
 
 - `parseCheckpointRequest` and `parseCheckpointResponse` validate bounded JSON envelopes, exact versions/fields, canonical base64, UUIDs, safe counters, digests and decimal PostgreSQL revisions. Parsing does not authorize access or prove valid Yjs state.
 - `receiptCoversObservedState` matches a trusted parsed receipt to the immutable pending request and current observed document/session/generation/counter. Older receipts, errors, remote edits and deletion-only changes cannot incorrectly mark the current observation Saved.
-- The package exports source TypeScript via `@code-along/contracts/collaboration`. Source is typechecked without Node globals; tests have their own Node/DOM declarations because Yjs's XML types refer to DOM interfaces. Native Node 24 import and the Vitest package export were verified. This does not claim a browser runtime test.
+- The package exports source TypeScript via `@code-along/contracts/collaboration`. Source is typechecked without Node globals; tests have their own Node/DOM declarations because Yjs's XML types refer to DOM interfaces. Native Node 24 import and the Vitest package export were verified. The separate browser proof exercises the execution package and CodeMirror/Yjs binding; it is not a complete browser-to-server IDE.
 
-Run `corepack pnpm test` locally to exercise the first protocol behavior. The storage proof below now verifies real save transactions/idempotency; auth integration, Hocuspocus transport and restart behavior remain M0.4c/M3 work. There is no localhost application preview or start command yet. Provider sync is never a commit receipt; a checksum is not an authentication mechanism or named source revision.
+Run `corepack pnpm test` locally to exercise the first protocol behavior. The storage proof below now verifies real save transactions/idempotency; real Hocuspocus transport and restart tests are also supplied below; production auth remains M1/M3 work. The product has no localhost preview/start command; browser proof commands are listed below. Provider sync is never a commit receipt; a checksum is not an authentication mechanism or named source revision.
 
 ### Binary checkpoint storage proof
 
@@ -96,7 +96,33 @@ uv run --locked --offline python tools/dev/postgres_cluster.py -- \
   corepack pnpm --filter @code-along/collaboration test:integration
 ```
 
-Set CODE_ALONG_POSTGRES_BIN as described below first. `corepack pnpm test` runs the regular suite only; it explicitly excludes `*.integration.test.ts`. The separate native command runs all 20 integration tests and fails without the required harness. Django still owns production schema/migrations; the SQL fixture is not a product migration. This is a storage component with no public server, authorization integration or preview URL.
+Set CODE_ALONG_POSTGRES_BIN as described below first. `corepack pnpm test` runs the regular suite only; it explicitly excludes `*.integration.test.ts`. The separate native command runs all 20 integration tests and fails without the required harness. Django still owns production schema/migrations; the SQL fixture is not a product migration. The separate loopback transport fixture adds no public server or production authorization integration.
+
+### Remaining M0 proofs
+
+Read the [M0 validation report](docs/architecture/m0-validation.md), [runner threat model](docs/architecture/runner-threat-model.md), [architecture decisions](docs/architecture/decisions.md) and [original design direction](DESIGN.md).
+
+With the same PostgreSQL prerequisite, run real providers against a disposable database:
+
+```sh
+uv run --locked --offline python tools/dev/postgres_cluster.py -- \
+  corepack pnpm --filter @code-along/collaboration test:transport
+```
+
+For local cross-site execution tests, install the owned browser engines explicitly and build both fixture applications:
+
+```sh
+corepack pnpm --filter @code-along/browser-proofs exec playwright install chromium webkit
+corepack pnpm --filter @code-along/runner-web build
+corepack pnpm --filter @code-along/browser-proofs build
+corepack pnpm --filter @code-along/browser-proofs test:browser
+```
+
+This requires OpenSSL and free loopback port 9443. The test fixture serves the app at HTTPS 127.0.0.1 and runner at HTTPS localhost with separate-site policy, a temporary self-signed certificate and fixed hash-verified runtime assets. It shuts down after the tests. No trust-store or hosts-file changes are needed. The shell build alone is **not deployable**: production runtime asset packaging and configured domains/headers arrive in M1/M2. Temporary keys/traces/builds remain ignored.
+
+The browser gate contains 13 cases each for Chromium and WebKit. Firefox is **unverified** here: its owned launcher reports `Could not find profile folder` before navigation, including with alternate fresh profiles. `test:firefox` remains an explicit failing gate until that environment issue is resolved; `test:all` includes all three engines. Retail-browser/mobile certification remains later work. The report records exact versions and limits; no browser memory quota or trusted grading is claimed.
+
+The design system currently exports only original semantic CSS tokens. Primitives, Storybook and product screens begin in M1.3; technical proof pages are not UI designs to evaluate.
 
 ### Python tooling
 
@@ -141,7 +167,7 @@ uv run --locked --offline python -m pytest -q
 
 The path is a placeholder for your installation. PostgreSQL 18.7 was compiled and verified outside the repository on this machine; no global service or reference database was changed. The harness validates tool versions, strips inherited PG connection settings, propagates child failures and cleans up after normal/error/handled-interrupt paths. Unit-only prerequisite checks can run with `-m 'not postgres'`, explicitly excluding integration coverage.
 
-The first Python suite has **28 tests** (19 prerequisite/unit cases and 9 real-cluster integration cases). The tests verify version/settings, transaction rollback, isolation and process cleanup. The separate M0.4b suite now proves storage/receipt transactions; M0.4c still needs actual Hocuspocus transport and process-restart evidence. The tests leave no running application/database service or preview URL.
+The Python suite has **29 tests** (19 prerequisite/unit cases and 10 real-cluster cases). The binary-recovery case additionally requires Node and the installed pnpm workspace. The tests verify version/settings, transaction rollback, isolation and process cleanup. The separate M0.4b suite now proves storage/receipt transactions; M0.4c adds real Hocuspocus transport and process-restart evidence. The tests leave no running application/database service or preview URL.
 
 No credentials belong in documentation or source control. PyTogether remains a read-only technical reference; its code, assets and branding are not imported into the application.
 
@@ -155,7 +181,7 @@ Use `git status --short`, `git diff --cached --check` and `git diff --cached` to
 
 ## Development workflow
 
-During foundation work, group 2–3 closely related tasks into one reviewable unit when they share a coherent purpose. Implement and verify each task sequentially before starting the next task in that bundle. Review the combined diff and request one commit approval. Keep substantial protocol, persistence, authentication and execution-security changes separate. Milestone order remains unchanged; the task count is a guideline.
+By default, group 2–3 closely related foundation tasks when they share a coherent purpose. The owner explicitly authorized completing the remaining M0 tasks in one review bundle after the M0.4b commit; this is a scoped exception, not a change to future milestone commit policy. Implement and verify each task sequentially before starting the next task in that bundle. Review the combined diff and request one commit approval. Keep substantial protocol, persistence, authentication and execution-security changes separate. Milestone order remains unchanged; the task count is a guideline.
 
 For each independently reviewable unit:
 

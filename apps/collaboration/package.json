@@ -5,14 +5,21 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --project tsconfig.json",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:transport": "vitest run --config vitest.transport.config.ts"
   },
   "dependencies": {
     "@code-along/contracts": "workspace:*",
     "pg": "8.23.1",
-    "yjs": "13.6.33"
+    "yjs": "13.6.33",
+    "@hocuspocus/server": "4.8.0",
+    "lib0": "0.2.117",
+    "y-protocols": "1.0.7"
   },
   "devDependencies": {
-    "@types/pg": "8.23.1"
+    "@types/pg": "8.23.1",
+    "@hocuspocus/provider": "4.8.0",
+    "ws": "8.22.2",
+    "@types/ws": "8.18.2"
   }
 }

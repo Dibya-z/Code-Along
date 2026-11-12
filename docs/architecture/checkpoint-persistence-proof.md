@@ -1,6 +1,6 @@
 # Binary checkpoint persistence proof (M0.4b)
 
-Status: implemented and tested against disposable PostgreSQL 18.7. This is a storage component/proof, not a running collaboration service. Authentication, provider routing, peer-forged receipt prevention and process/database restart behavior remain M0.4c/M3 gates. Read the [wire contract](../protocols/collaboration-checkpoints.md) and [database harness setup](../operations/postgres-tests.md).
+Status: implemented and tested against disposable PostgreSQL 18.7. This is a storage component/proof, not a running collaboration service. Production authentication remains M1/M3 work. The subsequent M0 transport/restart proof is recorded below. Read the [wire contract](../protocols/collaboration-checkpoints.md) and [database harness setup](../operations/postgres-tests.md).
 
 ## Ownership and interfaces
 
@@ -69,4 +69,8 @@ The integration fixture creates a login role with SELECT metadata, SELECT/INSERT
 
 Real tests cover competing initial seeds, binary reload, duplicate/conflicting requests, delayed autosaves after deletion, forced CAS overlap, receipt/state invisibility before COMMIT, insert/deferred-COMMIT rollback, backend termination before commit and retry, generation rejection, receipt pruning, bigint precision, corruption checks, queue recovery and database privileges.
 
-No Hocuspocus socket, browser editor, production migration or learner authentication flow has been implemented here. Rebuilding a store object is not a process-restart test. Full restart/crash recovery, network ordering, provider integration and revocation tests remain M0.4c/M3. The tests deliberately use a disposable fixture and leave no running database/application service.
+This storage suite by itself supplies no Hocuspocus socket, browser editor, production migration or learner authentication flow. Rebuilding a store object is not a process-restart test. Separate M0.4c tests now add provider and real process/database recovery evidence; revocation, full browser-to-server IDE and production integration remain M1/M3. The fixtures leave no running database/application service.
+
+## Subsequent M0 transport evidence
+
+The separate `test:transport` suite now exercises real Hocuspocus/provider sync, correlated server-only receipts, rejection paths and collaboration process SIGKILL/restart. Python also exercises a committed binary checkpoint/receipt through immediate PostgreSQL shutdown and WAL recovery using fresh Node processes. See [the consolidated M0 record](m0-validation.md) for current commands and measured scope. These additions do not turn fixture DDL/admission into production schema/auth or establish product capacity/backup guarantees.
