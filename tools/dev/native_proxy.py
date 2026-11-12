@@ -12,7 +12,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
-PORT = 8443
+PORT = int(os.environ.get("CODE_ALONG_HTTPS_PORT", "8443"))
 APP = f"https://127.0.0.1:{PORT}"
 RUNNER = f"https://localhost:{PORT}"
 
@@ -65,6 +65,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 }
             }
             request_headers["X-Forwarded-Proto"] = "https"
+            request_headers["X-Forwarded-For"] = self.client_address[0]
             with closing(
                 http.client.HTTPConnection(
                     "127.0.0.1",

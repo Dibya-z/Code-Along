@@ -14,6 +14,9 @@ x-api: &api
     CODE_ALONG_DB_HOST: db
     CODE_ALONG_REDIS_URL: redis://redis:6379/0
     CODE_ALONG_TRUST_PROXY: 'true'
+    CODE_ALONG_APP_ORIGIN: https://127.0.0.1:${CODE_ALONG_HTTPS_PORT:-8443}
+    CODE_ALONG_MAIL_DIR: /app/dev-mail
+  volumes: [mail:/app/dev-mail]
   networks: [backend]
   depends_on:
     db: { condition: service_healthy }
@@ -75,3 +78,4 @@ networks:
   backend:
 volumes:
   database:
+  mail:

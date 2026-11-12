@@ -21,7 +21,7 @@ def _required(environ: Mapping[str, str], name: str) -> str:
     return value
 
 
-def _host(value: str) -> bool:
+def valid_host(value: str) -> bool:
     if not value or len(value) > 253:
         return False
     if value.startswith("[") and value.endswith("]"):
@@ -88,7 +88,7 @@ def load_environment(
         "CODE_ALONG_ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]" if development else ""
     )
     hosts = tuple(part.strip() for part in hosts_value.split(","))
-    if not all(_host(host) for host in hosts):
+    if not all(valid_host(host) for host in hosts):
         raise ImproperlyConfigured(
             "CODE_ALONG_ALLOWED_HOSTS requires exact hostnames without schemes, ports or wildcards."
         )
@@ -99,7 +99,7 @@ def load_environment(
             "CODE_ALONG_DB_NAME and CODE_ALONG_DB_USER must be PostgreSQL identifiers."
         )
     db_host = _required(environ, "CODE_ALONG_DB_HOST")
-    if not db_host.startswith("/") and not _host(db_host):
+    if not db_host.startswith("/") and not valid_host(db_host):
         raise ImproperlyConfigured(
             "CODE_ALONG_DB_HOST must be a hostname or absolute Unix-socket directory."
         )

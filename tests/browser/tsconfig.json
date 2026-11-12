@@ -7,5 +7,11 @@
     "types": ["node", "vite/client"],
     "allowImportingTsExtensions": true
   },
-  "include": ["src/**/*.ts", "*.ts", "specs/**/*.ts", "foundation/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "*.ts",
+    "specs/**/*.ts",
+    "foundation/**/*.ts",
+    "product/**/*.ts"
+  ]
 }

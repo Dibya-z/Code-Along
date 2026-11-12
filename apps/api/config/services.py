@@ -35,6 +35,14 @@ def service_settings(environ: Mapping[str, str]) -> dict[str, object]:
             raise ImproperlyConfigured(
                 "CODE_ALONG_REDIS_URL requires a valid Redis database-0 URL."
             ) from None
+        result["CACHES"] = {
+            "default": {
+                "BACKEND": "django.core.cache.backends.redis.RedisCache",
+                "LOCATION": value,
+                "KEY_PREFIX": "code_along",
+                "TIMEOUT": 300,
+            }
+        }
         result["REDIS_CONNECTION_SECRET"] = value
         result["CHANNEL_LAYERS"] = {
             "default": {

@@ -66,6 +66,7 @@ def main() -> None:
                 for k, v in cluster.environment().items()
                 if not k.startswith("CODE_ALONG_")
             }
+            https_port = os.environ.get("CODE_ALONG_HTTPS_PORT", "8443")
             env.update(
                 DJANGO_SETTINGS_MODULE="config.settings.development",
                 CODE_ALONG_DEBUG="false",
@@ -77,6 +78,8 @@ def main() -> None:
                 CODE_ALONG_DB_HOST=str(cluster.socket_directory),
                 CODE_ALONG_REDIS_URL=f"unix://{socket}",
                 CODE_ALONG_TRUST_PROXY="true",
+                CODE_ALONG_HTTPS_PORT=https_port,
+                CODE_ALONG_APP_ORIGIN=f"https://127.0.0.1:{https_port}",
             )
             # Private file mail spool is enabled by the account milestone.
             env["CODE_ALONG_MAIL_DIR"] = str(ROOT / ".runtime/mail")
@@ -121,7 +124,7 @@ def main() -> None:
             )
             proxy = spawn([sys.executable, "tools/dev/native_proxy.py"], env)
             print(
-                "Code Along native development: https://127.0.0.1:8443 (disposable database)",
+                f"Code Along native development: https://127.0.0.1:{https_port} (disposable database)",
                 flush=True,
             )
             while proxy.poll() is None:

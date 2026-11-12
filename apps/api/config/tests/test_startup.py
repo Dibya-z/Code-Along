@@ -75,7 +75,7 @@ def test_production_uses_host_only_secure_cookies_and_no_implicit_proxy_trust() 
     assert s["CSRF_TRUSTED_ORIGINS"] == []
     assert s["SECURE_PROXY_SSL_HEADER"] is None
     assert s["CHANNEL_LAYERS"] == {}
-    assert s["EMAIL_BACKEND"] == "django.core.mail.backends.dummy.EmailBackend"
+    assert s["EMAIL_BACKEND"] == "django.core.mail.backends.smtp.EmailBackend"
 
 
 def test_development_explicitly_allows_local_http() -> None:

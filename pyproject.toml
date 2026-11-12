@@ -13,6 +13,7 @@ dev = [
     "mypy==1.19.1",
     "django-stubs[compatible-mypy]==5.2.9",
     "django-stubs-ext==5.2.9",
+    "djangorestframework-stubs==3.16.8",
 ]
 
 [tool.uv]
@@ -46,7 +47,7 @@ markers = ["postgres: requires native PostgreSQL 18 binaries; creates a private 
 
 [tool.mypy]
 python_version = "3.13"
-plugins = ["mypy_django_plugin.main"]
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
 mypy_path = "$MYPY_CONFIG_FILE_DIR/apps/api"
 files = ["apps/api/config", "apps/api/code_along", "apps/api/manage.py", "apps/api/conftest.py"]
 exclude = ["/migrations/"]
@@ -59,5 +60,5 @@ django_settings_module = "config.settings.test"
 strict_settings = true
 
 [[tool.mypy.overrides]]
-module = ["channels.*"]
+module = ["channels.*", "allauth.*"]
 follow_untyped_imports = true

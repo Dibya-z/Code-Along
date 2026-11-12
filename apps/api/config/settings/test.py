@@ -23,3 +23,9 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_SSL_REDIRECT = False
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+from config.accounts import account_settings  # noqa: E402
+
+globals().update(
+    account_settings({"CODE_ALONG_APP_ORIGIN": "https://testserver"}, production=False)
+)

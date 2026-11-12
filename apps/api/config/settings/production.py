@@ -1,5 +1,6 @@
 import os
 
+from config.accounts import account_settings
 from config.environment import load_environment
 from config.services import service_settings
 
@@ -19,3 +20,4 @@ SECURE_SSL_REDIRECT = True
 SECURE_HSTS_SECONDS = 0
 EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
 globals().update(service_settings(os.environ))
+globals().update(account_settings(os.environ, production=True))

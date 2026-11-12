@@ -7,9 +7,11 @@ import {
   NavLink,
   useLocation,
 } from 'react-router';
-import { Notice } from '@code-along/design-system';
+import { AccountPage, AccountActions } from '../features/auth/pages.tsx';
+import { useIdentity } from '../features/auth/session.ts';
 function Shell() {
   const location = useLocation();
+  const identity = useIdentity();
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main">
@@ -34,9 +36,16 @@ function Shell() {
       <div className="app-body">
         <header className="topbar">
           <span>Python, with company.</span>
-          <Link className="button secondary" to="/login">
-            Sign in
-          </Link>
+          {identity.data ? (
+            <div className="actions">
+              <span>{identity.data.display_name}</span>
+              <AccountActions />
+            </div>
+          ) : (
+            <Link className="button secondary" to="/login">
+              Sign in
+            </Link>
+          )}
         </header>
         <main id="main" tabIndex={-1} key={location.pathname}>
           <Outlet />
@@ -79,15 +88,6 @@ function Home() {
     </div>
   );
 }
-function LoginPending() {
-  return (
-    <div className="page narrow">
-      <Link to="/">← Your workspaces</Link>
-      <h1>Sign in</h1>
-      <Notice>Account access is being prepared.</Notice>
-    </div>
-  );
-}
 function Missing() {
   return (
     <div className="page narrow">
@@ -126,7 +126,20 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: 'workspaces', element: <Home /> },
-      { path: 'login', element: <LoginPending /> },
+      { path: 'login', element: <AccountPage key="login" kind="login" /> },
+      {
+        path: 'auth/signup',
+        element: <AccountPage key="signup" kind="signup" />,
+      },
+      {
+        path: 'auth/forgot',
+        element: <AccountPage key="forgot" kind="forgot" />,
+      },
+      { path: 'auth/reset', element: <AccountPage key="reset" kind="reset" /> },
+      {
+        path: 'auth/verify',
+        element: <AccountPage key="verify" kind="verify" />,
+      },
       { path: '*', element: <Missing /> },
     ],
   },

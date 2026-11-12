@@ -6,6 +6,7 @@ COPY pyproject.toml uv.lock .python-version ./
 COPY apps/api ./apps/api
 RUN uv sync --locked --no-dev --no-python-downloads
 RUN useradd --uid 10001 --create-home api
+RUN mkdir -p /app/dev-mail && chown api:api /app/dev-mail && chmod 700 /app/dev-mail
 WORKDIR /app/apps/api
 USER api
 CMD ["/app/.venv/bin/daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]

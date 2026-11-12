@@ -210,3 +210,7 @@ For each independently reviewable unit:
 Do not push, merge or deploy without separate explicit approval. Stop for approval before changing an accepted architectural decision.
 
 The tracker distinguishes verified work from committed work. A commit cannot contain its own final hash: after an approved commit, record its hash in the next tracker update, to be included in the next approved unit. Never create an unapproved bookkeeping commit or amend a reviewed commit solely to insert that hash.
+
+### Accounts
+
+The account forms now support registration, email verification, login/logout and password reset. See [account flows and private development email](docs/operations/authentication.md). Open the local HTTPS app and choose **Create an account**; verification links are in the private development mail store. Product access requires verified email. Nothing sends real email unless production SMTP is explicitly configured.
