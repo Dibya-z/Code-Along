@@ -1,0 +1,58 @@
+.execution-panel {
+  border-top: 1px solid var(--color-separator);
+  min-width: 0;
+}
+.execution-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.execution-toolbar h2 {
+  font-size: var(--text-heading-sm);
+  margin: 0;
+}
+.execution-toolbar .actions {
+  padding: 0;
+  border: 0;
+}
+.execution-status,
+.execution-provenance,
+.execution-scope {
+  padding: 0 var(--space-4);
+  font-size: var(--text-meta);
+  color: var(--color-muted);
+}
+.execution-provenance {
+  overflow-wrap: anywhere;
+}
+.execution-provenance strong {
+  color: var(--color-warning);
+}
+.execution-input {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4);
+  font-size: var(--text-meta);
+}
+.execution-output {
+  margin: 0;
+  min-height: 10rem;
+  max-height: 24rem;
+  overflow: auto;
+  padding: var(--space-4);
+  border-block: 1px solid var(--color-separator);
+  font: 1rem/1.5 var(--font-code);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  white-space: pre;
+}
+.execution-output .stderr {
+  color: var(--color-error);
+}
+.execution-scope {
+  margin: 0;
+  padding-block: var(--space-3);
+}

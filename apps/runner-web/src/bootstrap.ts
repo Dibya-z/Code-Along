@@ -3,7 +3,8 @@ import {
   RUNNER_VERSION,
   isRunnerId,
 } from '@code-along/contracts/execution';
-import { RunnerSupervisor } from './supervisor.ts';
+import { ProductRunnerSupervisor, RunnerSupervisor } from './supervisor.ts';
+import { PRODUCT_RUNNER_VERSION } from '@code-along/contracts/execution/product-runner';
 
 const appOrigin = document.querySelector<HTMLMetaElement>(
   'meta[name="app-origin"]',
@@ -29,7 +30,8 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
   if (
     Object.keys(v).length !== 4 ||
     v['protocol'] !== RUNNER_PROTOCOL ||
-    v['version'] !== RUNNER_VERSION ||
+    (v['version'] !== RUNNER_VERSION &&
+      v['version'] !== PRODUCT_RUNNER_VERSION) ||
     v['type'] !== 'connect' ||
     !isRunnerId(v['session_nonce']) ||
     event.ports.length !== 1
@@ -37,7 +39,11 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     return;
   const port = event.ports[0]!;
   connected = true;
-  const supervisor = new RunnerSupervisor(v['session_nonce'], (message) =>
+  const Supervisor =
+    v['version'] === PRODUCT_RUNNER_VERSION
+      ? ProductRunnerSupervisor
+      : RunnerSupervisor;
+  const supervisor = new Supervisor(v['session_nonce'], (message) =>
     port.postMessage(message),
   );
   port.onmessage = (message: MessageEvent<unknown>) => {
@@ -46,7 +52,7 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
   port.start();
   port.postMessage({
     protocol: RUNNER_PROTOCOL,
-    version: RUNNER_VERSION,
+    version: v['version'],
     type: 'ready',
     session_nonce: v['session_nonce'],
     interactive:

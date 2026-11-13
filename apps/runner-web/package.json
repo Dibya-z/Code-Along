@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "typecheck": "tsc --project tsconfig.json && tsc --project tsconfig.worker.json"
+    "typecheck": "tsc --project tsconfig.json && tsc --project tsconfig.worker.json && tsc --project tsconfig.test.json"
   },
   "dependencies": {
     "@code-along/contracts": "workspace:*"

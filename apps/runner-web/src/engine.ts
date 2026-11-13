@@ -1,0 +1,208 @@
+import {
+  RUN_LIMITS,
+  RUNTIME_ID,
+  verifyRunManifest,
+  type RunManifest,
+  type RunnerEventBody,
+  type TerminalStatus,
+} from '@code-along/contracts/execution';
+import {
+  verifyProjectManifest,
+  type ProjectRunManifest,
+} from '@code-along/contracts/execution/project';
+export type EngineCommand =
+  | {
+      type: 'run';
+      run_id: string;
+      manifest: RunManifest | ProjectRunManifest;
+      stdin: readonly string[];
+    }
+  | { type: 'cancel'; run_id: string }
+  | { type: 'stdin'; run_id: string; text: string | null };
+export type EngineEvent =
+  | Exclude<RunnerEventBody, { type: 'terminal' }>
+  | {
+      type: 'terminal';
+      status: TerminalStatus;
+      manifest_sha256: string;
+      runtime_id: string;
+    };
+interface ActiveRun {
+  id: string;
+  manifest: RunManifest | ProjectRunManifest;
+  worker: Worker | null;
+  timer: ReturnType<typeof setTimeout>;
+  input: Int32Array | null;
+  waiting: boolean;
+  outputBytes: number;
+  sequence: number;
+  running: boolean;
+}
+/** Trusted shell: owns worker handles, time and output budgets; never trusts Python as a grader. */
+export class ExecutionSupervisor {
+  private closed = false;
+  private active: ActiveRun | null = null;
+  private readonly usedIds = new Set<string>();
+  constructor(
+    private readonly emit: (runId: string, event: EngineEvent) => void,
+  ) {}
+  private send(run: ActiveRun, event: EngineEvent): void {
+    this.emit(run.id, event);
+  }
+  private state(
+    run: ActiveRun,
+    state: 'initializing' | 'running' | 'waiting_for_input',
+  ): void {
+    this.send(run, { type: 'state', state });
+  }
+  private finish(run: ActiveRun, status: TerminalStatus): void {
+    if (this.active !== run) return;
+    this.active = null;
+    clearTimeout(run.timer);
+    run.worker?.terminate();
+    this.send(run, {
+      type: 'terminal',
+      status,
+      manifest_sha256: run.manifest.sha256,
+      runtime_id:
+        run.manifest.version === 1
+          ? RUNTIME_ID
+          : run.manifest.runtime.runtime_id,
+    });
+  }
+  async handle(command: EngineCommand): Promise<void> {
+    if (this.closed) return;
+    if (command.type === 'cancel') {
+      if (this.active?.id === command.run_id)
+        this.finish(this.active, 'cancelled');
+      return;
+    }
+    if (command.type === 'stdin') {
+      const r = this.active;
+      if (!r || r.id !== command.run_id || !r.input || !r.waiting) return;
+      const bytes =
+        command.text === null ? null : new TextEncoder().encode(command.text);
+      if (bytes && bytes.length > RUN_LIMITS.inputBytes) return;
+      if (bytes) new Uint8Array(r.input.buffer, 8).set(bytes);
+      Atomics.store(r.input, 1, bytes?.length ?? 0);
+      Atomics.store(r.input, 0, bytes === null ? 2 : 1);
+      r.waiting = false;
+      this.state(r, 'running');
+      Atomics.notify(r.input, 0);
+      return;
+    }
+    if (
+      this.active ||
+      this.usedIds.has(command.run_id) ||
+      this.usedIds.size >= 100
+    )
+      return;
+    // Reserve before hashing: cancel/new messages cannot race two starts.
+    this.usedIds.add(command.run_id);
+    const run: ActiveRun = {
+      id: command.run_id,
+      manifest: command.manifest,
+      worker: null,
+      timer: setTimeout(
+        () => this.finish(run, 'timed_out'),
+        RUN_LIMITS.startupMs,
+      ),
+      input: null,
+      waiting: false,
+      outputBytes: 0,
+      sequence: 0,
+      running: false,
+    };
+    this.active = run;
+    this.state(run, 'initializing');
+    let valid: boolean;
+    try {
+      valid =
+        command.manifest.version === 1
+          ? await verifyRunManifest(command.manifest)
+          : await verifyProjectManifest(command.manifest);
+    } catch {
+      this.finish(run, 'failed');
+      return;
+    }
+    if (!valid) {
+      this.finish(run, 'failed');
+      return;
+    }
+    if (this.active !== run) return;
+    if (command.manifest.stdin_mode === 'interactive') {
+      if (!crossOriginIsolated || typeof SharedArrayBuffer === 'undefined') {
+        this.finish(run, 'failed');
+        return;
+      }
+      run.input = new Int32Array(
+        new SharedArrayBuffer(8 + RUN_LIMITS.inputBytes),
+      );
+    }
+    try {
+      run.worker = new Worker(new URL('./worker.ts', import.meta.url), {
+        type: 'module',
+      });
+      run.worker.onerror = (event) => {
+        event.preventDefault();
+        this.finish(run, 'failed');
+      };
+      run.worker.onmessage = (event: MessageEvent<unknown>) => {
+        if (
+          this.active !== run ||
+          typeof event.data !== 'object' ||
+          event.data === null
+        )
+          return;
+        const m = event.data as Record<string, unknown>;
+        if (m['run_id'] !== run.id) return;
+        if (m['type'] === 'ready' && !run.running) {
+          run.running = true;
+          clearTimeout(run.timer);
+          run.timer = setTimeout(
+            () => this.finish(run, 'timed_out'),
+            RUN_LIMITS.wallMs,
+          );
+          this.state(run, 'running');
+        } else if (m['type'] === 'input' && run.input && !run.waiting) {
+          run.waiting = true;
+          this.state(run, 'waiting_for_input');
+        } else if (
+          m['type'] === 'output' &&
+          typeof m['text'] === 'string' &&
+          m['text'].length <= 8192 &&
+          ['stdout', 'stderr'].includes(String(m['stream']))
+        ) {
+          const size = new TextEncoder().encode(m['text']).length;
+          if (run.outputBytes + size > RUN_LIMITS.outputBytes) {
+            this.finish(run, 'output_limit');
+            return;
+          }
+          run.outputBytes += size;
+          this.send(run, {
+            type: 'output',
+            stream: m['stream'] as 'stdout' | 'stderr',
+            text: m['text'],
+            sequence: run.sequence++,
+          });
+        } else if (
+          m['type'] === 'done' &&
+          (m['status'] === 'succeeded' || m['status'] === 'failed')
+        )
+          this.finish(run, m['status']);
+      };
+      run.worker.postMessage({
+        run_id: run.id,
+        manifest: command.manifest,
+        stdin: command.stdin,
+        input: run.input?.buffer,
+      });
+    } catch {
+      this.finish(run, 'failed');
+    }
+  }
+  destroy(): void {
+    this.closed = true;
+    if (this.active) this.finish(this.active, 'cancelled');
+  }
+}

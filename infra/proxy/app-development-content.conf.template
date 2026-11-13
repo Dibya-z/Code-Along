@@ -7,6 +7,7 @@ location / {
   proxy_set_header Accept-Encoding "";
   # Replace Vite's placeholder with this response's random CSP nonce.
   sub_filter '__CODE_ALONG_DEV_NONCE__' '$request_id';
+  sub_filter '__CODE_ALONG_RUNNER_ORIGIN__' '${RUNNER_ORIGIN}';
   sub_filter_once off;
   proxy_buffering off;
 }

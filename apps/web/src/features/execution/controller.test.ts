@@ -1,0 +1,199 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { CORE_RUNTIME } from '@code-along/contracts/execution/profiles';
+import {
+  RUNNER_PROTOCOL,
+  sha256,
+  sourceBytes,
+} from '@code-along/contracts/execution';
+import type {
+  ProductRunnerEvent,
+  ProductRunnerReady,
+} from '@code-along/contracts/execution/product-runner';
+import type { ProjectRunManifest } from '@code-along/contracts/execution/project';
+import { EditorWorkspace } from '../editor/model/workspace.ts';
+import { ExecutionController } from './controller.ts';
+import { checkedRunnerOrigin, type RunnerBridge } from './bridge.ts';
+const id = (n: number) =>
+  `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+async function fixture() {
+  const workspace = new EditorWorkspace(id(1), id(2));
+  const file = {
+    id: id(3),
+    document_id: id(4),
+    generation: 1,
+    path: 'main.py',
+    kind: 'python' as const,
+    initial_source: 'print(42)',
+    initial_sha256: await sha256(sourceBytes('print(42)')),
+  };
+  workspace.reconcile(
+    {
+      id: id(2),
+      owner_id: id(1),
+      workspace_id: id(5),
+      name: 'Run',
+      metadata_version: 1,
+      acl_version: '1',
+      role: 'owner',
+      archived: false,
+      workspace_archived: false,
+      entrypoint_file_id: file.id,
+      entrypoint_path: file.path,
+      runtime_id: CORE_RUNTIME.runtime_id,
+      runtime_profile_id: id(6),
+    },
+    [file],
+  );
+  await workspace.loadSource(file);
+  const sessions: {
+    emit: (value: ProductRunnerEvent) => void;
+    bridge: RunnerBridge;
+    runId: string;
+    manifest: ProjectRunManifest | null;
+  }[] = [];
+  const controller = new ExecutionController(workspace, (emit) => {
+    const session = {
+      emit,
+      runId: '',
+      manifest: null as ProjectRunManifest | null,
+      bridge: {} as RunnerBridge,
+    };
+    session.bridge = {
+      start: vi.fn(
+        async (
+          runId: string,
+          manifest: ProjectRunManifest,
+        ): Promise<ProductRunnerReady> => {
+          session.runId = runId;
+          session.manifest = manifest;
+          return {
+            protocol: RUNNER_PROTOCOL,
+            version: 2,
+            type: 'ready',
+            session_nonce: id(90),
+            interactive: false,
+            cross_origin_isolated: false,
+          };
+        },
+      ),
+      input: vi.fn(),
+      cancel: vi.fn(),
+      destroy: vi.fn(),
+    };
+    sessions.push(session);
+    return session.bridge;
+  });
+  const event = (index: number, body: Record<string, unknown>) =>
+    sessions[index]!.emit({
+      protocol: RUNNER_PROTOCOL,
+      version: 2,
+      session_nonce: id(90),
+      run_id: sessions[index]!.runId,
+      ...body,
+    } as ProductRunnerEvent);
+  const finish = (index = 0) =>
+    event(index, {
+      type: 'terminal',
+      status: 'succeeded',
+      manifest_sha256: sessions[index]!.manifest!.sha256,
+      runtime_id: CORE_RUNTIME.runtime_id,
+    });
+  return { workspace, controller, sessions, event, finish };
+}
+afterEach(() => vi.useRealTimers());
+describe('product execution state', () => {
+  it('uses a new bridge for every run and ignores old output/terminal packets', async () => {
+    const f = await fixture();
+    await f.controller.run();
+    f.event(0, {
+      type: 'output',
+      stream: 'stdout',
+      text: 'first\n',
+      sequence: 0,
+    });
+    f.finish();
+    expect(f.controller.getSnapshot().phase).toBe('succeeded');
+    expect(f.sessions[0]!.bridge.destroy).toHaveBeenCalledOnce();
+    await f.controller.run();
+    f.event(0, { type: 'output', stream: 'stdout', text: 'late', sequence: 1 });
+    f.finish(0);
+    expect(f.controller.getSnapshot().phase).toBe('initializing');
+    expect(f.controller.getSnapshot().output).toEqual([]);
+    f.finish(1);
+    f.controller.destroy();
+    f.workspace.destroy();
+  });
+  it('does not admit a run cancelled during snapshot hashing or another start while busy', async () => {
+    const f = await fixture();
+    const pending = f.controller.run();
+    await f.controller.run();
+    f.controller.stop();
+    await pending;
+    expect(f.sessions).toHaveLength(0);
+    expect(f.controller.getSnapshot().phase).toBe('cancelled');
+    f.controller.destroy();
+    f.workspace.destroy();
+  });
+  it('marks earlier source without replacing the captured manifest and fails on output gaps', async () => {
+    const f = await fixture();
+    await f.controller.run();
+    const captured = f.controller.getSnapshot().captured;
+    f.workspace.replaceSource(id(3), 'print("later")');
+    expect(f.controller.getSnapshot().earlierSource).toBe(true);
+    expect(f.controller.getSnapshot().captured).toBe(captured);
+    f.event(0, {
+      type: 'output',
+      stream: 'stdout',
+      text: 'missing first packet',
+      sequence: 1,
+    });
+    expect(f.controller.getSnapshot().phase).toBe('failed');
+    f.controller.destroy();
+    f.workspace.destroy();
+  });
+  it('keeps one terminal state, rejects mismatched manifests and closes resources on disposal', async () => {
+    const f = await fixture();
+    await f.controller.run();
+    f.event(0, {
+      type: 'terminal',
+      status: 'succeeded',
+      manifest_sha256: '0'.repeat(64),
+      runtime_id: CORE_RUNTIME.runtime_id,
+    });
+    expect(f.controller.getSnapshot().phase).toBe('failed');
+    f.finish();
+    expect(f.controller.getSnapshot().phase).toBe('failed');
+    await f.controller.run();
+    f.controller.destroy();
+    expect(f.sessions[1]!.bridge.destroy).toHaveBeenCalledOnce();
+    f.event(1, { type: 'state', state: 'running' });
+    f.workspace.destroy();
+  });
+  it('stops a lost runtime using the independent parent deadline', async () => {
+    const f = await fixture();
+    await f.controller.run();
+    vi.useFakeTimers();
+    // A new run creates its parent deadline under the fake clock.
+    f.controller.stop();
+    await f.controller.run();
+    vi.advanceTimersByTime(75_000);
+    expect(f.controller.getSnapshot().phase).toBe('timed_out');
+    expect(f.sessions[1]!.bridge.destroy).toHaveBeenCalledOnce();
+    f.controller.destroy();
+    f.workspace.destroy();
+  });
+  it('requires an exact separate HTTPS hostname rather than another port on the app host', () => {
+    expect(
+      checkedRunnerOrigin('https://localhost:18443', 'https://127.0.0.1:18443'),
+    ).toBe('https://localhost:18443');
+    for (const raw of [
+      'http://localhost:18443',
+      'https://127.0.0.1:9443',
+      'https://localhost:18443/',
+      'https://user@localhost:18443',
+    ])
+      expect(() =>
+        checkedRunnerOrigin(raw, 'https://127.0.0.1:18443'),
+      ).toThrow();
+  });
+});

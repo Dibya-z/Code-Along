@@ -136,6 +136,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             data = file.read_bytes()
             if runner and file.name == "index.html":
                 data = data.replace(b"%APP_ORIGIN%", APP.encode())
+            elif not runner and file.name == "index.html":
+                data = data.replace(b"__CODE_ALONG_RUNNER_ORIGIN__", RUNNER.encode())
         content_type = (
             "application/wasm"
             if file.suffix == ".wasm"

@@ -4,7 +4,7 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-M0 integration proofs and M1 product foundation are implemented; M2 is in progress. You can register, verify an email locally, sign in, create a workspace, invite another account and create private projects with explicit editor/viewer access. Projects now open a multi-file Python editor with file tabs, syntax highlighting, undo and adjustable text size. Local edits survive tab switches and metadata refreshes but currently last only in the open browser tab. Python execution and local recovery are the next M2 units; collaboration, durable server saves and chat follow in M3. Nothing is deployed.
+M0 integration proofs and M1 product foundation are implemented; M2 is in progress. You can register, verify an email locally, sign in, create a workspace, invite another account and create private projects with explicit editor/viewer access. Projects now open a multi-file Python editor with file tabs, syntax highlighting, undo and adjustable text size. Run code executes a complete frozen snapshot in a separate-site fresh Python Worker, with local output, batch stdin and Stop. Local edits survive tab switches and metadata refreshes but currently last only in the open browser tab. Runtime profiles, richer console/input and local recovery are the next M2 units; collaboration, durable server saves and chat follow in M3. Nothing is deployed.
 
 Open **https://127.0.0.1:8443** after starting the [local development stack](docs/operations/development-stack.md). This workstation uses the project-owned Lima VM; that guide includes its exact commands. Development verification/reset emails stay in a private local mail store, described in the [account guide](docs/operations/authentication.md).
 
@@ -25,7 +25,7 @@ Open **https://127.0.0.1:8443** after starting the [local development stack](doc
 | Design system               | Original tokens, Radix-based primitives, Tailwind and Storybook                                 |
 | API contracts               | Offline-generated OpenAPI and typed clients with CI drift checks                                |
 | Editor/collaboration, M2/M3 | CodeMirror 6, Yjs and narrow Node/Hocuspocus service; integration proofs exist                  |
-| Browser execution, M2       | Hash-pinned Pyodide in a separate-site supervised Worker; isolation proof exists                |
+| Browser execution, M2       | Hash-pinned Pyodide; frozen product runs in a separate-site supervised fresh Worker             |
 | Later trusted grading       | Separate Linux sandbox hosts and external scoring; never Django or ordinary application workers |
 
 Workspace teaching roles do not grant access to private projects. Provider synchronization is not a durable save receipt. Browser practice is not a trusted grade. Runtime/framework/tool versions are exact in the lockfiles, and development base images use digest pins.
@@ -34,7 +34,7 @@ Workspace teaching roles do not grant access to private projects. Provider synch
 apps/api/                 Django config, accounts, workspaces and projects
 apps/web/                 React routes, feature screens and credential transport
 apps/collaboration/       Binary checkpoint/transport proofs (M3 integration later)
-apps/runner-web/          Separate-site supervised Pyodide Worker proof
+apps/runner-web/          Separate-site supervised Pyodide product runner and v1 proof adapter
 packages/api-client/      Generated product/auth types and client factories
 packages/contracts/       Versioned checkpoint and execution contracts
 packages/design-system/   Original tokens, reusable controls and stories

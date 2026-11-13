@@ -1,6 +1,6 @@
 # Product Python execution v2
 
-M2 uses a product manifest separate from the M0 v1 runner proof. The proof contract stays unchanged. The product bridge is added in the following unit; this document does not claim that it is connected yet.
+M2 uses a product manifest separate from the M0 v1 runner proof. Both contracts share the supervised Worker engine; the v1 proof wire format stays unchanged.
 
 `packages/contracts/execution/project-manifest.ts` owns v2 capture and validation. A manifest contains `version: 2`, project identity, `source_kind` (`project` or explicit `local_draft`), the observed metadata version, entrypoint file identity, reviewed runtime identity, stdin mode, every file and the aggregate SHA-256 digest. Each file includes its file/document IDs, generation, exact path/source and source SHA-256. Runtime identity includes the engine/version, Python version and immutable reviewed asset/profile inventory digest. It grants no application authority and is not an authentication or grading claim.
 
@@ -9,3 +9,13 @@ All live values are copied synchronously from authoritative editor documents bef
 Limits match the product API: 1–20 Python files, 128 KiB UTF-8 per file, 1 MiB aggregate, relative ASCII module paths up to 160 characters, no traversal/NUL/unpaired surrogates, case-insensitive duplicate paths, duplicate file/document identities or module/folder import collisions. The entrypoint must exist. An editor cannot capture until every known file is loaded and verified; an explicit local draft is still subject to completeness and the same bounds. Future offline recovery must supply a complete cached project rather than omitting unavailable files.
 
 `EditorWorkspace.snapshotInput()` reads Y.Text and current reconciled metadata; editor DOM and React text mirrors are never execution inputs. `captureWorkspaceRun()` records the model revision with the immutable manifest. `isCurrentRun()` cheaply detects later source or metadata/runtime changes so output can be labeled as belonging to earlier source. A source revision is local provenance; it does not certify global room order, durable save status, authorship or trusted assessment.
+
+## Iframe and Worker connection
+
+The HTTPS proxy supplies an exact `runner-origin` meta value. Current development uses the different sites `127.0.0.1` and `localhost`; another port on the application hostname is rejected. Production host/site, TLS and cookie policy still need the deployment gate; URL shape validation is not a public-suffix-list site validator.
+
+Each product run creates a fresh sandboxed iframe, MessageChannel, UUID session nonce and run ID. The application sends only `{protocol, version: 2, type: connect, session_nonce}` to the configured exact origin and transfers one port. The runner accepts one connection only from its configured parent origin/window. Its ready reply reports measured isolation/interactive capability. Commands/events are versioned, nonce/run-bound and field-exact; undeclared API, credential and fetch operations are rejected. Product commands carry only run manifests, bounded stdin, input and cancellation. Batch input is limited to 100 lines, 4 KiB each and 64 KiB total.
+
+The shared trusted supervisor reserves a run before async verification, owns Worker handles and independent startup/wall timers, verifies source hashes, sequences/caps output and terminates on completion/error/Stop. The Worker receives source and stdin, never the parent's application port or credentials. Every run starts a fresh interpreter and virtual filesystem. Late events from old frames/Workers are ignored; result runtime/manifest identity must match capture. An additional parent deadline closes a lost iframe. Route disposal releases private source/controller resources and the runner.
+
+The app denies its own Workers; the separate runner shell and Worker have separate CSPs. The Worker's own response permits only self-hosted runtime assets and Wasm evaluation, with no child Worker or app/external network destination. The runner site has no authenticated API routing. Python can forge local feedback through its JavaScript environment, so run success remains untrusted practice feedback. Browser resource limits are soft product controls; no hard memory quota is claimed.

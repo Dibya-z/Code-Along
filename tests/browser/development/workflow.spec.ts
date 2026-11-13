@@ -15,6 +15,7 @@ test('React refresh, actual API/CSRF and separate runner work behind the develop
   expect(nonce).toBeTruthy();
   expect(await first.text()).toContain(`nonce="${nonce}"`);
   expect(await first.text()).not.toContain('__CODE_ALONG_DEV_NONCE__');
+  expect(await first.text()).not.toContain('__CODE_ALONG_RUNNER_ORIGIN__');
   expect(second.headers()['content-security-policy']).not.toEqual(policy);
   expect(policy).toContain("worker-src 'none'");
   expect(first.headers()['cross-origin-embedder-policy']).toBe('require-corp');

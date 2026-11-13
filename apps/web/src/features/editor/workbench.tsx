@@ -15,6 +15,7 @@ import type { FileMetadata } from './model/document.ts';
 import { CodeEditor } from './components/code-editor.tsx';
 import { FileTabs } from './components/file-tabs.tsx';
 import { FileTree } from './components/file-tree.tsx';
+import { ExecutionPanel } from '../execution/panel.tsx';
 import './styles.css';
 
 interface Props {
@@ -234,6 +235,7 @@ function ScopedWorkbench({
           Delete closes a tab.
         </p>
         {fileActions}
+        <ExecutionPanel workspace={workspace} paused={paused} />
       </section>
     </div>
   );

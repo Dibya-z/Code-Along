@@ -20,12 +20,13 @@ type LoadPyodide = (options: {
   stderr: (s: string) => void;
 }) => Promise<BrowserPyodide>;
 import type { RunManifest } from '@code-along/contracts/execution';
+import type { ProjectRunManifest } from '@code-along/contracts/execution/project';
 declare const self: DedicatedWorkerGlobalScope;
 let started = false;
 self.onmessage = async (
   event: MessageEvent<{
     run_id: string;
-    manifest: RunManifest;
+    manifest: RunManifest | ProjectRunManifest;
     stdin: string[];
     input?: SharedArrayBuffer;
   }>,
@@ -85,7 +86,14 @@ self.onmessage = async (
       pyodide.FS.writeFile(target, new TextEncoder().encode(file.source));
     }
     pyodide.FS.chdir('/project');
-    pyodide.globals.set('__entrypoint', `/project/${manifest.entrypoint}`);
+    const entrypoint =
+      manifest.version === 1
+        ? manifest.entrypoint
+        : manifest.files.find(
+            (file) => file.file_id === manifest.entrypoint_file_id,
+          )?.path;
+    if (!entrypoint) throw new Error('The captured entrypoint is missing.');
+    pyodide.globals.set('__entrypoint', `/project/${entrypoint}`);
     send({ type: 'ready' });
     const result = await pyodide.runPythonAsync(
       'import sys, runpy\nsys.path.insert(0, "/project")\nrunpy.run_path(__entrypoint, run_name="__main__")',

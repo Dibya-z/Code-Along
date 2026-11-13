@@ -1,1 +1,4 @@
-location / { try_files $uri $uri/ /index.html; }
+location / {
+  sub_filter '__CODE_ALONG_RUNNER_ORIGIN__' '${RUNNER_ORIGIN}';
+  try_files $uri $uri/ /index.html;
+}

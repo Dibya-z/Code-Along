@@ -7,7 +7,8 @@
     "./collaboration": "./collaboration/checkpoints.ts",
     "./execution": "./execution/runner.ts",
     "./execution/project": "./execution/project-manifest.ts",
-    "./execution/profiles": "./execution/profiles.ts"
+    "./execution/profiles": "./execution/profiles.ts",
+    "./execution/product-runner": "./execution/product-runner.ts"
   },
   "scripts": {
     "typecheck": "tsc --project tsconfig.json && tsc --project tsconfig.test.json"
