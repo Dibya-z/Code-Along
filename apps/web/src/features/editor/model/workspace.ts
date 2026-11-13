@@ -5,7 +5,7 @@ import {
   sourceBytes,
 } from '@code-along/contracts/execution';
 import type { components } from '@code-along/api-client';
-import type { Project } from '../../projects/types.ts';
+import type { EditorProject } from '../../projects/types.ts';
 import type { ProjectSnapshot } from '@code-along/contracts/execution/project';
 import {
   reviewedRuntime,
@@ -26,7 +26,7 @@ export interface WorkspaceSummary {
   readonly writable: boolean;
 }
 
-/** Account/project-scoped local workbench. Durability/provider admission belong to M3. */
+/** Account/project-scoped local workbench. Server durability/provider admission belong to M3. */
 export class EditorWorkspace {
   private records = new Map<string, EditorDocument>();
   private listeners = new Set<() => void>();
@@ -48,6 +48,7 @@ export class EditorWorkspace {
   constructor(
     readonly accountId: string,
     readonly projectId: string,
+    readonly sourceKind: ProjectSnapshot['source_kind'] = 'project',
   ) {
     if (!isRunnerId(accountId) || !isRunnerId(projectId))
       throw new Error('Invalid workbench identity.');
@@ -93,8 +94,8 @@ export class EditorWorkspace {
     this.publish(seeded || summary?.dirty !== file.dirty);
   };
 
-  reconcile(
-    project: Project,
+  reconcile<T extends EditorProject>(
+    project: T,
     files: readonly FileMetadata[],
     count = files.length,
   ): boolean {
@@ -270,7 +271,7 @@ export class EditorWorkspace {
       );
     return {
       project_id: this.projectId,
-      source_kind: 'project',
+      source_kind: this.sourceKind,
       metadata_version: this.metadataVersion,
       entrypoint_file_id: this.summary.entrypoint,
       runtime: selectedRuntime,
