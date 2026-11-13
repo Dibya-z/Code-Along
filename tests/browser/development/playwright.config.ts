@@ -22,6 +22,7 @@ if (
   );
 }
 export default defineConfig({
+  reporter: process.env['CI'] ? [['list'], ['github']] : [['list']],
   testDir: '.',
   testMatch: '**/*.spec.ts',
   forbidOnly: true,

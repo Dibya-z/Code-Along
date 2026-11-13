@@ -1,5 +1,7 @@
+import process from 'node:process';
 import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
+  reporter: process.env['CI'] ? [['list'], ['github']] : [['list']],
   testDir: '.',
   testMatch: '**/*.spec.ts',
   workers: 1,
