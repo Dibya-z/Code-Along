@@ -10,6 +10,7 @@ export async function documentTicket(
   scope: 'read' | 'write',
   clientSessionId: string,
   signal: AbortSignal,
+  shareToken?: string,
 ): Promise<DocumentTicket> {
   const ticket = await api<DocumentTicket>(
     `/api/v1/projects/${projectId}/documents/${file.metadata.document_id}/ticket/`,
@@ -21,6 +22,7 @@ export async function documentTicket(
         scope,
         client_session_id: clientSessionId,
         awareness_client_id: file.doc.clientID,
+        ...(shareToken ? { share_token: shareToken } : {}),
       } satisfies components['schemas']['TicketBodyRequest'],
     },
   );
@@ -38,3 +40,4 @@ export async function documentTicket(
     throw new Error('Collaboration admission could not be verified.');
   return ticket;
 }
+export type TicketLoader = typeof documentTicket;

@@ -42,11 +42,10 @@ const servers: ReturnType<typeof createProductServer>[] = [],
     doc: Y.Doc;
   }[] = [];
 afterEach(async () => {
-  for (const c of clients.splice(0)) {
-    c.provider.destroy();
-    c.socket.destroy();
-    c.doc.destroy();
-  }
+  const owned = clients.splice(0);
+  for (const c of owned) c.provider.destroy();
+  for (const socket of new Set(owned.map((c) => c.socket))) socket.destroy();
+  for (const c of owned) c.doc.destroy();
   for (const s of servers.splice(0)) await s.destroy();
 });
 async function until(predicate: () => boolean | Promise<boolean>) {
@@ -123,6 +122,11 @@ async function setup(
   async function connect(c: ReturnType<typeof client>) {
     void c.socket.connect();
     await until(() => c.provider.isSynced);
+    // These fixtures register one-use admission grants. Automatic retries after
+    // an intentional denial/expiry cannot be admitted and can leave a fresh
+    // CONNECTING ws socket when the test tears down. Explicit connect remains
+    // available; actual fresh-ticket reconnect has separate integration gates.
+    c.socket.setConfiguration({ autoConnect: false });
   }
   return { server, client, connect, store, consume };
 }
@@ -522,4 +526,92 @@ it('rejects a forged identity from a client before it can reach another subscrib
   await until(() => f.server.hocuspocus.getConnectionsCount() === 1);
   expect(b.provider.isSynced).toBe(true);
   expect(b.replies.some((reply) => reply.includes('Forged'))).toBe(false);
+});
+
+it('applies a bounded128-lease invalidation batch to all documents on the target transport while preserving other subscribers', async () => {
+  const f = await setup(),
+    a = f.client(),
+    second = f.client(
+      grant('10000000-0000-4000-8000-000000000088', 'second\n'),
+      a.socket,
+    ),
+    other = f.client();
+  await f.connect(a);
+  await until(() => second.provider.isSynced);
+  await f.connect(other);
+  const url = `http://127.0.0.1:${f.server.address.port}/internal/v1/invalidations/`;
+  const body = JSON.stringify({
+    version: 1,
+    event_id: randomUUID(),
+    lease_ids: [
+      a.grant.lease_id,
+      ...Array.from({ length: 127 }, () => randomUUID()),
+    ],
+    reason: 'authorization_changed',
+  });
+  const denied = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  });
+  expect(denied.status).toBe(403);
+  expect(f.server.hocuspocus.getConnectionsCount()).toBe(2);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${'c'.repeat(40)}`,
+      },
+      body,
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ version: 1, status: 'ok' });
+  }
+  await until(() => f.server.hocuspocus.getConnectionsCount() === 1);
+  expect(other.provider.isSynced).toBe(true);
+  expect(
+    f.server.hocuspocus.documents
+      .get(`${documentId}:1`)!
+      .getConnections()
+      .every(
+        (connection) =>
+          connection.context.lease.grant.client_session_id ===
+          other.grant.client_session_id,
+      ),
+  ).toBe(true);
+  expect(
+    f.server.hocuspocus.documents
+      .get('10000000-0000-4000-8000-000000000088:1')
+      ?.getConnectionsCount() ?? 0,
+  ).toBe(0);
+});
+it('cannot revive a shorter admitted lease with a renewal response received after its original deadline', async () => {
+  let release = () => undefined as void,
+    renewing = false;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const f = await setup({
+      renew: async (lease) => {
+        renewing = true;
+        await held;
+        return {
+          grant: { ...lease.grant, ttl_ms: 30_000 },
+          started: performance.now(),
+        };
+      },
+    }),
+    c = f.client();
+  c.grant.ttl_ms = 180;
+  await f.connect(c);
+  const expired = once(c.socket.webSocket as unknown as WebSocket, 'close');
+  await until(() => renewing);
+  await until(() => f.server.hocuspocus.getConnectionsCount() === 0);
+  const [closeCode] = await expired;
+  expect(closeCode).toBe(4401);
+  release();
+  await new Promise<void>((resolve) => setTimeout(resolve, 25));
+  expect(f.server.hocuspocus.getConnectionsCount()).toBe(0);
+  expect(f.store.source()).toBe('print("starter")\n');
 });

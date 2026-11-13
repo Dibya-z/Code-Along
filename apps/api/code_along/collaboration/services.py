@@ -1,13 +1,10 @@
 """Django owns live authority; ticket IDs and Yjs counters grant no access."""
 
 import hashlib
-import json
 import secrets
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Literal
-from urllib.error import URLError
-from urllib.request import Request, urlopen
 
 from allauth.account.models import EmailAddress
 from django.conf import settings
@@ -20,10 +17,12 @@ from django.utils import timezone
 from rest_framework.exceptions import APIException
 
 from code_along.accounts.models import User
-from code_along.projects.models import CollaborationDocument, Project
+from code_along.projects.models import CollaborationDocument, Project, ShareGrant
 from code_along.projects.policies import project_role
 from code_along.projects.services import lock_project, require_editable
+from code_along.projects.source_access import source_share
 
+from .control import ControlUnavailable, post_control
 from .models import CollaborationLease, CollaborationTicket
 from .profiles import public_display_name
 
@@ -94,10 +93,18 @@ def session_user(session_key: str | None) -> tuple[User, Session]:
 
 
 def admitted_document(
-    project: Project, user: User, document_id: uuid.UUID, generation: int, scope: str
+    project: Project,
+    user: User,
+    document_id: uuid.UUID,
+    generation: int,
+    scope: str,
+    share: ShareGrant | None = None,
 ) -> CollaborationDocument:
     try:
-        project_role(project, user, write=scope == "write")
+        if share is not None:
+            source_share(project, user, scope, share_id=share.id)
+        else:
+            project_role(project, user, write=scope == "write")
         if scope == "write":
             require_editable(project)
     except APIException:
@@ -139,6 +146,7 @@ def issue_ticket(
     scope: str,
     client_session_id: uuid.UUID,
     awareness_client_id: int,
+    share_token: str | None = None,
 ) -> dict[str, Any]:
     if origin != settings.PUBLIC_APP_ORIGIN or not settings.COLLABORATION_SECRET:
         raise AdmissionError("unauthorized")
@@ -146,7 +154,13 @@ def issue_ticket(
     actual_user, session = session_user(session_key)
     if actual_user.id != user.id:
         raise AdmissionError("unauthorized")
-    document = admitted_document(project, user, document_id, generation, scope)
+    share = None
+    if share_token is not None:
+        try:
+            share = source_share(project, user, scope, token=share_token)
+        except APIException:
+            raise AdmissionError("unauthorized") from None
+    document = admitted_document(project, user, document_id, generation, scope, share)
     now = timezone.now()
     if (
         CollaborationTicket.objects.filter(
@@ -161,13 +175,18 @@ def issue_ticket(
         user=user,
         session=session,
         project=project,
+        share_grant=share,
         document=document,
         generation=generation,
         scope=scope,
         client_session_id=client_session_id,
         awareness_client_id=awareness_client_id,
         origin=origin,
-        expires_at=min(now + TTL, session.expire_date),
+        expires_at=min(
+            now + TTL,
+            session.expire_date,
+            share.expires_at if share else session.expire_date,
+        ),
     )
     return {
         "ticket": token,
@@ -243,7 +262,12 @@ def consume_ticket(
     ):
         raise AdmissionError("unauthorized")
     document = admitted_document(
-        project, user, stored.document_id, stored.generation, stored.scope
+        project,
+        user,
+        stored.document_id,
+        stored.generation,
+        stored.scope,
+        stored.share_grant,
     )
     if (
         CollaborationLease.objects.filter(
@@ -260,6 +284,7 @@ def consume_ticket(
         user=user,
         session=session,
         project=project,
+        share_grant=stored.share_grant,
         document=document,
         generation=stored.generation,
         scope=stored.scope,
@@ -271,7 +296,13 @@ def consume_ticket(
         workspace_acl_version=project.workspace.acl_version,
         project_acl_version=project.acl_version,
         renewed_at=now,
-        expires_at=min(now + TTL, session.expire_date),
+        expires_at=min(
+            now + TTL,
+            session.expire_date,
+            stored.share_grant.expires_at
+            if stored.share_grant
+            else session.expire_date,
+        ),
     )
     stored.consumed_at = now
     stored.consumed_connection_id = connection_id
@@ -307,12 +338,21 @@ def renew_lease(
     if user.id != lease.user_id:
         raise AdmissionError("unauthorized")
     document = admitted_document(
-        project, user, lease.document_id, lease.generation, lease.scope
+        project,
+        user,
+        lease.document_id,
+        lease.generation,
+        lease.scope,
+        lease.share_grant,
     )
     lease.workspace_acl_version = project.workspace.acl_version
     lease.project_acl_version = project.acl_version
     lease.renewed_at = now
-    lease.expires_at = min(now + TTL, session.expire_date)
+    lease.expires_at = min(
+        now + TTL,
+        session.expire_date,
+        lease.share_grant.expires_at if lease.share_grant else session.expire_date,
+    )
     lease.save(
         update_fields=[
             "workspace_acl_version",
@@ -325,10 +365,6 @@ def renew_lease(
 
 
 def send_invalidation(lease_ids: list[str]) -> None:
-    url = settings.COLLABORATION_CONTROL_URL
-    secret = settings.COLLABORATION_CONTROL_SECRET
-    if not url or not secret:
-        return
     for start in range(0, len(lease_ids), 128):
         payload = {
             "version": 1,
@@ -336,19 +372,11 @@ def send_invalidation(lease_ids: list[str]) -> None:
             "lease_ids": lease_ids[start : start + 128],
             "reason": "authorization_changed",
         }
-        request = Request(
-            f"{url}/internal/v1/invalidations/",
-            json.dumps(payload).encode(),
-            headers={
-                "Authorization": f"Bearer {secret}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
         try:
-            with urlopen(request, timeout=0.25) as response:
-                response.read(1)
-        except (OSError, URLError, ValueError):
+            post_control(
+                "/internal/v1/invalidations/", payload, maximum=1024, timeout=0.25
+            )
+        except ControlUnavailable:
             pass  # Leases still expire fail-closed; outbox retries are a later M3 bundle.
 
 
@@ -359,8 +387,11 @@ def revoke_leases(
     user_id: uuid.UUID | None = None,
     document_id: uuid.UUID | None = None,
     session_key: str | None = None,
+    share_grant_id: uuid.UUID | None = None,
 ) -> None:
-    if not any((project_id, workspace_id, user_id, document_id, session_key)):
+    if not any(
+        (project_id, workspace_id, user_id, document_id, session_key, share_grant_id)
+    ):
         raise ValueError("An explicit invalidation scope is required.")
     query = CollaborationLease.objects.filter(
         revoked_at__isnull=True, expires_at__gt=timezone.now()
@@ -375,6 +406,8 @@ def revoke_leases(
         query = query.filter(document_id=document_id)
     if session_key is not None:
         query = query.filter(session_id=session_key)
+    if share_grant_id is not None:
+        query = query.filter(share_grant_id=share_grant_id)
     ids = [str(value) for value in query.values_list("id", flat=True)]
     if ids:
         query.update(revoked_at=timezone.now())

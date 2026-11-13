@@ -1,6 +1,7 @@
 from code_along.accounts.api import CsrfTokenView, CurrentUserView
 from code_along.collaboration.api import TicketView
 from code_along.projects.api import RuntimeListView
+from code_along.projects.share_api import ShareResolveView
 from code_along.workspaces.invitation_api import (
     InvitationAcceptView,
     InvitationPreviewView,
@@ -10,6 +11,7 @@ from django.urls import include, path
 from .views import liveness, readiness
 
 urlpatterns = [
+    path("api/v1/shares/resolve/", ShareResolveView.as_view()),
     path("internal/v1/collaboration/", include("code_along.collaboration.urls")),
     path(
         "api/v1/projects/<uuid:project_id>/documents/<uuid:document_id>/ticket/",

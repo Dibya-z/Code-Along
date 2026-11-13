@@ -113,7 +113,11 @@ vi.mock('./provider.ts', () => ({
 
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-async function setup(viewer = false, count = 1) {
+async function setup(
+  viewer = false,
+  count = 1,
+  ticket?: typeof documentTicket,
+) {
   vi.useFakeTimers();
   vi.stubGlobal(
     'window',
@@ -157,7 +161,7 @@ async function setup(viewer = false, count = 1) {
     expires_at: new Date(Date.now() + 30000).toISOString(),
     document_name: `${file.document_id}:1`,
   });
-  const model = new ProjectCollaboration(workspace);
+  const model = new ProjectCollaboration(workspace, ticket);
   const socketCount = transport.Socket.instances.length;
   model.start();
   const socket = transport.Socket.instances.at(-1)!,
@@ -197,6 +201,32 @@ afterEach(() => {
 });
 
 describe('project transport lifecycle', () => {
+  it('uses only the capability admission closure for initial sync and fresh reconnect tickets', async () => {
+    const ticket = vi.fn<typeof documentTicket>(async () => ({
+      ticket: 'capability-ticket',
+      expires_at: new Date(Date.now() + 30000).toISOString(),
+      document_name: `${id(4)}:1`,
+    }));
+    const f = await setup(false, 1, ticket);
+    await f.admit();
+    expect(ticket).toHaveBeenCalledWith(
+      id(2),
+      f.workspace.file(id(3)),
+      'write',
+      expect.any(String),
+      expect.any(AbortSignal),
+    );
+    vi.stubGlobal('navigator', { onLine: false });
+    window.dispatchEvent(new Event('offline'));
+    vi.stubGlobal('navigator', { onLine: true });
+    window.dispatchEvent(new Event('online'));
+    f.socket.open();
+    await Promise.resolve();
+    await f.admit();
+    expect(ticket).toHaveBeenCalledTimes(2);
+    expect(documentTicket).not.toHaveBeenCalled();
+    f.close();
+  });
   it('keeps a newly authenticated document unloaded/read-only until the initial-state adapter completes', async () => {
     const f = await setup();
     f.provider.options.onAuthenticated({ scope: 'read-write' });

@@ -1,11 +1,13 @@
 import { sha256, sourceBytes } from '@code-along/contracts/execution';
 import { EditorWorkspace } from '../editor/model/workspace.ts';
-import type { EditorProject } from '../projects/types.ts';
+import type { OrdinaryEditorProject } from '../projects/types.ts';
 import { captureRecovery, type ValidatedRecovery } from '../recovery/codec.ts';
 import { recoveryStore, type RecoveryStore } from '../recovery/store.ts';
 import { validateArchive, type SourceArchive } from './archive.ts';
 
-export function localDraftProject(recovery: ValidatedRecovery): EditorProject {
+export function localDraftProject(
+  recovery: ValidatedRecovery,
+): OrdinaryEditorProject {
   const data = recovery.data;
   if (data.kind !== 'local_draft')
     throw new Error('Open project recovery as a separate local copy.');

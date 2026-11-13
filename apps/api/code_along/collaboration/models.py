@@ -84,6 +84,9 @@ class CollaborationTicket(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     session = models.ForeignKey("sessions.Session", on_delete=models.CASCADE)
     project = models.ForeignKey("projects.Project", on_delete=models.PROTECT)
+    share_grant = models.ForeignKey(
+        "projects.ShareGrant", on_delete=models.PROTECT, null=True, blank=True
+    )
     document = models.ForeignKey(
         "projects.CollaborationDocument", on_delete=models.PROTECT
     )
@@ -139,6 +142,9 @@ class CollaborationLease(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     session = models.ForeignKey("sessions.Session", on_delete=models.CASCADE)
     project = models.ForeignKey("projects.Project", on_delete=models.PROTECT)
+    share_grant = models.ForeignKey(
+        "projects.ShareGrant", on_delete=models.PROTECT, null=True, blank=True
+    )
     document = models.ForeignKey(
         "projects.CollaborationDocument", on_delete=models.PROTECT
     )

@@ -11,6 +11,8 @@ import { loadEditorProject } from '../editor/api.ts';
 import { EditorWorkbench } from '../editor/workbench.tsx';
 import type { ProjectFile } from './types.ts';
 import { ProjectSharing } from './sharing.tsx';
+import { ProjectHistory } from '../history/panel.tsx';
+import { ProjectShares } from '../shares/management.tsx';
 export function ProjectPage() {
   return (
     <SignedIn>
@@ -299,8 +301,18 @@ function ProjectDetails() {
           )
         }
       />
+      <ProjectHistory
+        project={project}
+        accountId={identity.data.id}
+        paused={Boolean(query.error)}
+      />
       {project.role === 'owner' && (
         <>
+          <ProjectShares
+            project={project}
+            accountId={identity.data.id}
+            paused={Boolean(query.error)}
+          />
           <section className="content-section">
             <h2>Project settings</h2>
             <form className="form-stack compact-form" onSubmit={renameProject}>

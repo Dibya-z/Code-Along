@@ -7,7 +7,7 @@ import { ApiError } from '../../api/client.ts';
 import { parsePresenceIdentity } from '@code-along/contracts/collaboration/presence';
 import type { EditorDocument } from '../editor/model/document.ts';
 import type { EditorWorkspace } from '../editor/model/workspace.ts';
-import { documentTicket } from './api.ts';
+import { documentTicket, type TicketLoader } from './api.ts';
 import { DocumentCheckpoint } from './checkpoint.ts';
 import { CanonicalProvider } from './provider.ts';
 
@@ -123,7 +123,10 @@ export class ProjectCollaboration {
     CollaborationStatus,
     'phase' | 'save' | 'offlineEditable'
   > = { phase: 'connecting', save: 'connecting', offlineEditable: false };
-  constructor(readonly workspace: EditorWorkspace) {}
+  constructor(
+    readonly workspace: EditorWorkspace,
+    private readonly ticket: TicketLoader = documentTicket,
+  ) {}
   getSnapshot = (): CollaborationStatus => this.status;
   getEditingSnapshot = () => this.editingStatus;
   subscribe = (listener: () => void): (() => void) => {
@@ -344,7 +347,7 @@ export class ProjectCollaboration {
           document: file.doc,
           token: async () => {
             try {
-              const grant = await documentTicket(
+              const grant = await this.ticket(
                 this.workspace.projectId,
                 file,
                 this.workspace.getSnapshot().writable ? 'write' : 'read',

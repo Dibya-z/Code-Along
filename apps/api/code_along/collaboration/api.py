@@ -40,6 +40,9 @@ class TicketBody(BodySerializer):
     scope = serializers.ChoiceField(choices=["read", "write"])
     client_session_id = StrictUUIDField()
     awareness_client_id = StrictIntegerField(min_value=0, max_value=4294967295)
+    share_token = serializers.RegexField(
+        r"^[A-Za-z0-9_-]{43}$", trim_whitespace=False, required=False
+    )
 
 
 class TicketOutput(BodySerializer):

@@ -212,6 +212,86 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/projects/{project_id}/revisions/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_project_revisions'];
+    put?: never;
+    post: operations['create_project_revision'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/projects/{project_id}/revisions/{revision_id}/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_project_revision'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/projects/{project_id}/revisions/{revision_id}/copies/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['copy_project_revision'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/projects/{project_id}/shares/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_project_shares'];
+    put?: never;
+    post: operations['create_project_share'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/projects/{project_id}/shares/{share_id}/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: operations['revoke_project_share'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/runtime-profiles/': {
     parameters: {
       query?: never;
@@ -222,6 +302,22 @@ export interface paths {
     get: operations['list_runtime_profiles'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/shares/resolve/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['resolve_source_share'];
     delete?: never;
     options?: never;
     head?: never;
@@ -360,10 +456,29 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    CopyRevisionBodyRequest: {
+      name: string;
+    };
     CreateProjectBodyRequest: {
       name: string;
       /** Format: uuid */
       runtime_profile_id?: string;
+    };
+    CreateRevisionBodyRequest: {
+      /** Format: uuid */
+      client_request_id: string;
+      /** Format: int64 */
+      expected_version: number;
+      name: string;
+    };
+    CreateShareBodyRequest: {
+      expires_hours: number;
+      kind: components['schemas']['SourceShareKind'];
+      /** Format: uuid */
+      recipient_id: string | null;
+      /** Format: uuid */
+      revision_id: string | null;
+      scope: components['schemas']['SourceShareScope'];
     };
     CsrfOutput: {
       csrfToken: string;
@@ -375,6 +490,11 @@ export interface components {
       /** Format: uuid */
       id: string;
     };
+    /**
+     * @description * `pyodide` - pyodide
+     * @enum {string}
+     */
+    EngineEnum: 'pyodide';
     ErrorOutput: {
       detail: string;
     };
@@ -487,6 +607,34 @@ export interface components {
      * @enum {string}
      */
     InvitationStatus: 'pending' | 'accepted' | 'revoked' | 'expired';
+    LiveShareAccess: {
+      kind: components['schemas']['LiveShareAccessKindEnum'];
+      scope: components['schemas']['SourceShareScope'];
+    };
+    /**
+     * @description * `live_share` - live_share
+     * @enum {string}
+     */
+    LiveShareAccessKindEnum: 'live_share';
+    LiveShareResolved: {
+      /** Format: date-time */
+      expires_at: string;
+      files: components['schemas']['SharedFiles'];
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'live';
+      project: components['schemas']['SharedProject'];
+      scope: components['schemas']['SourceShareScope'];
+      /** Format: uuid */
+      share_id: string;
+    };
+    /**
+     * @description * `live` - live
+     * @enum {string}
+     */
+    LiveShareResolvedKindEnum: 'live';
     MemberBodyRequest: {
       role: components['schemas']['WorkspaceAssignableRole'];
     };
@@ -560,10 +708,104 @@ export interface components {
       /** Format: uuid */
       new_owner_id: string;
     };
+    /**
+     * @description * `code-along.revision` - code-along.revision
+     * @enum {string}
+     */
+    ProtocolEnum: 'code-along.revision';
+    /**
+     * @description * `shared_room_capture` - shared_room_capture
+     * @enum {string}
+     */
+    ProvenanceEnum: 'shared_room_capture';
+    /**
+     * @description * `code-along-python-helpers-v1` - code-along-python-helpers-v1
+     * @enum {string}
+     */
+    ReleaseIdEnum: 'code-along-python-helpers-v1';
     RenameBodyRequest: {
       /** Format: int64 */
       expected_version: number;
       path: string;
+    };
+    ResolveShareBodyRequest: {
+      token: string;
+    };
+    ResolvedShare:
+      | components['schemas']['LiveShareResolved']
+      | components['schemas']['SnapshotShareResolved'];
+    RevisionAuthor: {
+      display_name: string;
+      /** Format: uuid */
+      id: string;
+    };
+    RevisionDetail: {
+      author: components['schemas']['RevisionAuthor'];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      manifest: components['schemas']['RevisionManifest'];
+      manifest_sha256: string;
+      /** Format: int64 */
+      metadata_version: number;
+      name: string;
+      /** Format: uuid */
+      project_id: string;
+      provenance: components['schemas']['ProvenanceEnum'];
+    };
+    RevisionHelper: {
+      release_id: components['schemas']['ReleaseIdEnum'];
+      source_sha256: string;
+    };
+    RevisionManifest: {
+      /** Format: uuid */
+      entrypoint_file_id: string;
+      files: components['schemas']['RevisionSource'][];
+      helper_release: components['schemas']['RevisionHelper'];
+      /** Format: int64 */
+      metadata_version: number;
+      /** Format: uuid */
+      project_id: string;
+      protocol: components['schemas']['ProtocolEnum'];
+      runtime: components['schemas']['RevisionRuntime'];
+      sha256: string;
+      version: number;
+    };
+    RevisionOutput: {
+      author: components['schemas']['RevisionAuthor'];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      manifest_sha256: string;
+      /** Format: int64 */
+      metadata_version: number;
+      name: string;
+      /** Format: uuid */
+      project_id: string;
+      provenance: components['schemas']['ProvenanceEnum'];
+    };
+    RevisionPage: {
+      count: number;
+      items: components['schemas']['RevisionOutput'][];
+    };
+    RevisionRuntime: {
+      engine: components['schemas']['EngineEnum'];
+      engine_version: string;
+      manifest_sha256: string;
+      python_version: string;
+      runtime_id: string;
+    };
+    RevisionSource: {
+      /** Format: uuid */
+      document_id: string;
+      /** Format: uuid */
+      file_id: string;
+      generation: number;
+      path: string;
+      sha256: string;
+      source: string;
     };
     RuntimeOutput: {
       /** Format: uuid */
@@ -574,19 +816,93 @@ export interface components {
     RuntimePage: {
       items: components['schemas']['RuntimeOutput'][];
     };
+    ShareCreated: {
+      share: components['schemas']['ShareOutput'];
+      share_url: string;
+    };
+    ShareOutput: {
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      expires_at: string;
+      /** Format: uuid */
+      id: string;
+      kind: components['schemas']['SourceShareKind'];
+      /** Format: uuid */
+      project_id: string;
+      /** Format: uuid */
+      recipient_id: string | null;
+      /** Format: uuid */
+      revision_id: string | null;
+      revoked: boolean;
+      scope: components['schemas']['SourceShareScope'];
+    };
+    SharePage: {
+      count: number;
+      items: components['schemas']['ShareOutput'][];
+    };
+    SharedFiles: {
+      count: number;
+      items: components['schemas']['FileSource'][];
+    };
+    SharedProject: {
+      access: components['schemas']['LiveShareAccess'];
+      archived: boolean;
+      /** Format: uuid */
+      entrypoint_file_id: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: int64 */
+      metadata_version: number;
+      name: string;
+      runtime_id: string;
+      workspace_archived: boolean;
+    };
+    SnapshotRevision: {
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      manifest: components['schemas']['RevisionManifest'];
+      name: string;
+    };
+    SnapshotShareResolved: {
+      /** Format: date-time */
+      expires_at: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'snapshot';
+      revision: components['schemas']['SnapshotRevision'];
+      /** Format: uuid */
+      share_id: string;
+    };
+    /**
+     * @description * `snapshot` - snapshot
+     * @enum {string}
+     */
+    SnapshotShareResolvedKindEnum: 'snapshot';
+    /**
+     * @description * `live` - live
+     *     * `snapshot` - snapshot
+     * @enum {string}
+     */
+    SourceShareKind: 'live' | 'snapshot';
     /**
      * @description * `read` - read
      *     * `write` - write
      * @enum {string}
      */
-    ScopeEnum: 'read' | 'write';
+    SourceShareScope: 'read' | 'write';
     TicketBodyRequest: {
       /** Format: int64 */
       awareness_client_id: number;
       /** Format: uuid */
       client_session_id: string;
       generation: number;
-      scope: components['schemas']['ScopeEnum'];
+      scope: components['schemas']['SourceShareScope'];
+      share_token?: string;
     };
     TicketOutput: {
       document_name: string;
@@ -1878,6 +2194,461 @@ export interface operations {
       };
     };
   };
+  list_project_revisions: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        project_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RevisionPage'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  create_project_revision: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        project_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateRevisionBodyRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RevisionOutput'];
+        };
+      };
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RevisionOutput'];
+        };
+      };
+      /** @description No response body */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  get_project_revision: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        project_id: string;
+        revision_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RevisionDetail'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  copy_project_revision: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        project_id: string;
+        revision_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CopyRevisionBodyRequest'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProjectOutput'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  list_project_shares: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        project_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SharePage'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  create_project_share: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        project_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateShareBodyRequest'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ShareCreated'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  revoke_project_share: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        project_id: string;
+        share_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No response body */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
   list_runtime_profiles: {
     parameters: {
       query?: never;
@@ -1893,6 +2664,71 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['RuntimePage'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  resolve_source_share: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ResolveShareBodyRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ResolvedShare'];
         };
       };
       400: {

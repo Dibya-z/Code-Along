@@ -1,8 +1,21 @@
 from django.urls import path
 
-from . import api, sharing
+from . import api, revision_api, share_api, sharing
 
 urlpatterns = [
+    path("<uuid:project_id>/revisions/", revision_api.RevisionListView.as_view()),
+    path(
+        "<uuid:project_id>/revisions/<uuid:revision_id>/",
+        revision_api.RevisionDetailView.as_view(),
+    ),
+    path(
+        "<uuid:project_id>/revisions/<uuid:revision_id>/copies/",
+        revision_api.RevisionCopyView.as_view(),
+    ),
+    path("<uuid:project_id>/shares/", share_api.ShareListView.as_view()),
+    path(
+        "<uuid:project_id>/shares/<uuid:share_id>/", share_api.ShareDetailView.as_view()
+    ),
     path("<uuid:project_id>/invitations/", sharing.ProjectInvitationListView.as_view()),
     path(
         "<uuid:project_id>/invitations/<uuid:invitation_id>/",

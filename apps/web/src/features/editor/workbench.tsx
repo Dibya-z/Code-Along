@@ -10,7 +10,10 @@ import {
 import { useQueries } from '@tanstack/react-query';
 import { Button, Notice } from '@code-along/design-system';
 import { productApi } from '../../api/product.ts';
-import type { EditorProject } from '../projects/types.ts';
+import type {
+  LiveEditorProject,
+  OrdinaryEditorProject,
+} from '../projects/types.ts';
 import { EditorWorkspace } from './model/workspace.ts';
 import type { FileMetadata } from './model/document.ts';
 import { CodeEditor } from './components/code-editor.tsx';
@@ -24,27 +27,49 @@ import { RecoveryPanel } from '../recovery/panel.tsx';
 import type { ValidatedRecovery } from '../recovery/codec.ts';
 import { ProjectCollaboration } from '../collaboration/controller.ts';
 import { CollaborationPanel } from '../collaboration/panel.tsx';
+import type { TicketLoader } from '../collaboration/api.ts';
+import type { FileSource } from './model/workspace.ts';
+import { SharedSourceActions } from './source-actions.tsx';
 
 const noSubscription = () => () => {};
 const noCollaboration = () => null;
 
-interface Props {
+interface WorkbenchProps {
   accountId: string;
-  project: EditorProject;
   files: readonly FileMetadata[];
   count: number;
   selectedId: string;
   onSelect: (id: string) => void;
-  addControl: ReactNode;
-  fileActions: ReactNode;
   paused: boolean;
-  local?: ValidatedRecovery;
-  localSources?: ReadonlyMap<string, string>;
 }
+type Props = WorkbenchProps &
+  (
+    | {
+        project: OrdinaryEditorProject;
+        addControl: ReactNode;
+        fileActions: ReactNode;
+        local?: ValidatedRecovery;
+        localSources?: ReadonlyMap<string, string>;
+        capability?: never;
+      }
+    | {
+        project: LiveEditorProject;
+        addControl?: never;
+        fileActions?: never;
+        local?: never;
+        localSources?: never;
+        capability: {
+          readonly kind: 'live_share';
+          readonly shareId: string;
+          readonly baselines: readonly FileSource[];
+          readonly ticket: TicketLoader;
+        };
+      }
+  );
 export function EditorWorkbench(props: Props) {
   return (
     <ScopedWorkbench
-      key={`${props.accountId}:${props.local ? 'draft' : 'project'}:${props.project.id}`}
+      key={`${props.accountId}:${props.local ? 'draft' : (props.capability?.shareId ?? 'project')}:${props.project.id}`}
       {...props}
     />
   );
@@ -61,6 +86,7 @@ function ScopedWorkbench({
   paused,
   local,
   localSources,
+  capability,
 }: Props) {
   const name = useRef(project.name);
   name.current = project.name;
@@ -77,14 +103,18 @@ function ScopedWorkbench({
     }
     return {
       model,
-      collaboration: local ? null : new ProjectCollaboration(model),
-      recovery: new RecoveryController(
-        model,
-        () => name.current,
-        recoveryStore(),
-        undefined,
-        local,
-      ),
+      collaboration: local
+        ? null
+        : new ProjectCollaboration(model, capability?.ticket),
+      recovery: capability
+        ? null
+        : new RecoveryController(
+            model,
+            () => name.current,
+            recoveryStore(),
+            undefined,
+            local,
+          ),
       leases: 0,
     };
   });
@@ -108,13 +138,13 @@ function ScopedWorkbench({
   useEffect(() => {
     resource.leases++;
     resource.collaboration?.start();
-    resource.recovery.start();
+    resource.recovery?.start();
     return () => {
       resource.leases--;
       // React StrictMode replays effects; an actual unmount must still release all private buffers.
       queueMicrotask(() => {
         if (resource.leases === 0) {
-          resource.recovery.dispose();
+          resource.recovery?.dispose();
           resource.collaboration?.destroy();
           resource.model.destroy();
         }
@@ -156,7 +186,7 @@ function ScopedWorkbench({
     return () => window.removeEventListener('keydown', escape);
   }, [following]);
   const sources = useQueries({
-    queries: (local ? [] : files).map((file) => ({
+    queries: (local || capability ? [] : files).map((file) => ({
       queryKey: [
         'editor-source',
         accountId,
@@ -178,24 +208,25 @@ function ScopedWorkbench({
     .join('|');
   useEffect(() => {
     let active = true;
-    for (const query of sources)
-      if (query.data) {
-        const value = query.data;
-        void workspace.loadSource(value).catch((error) => {
-          if (active)
-            setErrors((previous) => ({
-              ...previous,
-              [value.id]:
-                error instanceof Error
-                  ? error.message
-                  : 'Source could not be verified.',
-            }));
-        });
-      }
+    const baselines =
+      capability?.baselines ??
+      sources.flatMap((query) => (query.data ? [query.data] : []));
+    for (const value of baselines) {
+      void workspace.loadSource(value).catch((error) => {
+        if (active)
+          setErrors((previous) => ({
+            ...previous,
+            [value.id]:
+              error instanceof Error
+                ? error.message
+                : 'Source could not be verified.',
+          }));
+      });
+    }
     return () => {
       active = false;
     };
-  }, [workspace, sourceSignature]);
+  }, [workspace, sourceSignature, capability?.baselines]);
   const active = workspace.file(selectedId);
   const sourceIndex = files.findIndex((file) => file.id === selectedId);
   const query = sources[sourceIndex];
@@ -284,7 +315,9 @@ function ScopedWorkbench({
         <p className="editor-scope-note">
           {local
             ? 'This local draft stays in this browser.'
-            : 'Live edits are shared with project members. Saved requires a server checkpoint receipt.'}
+            : capability
+              ? 'This link grants source access only. Saved requires a server checkpoint receipt.'
+              : 'Live edits are shared with project members. Saved requires a server checkpoint receipt.'}
         </p>
       </aside>
       <section className="editor-pane" aria-label="Python workbench">
@@ -383,11 +416,19 @@ function ScopedWorkbench({
         toolbar={toolbar}
         onRun={() => setPane('console')}
       />
-      <RecoveryPanel
-        model={resource.recovery}
-        name={project.name}
-        selectedId={selectedId}
-      />
+      {resource.recovery ? (
+        <RecoveryPanel
+          model={resource.recovery}
+          name={project.name}
+          selectedId={selectedId}
+        />
+      ) : (
+        <SharedSourceActions
+          workspace={workspace}
+          name={project.name}
+          selectedId={selectedId}
+        />
+      )}
     </div>
   );
 }

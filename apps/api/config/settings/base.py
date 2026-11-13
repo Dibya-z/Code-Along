@@ -121,6 +121,8 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "COMPONENT_SPLIT_PATCH": False,
     "ENUM_NAME_OVERRIDES": {
+        "SourceShareKind": ["live", "snapshot"],
+        "SourceShareScope": ["read", "write"],
         "WorkspaceRole": ["owner", "instructor", "learner"],
         "WorkspaceAssignableRole": ["instructor", "learner"],
         "ProjectRole": ["owner", "editor", "viewer"],

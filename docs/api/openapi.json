@@ -1,6 +1,17 @@
 {
   "components": {
     "schemas": {
+      "CopyRevisionBodyRequest": {
+        "properties": {
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
       "CreateProjectBodyRequest": {
         "properties": {
           "name": {
@@ -14,6 +25,58 @@
           }
         },
         "required": ["name"],
+        "type": "object"
+      },
+      "CreateRevisionBodyRequest": {
+        "properties": {
+          "client_request_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expected_version": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": ["client_request_id", "expected_version", "name"],
+        "type": "object"
+      },
+      "CreateShareBodyRequest": {
+        "properties": {
+          "expires_hours": {
+            "maximum": 168,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceShareKind"
+          },
+          "recipient_id": {
+            "format": "uuid",
+            "type": ["string", "null"]
+          },
+          "revision_id": {
+            "format": "uuid",
+            "type": ["string", "null"]
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SourceShareScope"
+          }
+        },
+        "required": [
+          "expires_hours",
+          "kind",
+          "recipient_id",
+          "revision_id",
+          "scope"
+        ],
         "type": "object"
       },
       "CsrfOutput": {
@@ -45,6 +108,11 @@
         },
         "required": ["display_name", "email", "id"],
         "type": "object"
+      },
+      "EngineEnum": {
+        "description": "* `pyodide` - pyodide",
+        "enum": ["pyodide"],
+        "type": "string"
       },
       "ErrorOutput": {
         "properties": {
@@ -357,6 +425,61 @@
         "enum": ["pending", "accepted", "revoked", "expired"],
         "type": "string"
       },
+      "LiveShareAccess": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/LiveShareAccessKindEnum"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SourceShareScope"
+          }
+        },
+        "required": ["kind", "scope"],
+        "type": "object"
+      },
+      "LiveShareAccessKindEnum": {
+        "description": "* `live_share` - live_share",
+        "enum": ["live_share"],
+        "type": "string"
+      },
+      "LiveShareResolved": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "files": {
+            "$ref": "#/components/schemas/SharedFiles"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LiveShareResolvedKindEnum"
+          },
+          "project": {
+            "$ref": "#/components/schemas/SharedProject"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SourceShareScope"
+          },
+          "share_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expires_at",
+          "files",
+          "kind",
+          "project",
+          "scope",
+          "share_id"
+        ],
+        "type": "object"
+      },
+      "LiveShareResolvedKindEnum": {
+        "description": "* `live` - live",
+        "enum": ["live"],
+        "type": "string"
+      },
       "MemberBodyRequest": {
         "properties": {
           "role": {
@@ -562,6 +685,21 @@
         "required": ["expected_version", "new_owner_id"],
         "type": "object"
       },
+      "ProtocolEnum": {
+        "description": "* `code-along.revision` - code-along.revision",
+        "enum": ["code-along.revision"],
+        "type": "string"
+      },
+      "ProvenanceEnum": {
+        "description": "* `shared_room_capture` - shared_room_capture",
+        "enum": ["shared_room_capture"],
+        "type": "string"
+      },
+      "ReleaseIdEnum": {
+        "description": "* `code-along-python-helpers-v1` - code-along-python-helpers-v1",
+        "enum": ["code-along-python-helpers-v1"],
+        "type": "string"
+      },
       "RenameBodyRequest": {
         "properties": {
           "expected_version": {
@@ -577,6 +715,294 @@
           }
         },
         "required": ["expected_version", "path"],
+        "type": "object"
+      },
+      "ResolveShareBodyRequest": {
+        "properties": {
+          "token": {
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "type": "string"
+          }
+        },
+        "required": ["token"],
+        "type": "object"
+      },
+      "ResolvedShare": {
+        "discriminator": {
+          "mapping": {
+            "live": "#/components/schemas/LiveShareResolved",
+            "snapshot": "#/components/schemas/SnapshotShareResolved"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/LiveShareResolved"
+          },
+          {
+            "$ref": "#/components/schemas/SnapshotShareResolved"
+          }
+        ]
+      },
+      "RevisionAuthor": {
+        "properties": {
+          "display_name": {
+            "maxLength": 80,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": ["display_name", "id"],
+        "type": "object"
+      },
+      "RevisionDetail": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/RevisionAuthor"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/RevisionManifest"
+          },
+          "manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "metadata_version": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ProvenanceEnum"
+          }
+        },
+        "required": [
+          "author",
+          "created_at",
+          "id",
+          "manifest",
+          "manifest_sha256",
+          "metadata_version",
+          "name",
+          "project_id",
+          "provenance"
+        ],
+        "type": "object"
+      },
+      "RevisionHelper": {
+        "properties": {
+          "release_id": {
+            "$ref": "#/components/schemas/ReleaseIdEnum"
+          },
+          "source_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          }
+        },
+        "required": ["release_id", "source_sha256"],
+        "type": "object"
+      },
+      "RevisionManifest": {
+        "properties": {
+          "entrypoint_file_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/RevisionSource"
+            },
+            "type": "array"
+          },
+          "helper_release": {
+            "$ref": "#/components/schemas/RevisionHelper"
+          },
+          "metadata_version": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "protocol": {
+            "$ref": "#/components/schemas/ProtocolEnum"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/RevisionRuntime"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "version": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entrypoint_file_id",
+          "files",
+          "helper_release",
+          "metadata_version",
+          "project_id",
+          "protocol",
+          "runtime",
+          "sha256",
+          "version"
+        ],
+        "type": "object"
+      },
+      "RevisionOutput": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/RevisionAuthor"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "metadata_version": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ProvenanceEnum"
+          }
+        },
+        "required": [
+          "author",
+          "created_at",
+          "id",
+          "manifest_sha256",
+          "metadata_version",
+          "name",
+          "project_id",
+          "provenance"
+        ],
+        "type": "object"
+      },
+      "RevisionPage": {
+        "properties": {
+          "count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RevisionOutput"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["count", "items"],
+        "type": "object"
+      },
+      "RevisionRuntime": {
+        "properties": {
+          "engine": {
+            "$ref": "#/components/schemas/EngineEnum"
+          },
+          "engine_version": {
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "python_version": {
+            "type": "string"
+          },
+          "runtime_id": {
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "required": [
+          "engine",
+          "engine_version",
+          "manifest_sha256",
+          "python_version",
+          "runtime_id"
+        ],
+        "type": "object"
+      },
+      "RevisionSource": {
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "file_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "generation": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "path": {
+            "maxLength": 160,
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "file_id",
+          "generation",
+          "path",
+          "sha256",
+          "source"
+        ],
         "type": "object"
       },
       "RuntimeOutput": {
@@ -609,7 +1035,199 @@
         "required": ["items"],
         "type": "object"
       },
-      "ScopeEnum": {
+      "ShareCreated": {
+        "properties": {
+          "share": {
+            "$ref": "#/components/schemas/ShareOutput"
+          },
+          "share_url": {
+            "pattern": "^https://[^/?#\\s]+/shares#[A-Za-z0-9_-]{43}$",
+            "type": "string"
+          }
+        },
+        "required": ["share", "share_url"],
+        "type": "object"
+      },
+      "ShareOutput": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceShareKind"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "recipient_id": {
+            "format": "uuid",
+            "type": ["string", "null"]
+          },
+          "revision_id": {
+            "format": "uuid",
+            "type": ["string", "null"]
+          },
+          "revoked": {
+            "type": "boolean"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SourceShareScope"
+          }
+        },
+        "required": [
+          "created_at",
+          "expires_at",
+          "id",
+          "kind",
+          "project_id",
+          "recipient_id",
+          "revision_id",
+          "revoked",
+          "scope"
+        ],
+        "type": "object"
+      },
+      "SharePage": {
+        "properties": {
+          "count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ShareOutput"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["count", "items"],
+        "type": "object"
+      },
+      "SharedFiles": {
+        "properties": {
+          "count": {
+            "maximum": 20,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FileSource"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["count", "items"],
+        "type": "object"
+      },
+      "SharedProject": {
+        "properties": {
+          "access": {
+            "$ref": "#/components/schemas/LiveShareAccess"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "entrypoint_file_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "metadata_version": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "runtime_id": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "workspace_archived": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "access",
+          "archived",
+          "entrypoint_file_id",
+          "id",
+          "metadata_version",
+          "name",
+          "runtime_id",
+          "workspace_archived"
+        ],
+        "type": "object"
+      },
+      "SnapshotRevision": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/RevisionManifest"
+          },
+          "name": {
+            "maxLength": 120,
+            "type": "string"
+          }
+        },
+        "required": ["created_at", "id", "manifest", "name"],
+        "type": "object"
+      },
+      "SnapshotShareResolved": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SnapshotShareResolvedKindEnum"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/SnapshotRevision"
+          },
+          "share_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": ["expires_at", "kind", "revision", "share_id"],
+        "type": "object"
+      },
+      "SnapshotShareResolvedKindEnum": {
+        "description": "* `snapshot` - snapshot",
+        "enum": ["snapshot"],
+        "type": "string"
+      },
+      "SourceShareKind": {
+        "description": "* `live` - live\n* `snapshot` - snapshot",
+        "enum": ["live", "snapshot"],
+        "type": "string"
+      },
+      "SourceShareScope": {
         "description": "* `read` - read\n* `write` - write",
         "enum": ["read", "write"],
         "type": "string"
@@ -632,7 +1250,12 @@
             "type": "integer"
           },
           "scope": {
-            "$ref": "#/components/schemas/ScopeEnum"
+            "$ref": "#/components/schemas/SourceShareScope"
+          },
+          "share_token": {
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "type": "string"
           }
         },
         "required": [
@@ -2504,6 +3127,658 @@
         "tags": ["projects"]
       }
     },
+    "/api/v1/projects/{project_id}/revisions/": {
+      "get": {
+        "operationId": "list_project_revisions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionPage"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["projects"]
+      },
+      "post": {
+        "operationId": "create_project_revision",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRevisionBodyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "description": "No response body"
+          },
+          "409": {
+            "description": "No response body"
+          },
+          "429": {
+            "description": "No response body"
+          },
+          "503": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["projects"]
+      }
+    },
+    "/api/v1/projects/{project_id}/revisions/{revision_id}/": {
+      "get": {
+        "operationId": "get_project_revision",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionDetail"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["projects"]
+      }
+    },
+    "/api/v1/projects/{project_id}/revisions/{revision_id}/copies/": {
+      "post": {
+        "operationId": "copy_project_revision",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopyRevisionBodyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["projects"]
+      }
+    },
+    "/api/v1/projects/{project_id}/shares/": {
+      "get": {
+        "operationId": "list_project_shares",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharePage"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["projects"]
+      },
+      "post": {
+        "operationId": "create_project_share",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShareBodyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareCreated"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["projects"]
+      }
+    },
+    "/api/v1/projects/{project_id}/shares/{share_id}/": {
+      "delete": {
+        "operationId": "revoke_project_share",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["projects"]
+      }
+    },
     "/api/v1/runtime-profiles/": {
       "get": {
         "operationId": "list_runtime_profiles",
@@ -2576,6 +3851,91 @@
           }
         ],
         "tags": ["runtime-profiles"]
+      }
+    },
+    "/api/v1/shares/resolve/": {
+      "post": {
+        "operationId": "resolve_source_share",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveShareBodyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolvedShare"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": ["shares"]
       }
     },
     "/api/v1/workspaces/": {

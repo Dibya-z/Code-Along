@@ -33,7 +33,7 @@ With `npm run dev` already running, open **https://127.0.0.1:8443**. If another 
 1. Create an account using the signup screen.
 2. Run `npm run mail -- --latest` in your own terminal, open the verification link and select **Verify email**. Sign in with the verified account.
 3. Select **Create workspace**, enter a name and create it.
-4. Select **Create project**, enter a name and open the project. Edit `main.py`, switch files and select **Run code**. Try input, captured-source inspection and Stop. Local source changes do not write a server Saved checkpoint; durable source persistence is M3.
+4. Select **Create project**, enter a name and open the project. Edit `main.py`, switch files and select **Run code**. Try input, captured-source inspection and Stop. Shared edits synchronize through the private collaboration service; wait for **Saved** before reloading. Device recovery is a separate local copy.
 5. To inspect sharing, use a second account in a separate browser profile, verify it through its own local message, then test workspace/project invitations and editor/viewer access. Workspace membership alone does not open private projects.
 6. Select **Local drafts** to preview a template or import a `.codealong.json` source backup into a new local copy. The NumPy template uses an explicitly reviewed scientific profile. Local copies never change the original project.
 7. Wait for **Local recovery updated** before reloading, and review the restore prompt on a server project's return. Source backups provide an independent export. Sign-out clears local drafts by default unless device retention is enabled. See [recovery](../protocols/local-recovery.md) and [project tools](../protocols/project-tools.md).

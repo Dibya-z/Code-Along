@@ -104,8 +104,8 @@ export function ProjectSharing({ project }: { project: Project }) {
     <section className="content-section" aria-labelledby="sharing-heading">
       <h2 id="sharing-heading">Project access</h2>
       <p className="muted">
-        Only you and the people listed here can open this project. A workspace
-        role alone gives no access.
+        These grants give ordinary project access. A workspace role alone gives
+        no access. Valid shared links grant separate, limited source access.
       </p>
       {change.error && <Failure error={change.error} />}
       {grants.error && <Failure error={grants.error} />}

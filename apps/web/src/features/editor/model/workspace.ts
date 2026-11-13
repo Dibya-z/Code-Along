@@ -6,7 +6,7 @@ import {
 } from '@code-along/contracts/execution';
 import type { components } from '@code-along/api-client';
 import * as Y from 'yjs';
-import type { EditorProject } from '../../projects/types.ts';
+import { sourceWritable, type EditorProject } from '../../projects/types.ts';
 import {
   validateRecoveryBinary,
   type ValidatedRecovery,
@@ -169,10 +169,7 @@ export class EditorWorkspace {
     this.summary = {
       ...this.summary,
       entrypoint: project.entrypoint_file_id,
-      writable:
-        project.role !== 'viewer' &&
-        !project.archived &&
-        !project.workspace_archived,
+      writable: sourceWritable(project),
     };
     this.publish(true);
     return true;

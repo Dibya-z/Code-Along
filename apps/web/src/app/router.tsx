@@ -21,6 +21,11 @@ const ProjectPage = lazy(() =>
     default: module.ProjectPage,
   })),
 );
+const SharedPage = lazy(() =>
+  import('../features/shares/page.tsx').then((module) => ({
+    default: module.SharedPage,
+  })),
+);
 const LocalDraftsPage = lazy(() =>
   import('../features/project-tools/hub.tsx').then((module) => ({
     default: module.LocalDraftsPage,
@@ -198,6 +203,20 @@ const router = createBrowserRouter([
       },
       { path: 'workspaces/:workspaceId', element: <WorkspacePage /> },
       { path: 'invitations/:token', element: <InvitationPage /> },
+      {
+        path: 'shares',
+        element: (
+          <Suspense
+            fallback={
+              <div className="page" role="status">
+                Opening shared source…
+              </div>
+            }
+          >
+            <SharedPage />
+          </Suspense>
+        ),
+      },
       {
         path: 'projects/:projectId',
         element: (
