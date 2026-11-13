@@ -88,6 +88,7 @@ jobs:
           corepack pnpm --filter @code-along/browser-proofs exec playwright install --with-deps chromium webkit
           corepack pnpm --filter @code-along/browser-proofs test:browser
           corepack pnpm --filter @code-along/browser-proofs test:foundation
+          uv run --locked --offline python tools/dev/init_development.py
           corepack pnpm --filter @code-along/browser-proofs test:product
       - name: Keep failed owned browser evidence
         if: failure()
