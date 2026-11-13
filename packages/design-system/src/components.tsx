@@ -81,6 +81,7 @@ export function Dialog({
   children,
   open,
   onOpenChange,
+  onCloseAutoFocus,
 }: {
   title: string;
   description: string;
@@ -88,6 +89,7 @@ export function Dialog({
   children: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   return (
     <DialogPrimitive.Root
@@ -97,7 +99,10 @@ export function Dialog({
       <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="dialog-overlay" />
-        <DialogPrimitive.Content className="dialog">
+        <DialogPrimitive.Content
+          className="dialog"
+          {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
+        >
           <DialogPrimitive.Title>{title}</DialogPrimitive.Title>
           <DialogPrimitive.Description>
             {description}

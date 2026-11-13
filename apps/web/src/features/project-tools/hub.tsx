@@ -55,7 +55,8 @@ function DraftHub() {
   const [preview, setPreview] = useState<SourceArchive | null>(null),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
-    [reading, setReading] = useState(false);
+    [reading, setReading] = useState(false),
+    [restoreListFocus, setRestoreListFocus] = useState(false);
   const readVersion = useRef(0);
   const query = useQuery({
     queryKey: ['local-drafts', actor],
@@ -63,6 +64,12 @@ function DraftHub() {
     gcTime: 0,
     queryFn: () => localRows(actor),
   });
+  useEffect(() => {
+    if (restoreListFocus && !query.isFetching) {
+      document.getElementById('refresh-local-list')?.focus();
+      setRestoreListFocus(false);
+    }
+  }, [restoreListFocus, query.isFetching]);
   async function create(archive: SourceArchive) {
     setBusy(true);
     setError('');
@@ -249,16 +256,9 @@ function DraftHub() {
                   actor={actor}
                   row={row.record}
                   onDeleted={() => {
-                    void query
-                      .refetch()
-                      .then(() =>
-                        requestAnimationFrame(() =>
-                          document
-                            .getElementById('refresh-local-list')
-                            ?.focus(),
-                        ),
-                      );
+                    void query.refetch();
                   }}
+                  onDeletedDialogClosed={() => setRestoreListFocus(true)}
                   onError={setError}
                 />
               </div>
@@ -332,19 +332,38 @@ function DeleteCopy({
   actor,
   row,
   onDeleted,
+  onDeletedDialogClosed,
   onError,
 }: {
   actor: string;
   row: StoredRecovery;
   onDeleted: () => void;
+  onDeletedDialogClosed: () => void;
   onError: (message: string) => void;
 }) {
   const [open, setOpen] = useState(false),
     [busy, setBusy] = useState(false);
+  const deleted = useRef(false),
+    closeObserved = useRef(false);
   return (
     <Dialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(next) => {
+        if (next && busy) return;
+        if (next) {
+          deleted.current = false;
+          closeObserved.current = false;
+        }
+        setOpen(next);
+      }}
+      onCloseAutoFocus={(event) => {
+        closeObserved.current = true;
+        if (deleted.current) {
+          // The deleted row's trigger is gone; return after real dialog cleanup.
+          event.preventDefault();
+          onDeletedDialogClosed();
+        }
+      }}
       title="Delete this local copy?"
       description="Export it first if you need a backup. This removes only the stored copy on this device."
       trigger={<Button variant="secondary">Delete copy</Button>}
@@ -362,8 +381,11 @@ function DeleteCopy({
               scope.policy.epoch,
               row.revision,
             );
+            deleted.current = true;
             setOpen(false);
             onDeleted();
+            // Escape/Close can finish before the storage transaction does.
+            if (closeObserved.current) onDeletedDialogClosed();
           })()
             .catch(() => {
               setOpen(false);

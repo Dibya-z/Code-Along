@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import process from 'node:process';
 import {
   register,
   login,
@@ -304,11 +305,30 @@ test('retained local drafts are account-scoped and confirmed deletion restores f
   );
   await hub(page);
   await page.getByRole('button', { name: 'Delete copy', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Delete this local copy?' });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Delete copy', exact: true }),
+  ).toBeFocused();
+  await page.getByRole('button', { name: 'Delete copy', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Delete this local copy?' })
     .getByRole('button', { name: 'Delete local copy', exact: true })
     .click();
   await expect(page.locator('.local-draft-row')).toHaveCount(0);
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Refresh local list', exact: true }),
+  ).toBeFocused();
+  const optionTab = browserName === 'webkit' && process.platform === 'darwin';
+  await page.keyboard.press(optionTab ? 'Alt+Shift+Tab' : 'Shift+Tab');
+  // Native file-picker subcontrols have different focus ownership by engine.
+  await expect(
+    page.getByRole('button', { name: 'Refresh local list', exact: true }),
+  ).not.toBeFocused();
+  await page.keyboard.press(optionTab ? 'Alt+Tab' : 'Tab');
   await expect(
     page.getByRole('button', { name: 'Refresh local list', exact: true }),
   ).toBeFocused();
