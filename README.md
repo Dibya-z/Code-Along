@@ -4,35 +4,38 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-M0 integration proofs and M1 product foundation are implemented; M2 is completing final verification. You can register, verify an email locally, sign in, create a workspace, invite another account and create private projects with explicit editor/viewer access.
+M0 integration proofs, M1 product foundation and the M2 Python IDE are implemented. You can register, verify an email locally, sign in, create a workspace, invite another account and create private projects with explicit editor/viewer access.
 
 Projects open a multi-file Python editor with stable tabs, syntax highlighting, undo and adjustable text size. Run code executes a complete frozen source snapshot in a fresh, separate-site Python Worker. It offers batch/interactive input, a bounded plain-text console, captured-source inspection, PNG plots and Stop. Core and opt-in NumPy use reviewed, hash-pinned assets; Matplotlib awaits compatible dependencies that pass the advisory gate. See [runtime profiles](packages/runtime-profiles/README.md). Desktop editor/console panes resize with a keyboard-friendly control; small screens retain both panes behind Editor/Console buttons.
 
 Account-scoped [local recovery](docs/protocols/local-recovery.md) preserves edits on this device, with explicit restore, two-tab conflict handling and source exports. It clears on sign-out by default, with optional device retention. Wait for “Local recovery updated” before closing. **Local drafts** offers three original templates, validated `.codealong.json` import, file operations and source exports. **Open local copy** captures project edits into an independent device-only draft.
 
-An already open complete project/local draft can run offline after its trusted runner connection and chosen environment are warmed. Large verified runtime assets stay in the frame's bounded memory cache; small scripts still need the browser cache. Stop, navigation, eviction or invalid/untrusted HTTPS can require a connection again. Cold offline login/installation is not provided, and login/API responses are never persisted. See [execution and offline limits](docs/protocols/product-execution.md). Final regression and local-stack verification remain before the M2 handoff. Collaboration, durable server saves and chat follow in M3. Nothing is deployed.
+An already open complete project/local draft can run offline after its trusted runner connection and chosen environment are warmed. Large verified runtime assets stay in the frame's bounded memory cache; small scripts still need the browser cache. Stop, navigation, eviction or invalid/untrusted HTTPS can require a connection again. Cold offline login/installation is not provided, and login/API responses are never persisted. See [execution and offline limits](docs/protocols/product-execution.md). Collaboration, durable server saves and chat follow in M3. Nothing is deployed.
 
 Open **https://127.0.0.1:8443** after starting the [local development stack](docs/operations/development-stack.md). This workstation uses the project-owned Lima VM; that guide includes its exact commands. Development verification/reset emails stay in a private local mail store, described in the [account guide](docs/operations/authentication.md).
 
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): milestones, dependencies, verification, commits and remaining work.
+- [M2 validation report](docs/architecture/m2-validation.md): editor/runner/recovery functionality, browser evidence and remaining boundaries.
 - [M1 validation report](docs/architecture/m1-validation.md): completed functionality, test evidence, CI and limitations.
 - [Approved architecture](docs/architecture/approved-architecture.html): decisions, schema, protocols and roadmap. Open the HTML in a browser; some archived investigation links are machine-local.
 - [Design direction](DESIGN.md) and [repository instructions](AGENTS.md).
 
 ## Architecture and implemented modules
 
-| Responsibility              | Technology / boundary                                                                           |
-| --------------------------- | ----------------------------------------------------------------------------------------------- |
-| Product UI                  | React 19, TypeScript 6, Vite, React Router, TanStack Query                                      |
-| Product APIs                | Python 3.13, Django 5.2 LTS, DRF, Channels/Daphne                                               |
-| Identity                    | allauth headless, verified email, host-only Django sessions and CSRF                            |
-| Durable storage             | PostgreSQL 18; Django owns product migrations                                                   |
-| Transient coordination      | Redis; shared account/API abuse controls                                                        |
-| Design system               | Original tokens, Radix-based primitives, Tailwind and Storybook                                 |
-| API contracts               | Offline-generated OpenAPI and typed clients with CI drift checks                                |
-| Editor/collaboration, M2/M3 | CodeMirror 6, Yjs and narrow Node/Hocuspocus service; integration proofs exist                  |
-| Browser execution, M2       | Hash-pinned Pyodide; frozen product runs in a separate-site supervised fresh Worker             |
-| Later trusted grading       | Separate Linux sandbox hosts and external scoring; never Django or ordinary application workers |
+| Responsibility         | Technology / boundary                                                                           |
+| ---------------------- | ----------------------------------------------------------------------------------------------- |
+| Product UI             | React 19, TypeScript 6, Vite, React Router, TanStack Query                                      |
+| Product APIs           | Python 3.13, Django 5.2 LTS, DRF, Channels/Daphne                                               |
+| Identity               | allauth headless, verified email, host-only Django sessions and CSRF                            |
+| Durable storage        | PostgreSQL 18; Django owns product migrations                                                   |
+| Transient coordination | Redis; shared account/API abuse controls                                                        |
+| Design system          | Original tokens, Radix-based primitives, Tailwind and Storybook                                 |
+| API contracts          | Offline-generated OpenAPI and typed clients with CI drift checks                                |
+| Local editor, M2       | CodeMirror 6 and stable per-file Yjs documents                                                  |
+| Local recovery, M2     | Account-scoped Dexie/IndexedDB binary records with revision/epoch checks                        |
+| Collaboration, M3      | Narrow Node/Hocuspocus service; checkpoint/transport proofs await product integration           |
+| Browser execution, M2  | Hash-pinned Pyodide; frozen product runs in a separate-site supervised fresh Worker             |
+| Later trusted grading  | Separate Linux sandbox hosts and external scoring; never Django or ordinary application workers |
 
 Workspace teaching roles do not grant access to private projects. Provider synchronization is not a durable save receipt. Browser practice is not a trusted grade. Runtime/framework/tool versions are exact in the lockfiles, and development base images use digest pins.
 
@@ -44,6 +47,7 @@ apps/runner-web/          Separate-site supervised Pyodide product runner and v1
 packages/api-client/      Generated product/auth types and client factories
 packages/contracts/       Versioned checkpoint and execution contracts
 packages/design-system/   Original tokens, reusable controls and stories
+packages/runtime-profiles/ Reviewed self-hosted runtime/package inventories
 tests/browser/            Owned runner, UI and two-user product browser checks
 tools/dev/                Disposable service harnesses, setup and schema generation
 tools/ci/                 CI-only native tools, dependency and Compose checks
@@ -85,7 +89,7 @@ npm run stop                   # Stop services; preserve database and mail.
 
 Ctrl+C in the development terminal also stops the services. With the dedicated Lima engine, shutdown also stops that owned VM and releases its allocated memory. Direct Docker engines are shared, so only this Compose project is stopped. Duplicate development controllers are rejected; repeated stops are safe. npm and Corepack/pnpm can invoke these same scripts; dependency installation continues to use the pinned pnpm/uv locks.
 
-The app uses `127.0.0.1`; `localhost` serves the separate Python runner. **System-wide certificate trust is optional and deferred by the owner.** You can continue development and inspect M1 screens without installing a CA; the current HTTPS profile may still show a certificate warning and needs a site-specific browser exception where supported. No HTTP development profile has been added. The [optional HTTPS tools](docs/operations/local-https.md) prepare backed-up certificates (`tls:setup`), preview trust (`tls:trust`) and verify HTTPS plus OS trust (`tls:check`). Trust installation requires an explicit `tls:trust -- --install`. An untrusted-CA failure from `tls:check` is expected while installation is deferred and is separate from application readiness. See the [development guide](docs/operations/development-stack.md) for the existing M1 walkthrough.
+The app uses `127.0.0.1`; `localhost` serves the separate Python runner. **System-wide certificate trust is optional and deferred by the owner.** The current HTTPS profile may still show a certificate warning and needs a site-specific browser exception where supported, including for the separate runner. The Run error help links to that runtime page. Reliable offline script caching needs browser-accepted HTTPS. No HTTP development profile has been added. The [optional HTTPS tools](docs/operations/local-https.md) prepare backed-up certificates (`tls:setup`), preview trust (`tls:trust`) and verify HTTPS plus OS trust (`tls:check`). Trust installation requires an explicit `tls:trust -- --install`. An untrusted-CA failure from `tls:check` is expected while installation is deferred and is separate from application readiness. See the [development guide](docs/operations/development-stack.md) for the account and M2 workbench walkthrough.
 
 ## Verification
 
@@ -114,7 +118,7 @@ uv run --locked --offline python tools/dev/postgres_cluster.py -- \
 
 Use your own trusted installation path; see [native database prerequisites](docs/operations/postgres-tests.md). These harnesses never migrate an existing/reference database. `-m 'not postgres'` runs explicitly partial Python coverage and does not replace integration tests. Empty suites fail.
 
-Post-M1 maintenance is addressing test-process cleanup and the local startup/certificate workflow before M2. The first cleanup fix is implemented and verified with 208 Python tests; startup and certificate improvements remain pending review of that unit. The [database lifecycle guide](docs/operations/postgres-tests.md) records the reproduced direct-SIGTERM cleanup gap, scoped fix and limits of cleanup after forced termination. Follow-up status is in the implementation tracker.
+Verified maintenance provides graceful test-process cleanup, the normal npm development controller and optional local HTTPS tooling. The [database lifecycle guide](docs/operations/postgres-tests.md) records the reproduced direct-SIGTERM gap and the limits of cleanup after forced termination. OS trust installation remains deferred.
 
 Build the owned browser fixtures and install Chromium/WebKit explicitly:
 
@@ -134,16 +138,16 @@ corepack pnpm --filter @code-along/browser-proofs test:product
 
 OpenSSL and free loopback fixture ports are required: runner HTTPS 9443, UI 15173/15174, product HTTPS 18443/API 18001. Fixtures clean up their owned services and disposable databases/accounts; they do not use the persistent development database. The runner fixture removes its temporary TLS; the product fixture uses ignored development certificates and private fake-account mail, which remain local. On Linux, Playwright's `install --with-deps chromium webkit` also installs browser OS prerequisites; CI runs it on disposable runners.
 
-| M1 final local gate                                         | Result                                      |
+| M2 local gate                                               | Result                                      |
 | ----------------------------------------------------------- | ------------------------------------------- |
-| Python configuration, backend, migration and recovery tests | 203 passed                                  |
-| Regular JavaScript protocol/client tests                    | 162 passed                                  |
+| Python configuration, backend, migration and recovery tests | 278 passed                                  |
+| Regular JavaScript model/protocol/client tests              | 279 passed                                  |
 | Native checkpoint storage / real-provider transport         | 20 / 13 passed                              |
-| Chromium + WebKit runner / UI / product browser flows       | 26 / 4 / 8 passed                           |
+| Chromium + WebKit runner / UI / product browser flows       | 26 / 4 / 50 passed                          |
 | Lint, formatting, strict types, builds, locks and API drift | Passed                                      |
-| npm audit and 58 exact public PyPI lock entries             | No known advisories reported at review time |
+| npm audit and 59 exact backend/browser package entries      | No known advisories reported at review time |
 
-[CI](.github/workflows/ci.yml) runs the foundation gates and a separate fresh Compose build/smoke test. The [M1 report](docs/architecture/m1-validation.md) links the observed runs. Audits are point-in-time checks. Three scoped lint-tool minimatch overrides and one Storybook-docgen glob override remain until their parent packages update. Storybook's package-local `skipLibCheck` covers upstream declarations only; own source/stories remain strict.
+[CI](.github/workflows/ci.yml) runs the foundation gates and a separate fresh Compose build/smoke test. The [M2 report](docs/architecture/m2-validation.md) records complete/focused local regressions, observed CI and limitations. Audits are point-in-time checks. Three scoped lint-tool minimatch overrides and one Storybook-docgen glob override remain until their parent packages update. Storybook's package-local `skipLibCheck` covers upstream declarations only; own source/stories remain strict.
 
 Firefox is **unverified** on this workstation: its owned launcher fails before navigation with `Could not find profile folder`. `test:firefox` and `test:all` retain the explicit gate. Chromium/WebKit automation does not certify every retail/mobile browser or replace later screen-reader/load/deployment checks. The [M0 report](docs/architecture/m0-validation.md) and [runner threat model](docs/architecture/runner-threat-model.md) describe execution limits, including no hard browser memory quota or grade authority.
 
@@ -153,6 +157,9 @@ Firefox is **unverified** on this workstation: its owned launcher fails before n
 - [Workspaces and membership](docs/operations/workspaces.md)
 - [Recipient-bound invitations](docs/operations/invitations.md)
 - [Projects, starter files and sharing](docs/operations/projects.md)
+- [Python execution, input/plots and warmed offline practice](docs/protocols/product-execution.md)
+- [Local recovery and shared-device retention](docs/protocols/local-recovery.md)
+- [Templates, source backups and local drafts](docs/protocols/project-tools.md)
 - [Backend configuration and commands](docs/operations/backend-development.md)
 - [Checkpoint protocol](docs/protocols/collaboration-checkpoints.md) and [persistence proof](docs/architecture/checkpoint-persistence-proof.md)
 
@@ -164,4 +171,4 @@ Follow **PLAN → IMPLEMENT → TEST → REVIEW → SHOW CHANGES → APPROVAL �
 
 The owner authorized verified granular commits and pushes throughout M2. That permission ends with its verified handoff; M3 requires a new instruction. A commit's hash is recorded in the next meaningful tracker update rather than amending history or creating a bookkeeping loop.
 
-M2 builds the multi-file IDE and isolated run experience. M3 integrates collaboration, durable saves and chat. M4 adds learning/submission/review workflows, M5 pilot readiness, and optional M6/M7 add trusted grading and extended collaboration. See the tracker for individual tasks and dependencies.
+M2 delivers the multi-file IDE and isolated run experience. M3 integrates collaboration, durable saves and chat. M4 adds learning/submission/review workflows, M5 pilot readiness, and optional M6/M7 add trusted grading and extended collaboration. See the tracker for individual tasks and dependencies.
