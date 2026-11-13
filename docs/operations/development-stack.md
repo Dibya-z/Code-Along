@@ -2,6 +2,47 @@
 
 This is development infrastructure, not a deployment configuration. Django owns migrations; learner Python never runs in its process. PostgreSQL data persists in the named Compose volume. Redis is transient. Only the HTTPS proxy is published, on loopback.
 
+## Normal local workflow
+
+Install the pinned README prerequisites once, then run these commands from the repository root:
+
+```sh
+npm run dev
+# Open https://127.0.0.1:8443 and keep this terminal open.
+```
+
+The foreground controller initializes missing ignored credentials/TLS without overwriting existing state, selects the existing project-owned Lima engine on this workstation (or a working Docker engine elsewhere), builds frozen dependencies/images, applies migrations and waits for DB/Redis/API readiness. The optional `infra/compose.development.yaml` profile adds a non-root React/Vite watcher on the private Docker network. App API requests go directly through the same HTTPS proxy to Django. Vite's port is not published to the host. Read-only frontend/shared-source mounts and polling support updates across the VM filesystem; backend and dependency changes need a restart/rebuild.
+
+```sh
+npm run status
+npm run mail
+npm run mail -- --latest
+npm run stop
+```
+
+Status reads state without starting a stopped VM. Mail listing reports only whether messages exist; `--latest` explicitly prints the newest private message and its access link. Ctrl+C, SIGTERM, terminal SIGHUP or `npm run stop` shuts down this project's services while retaining database/mail volumes. The dedicated Lima VM is stopped too, releasing its 4 GiB allocation. Other Docker engines and unrelated VMs/services are left running. A per-project lock rejects duplicate controllers. Startup failures trigger cleanup, and repeated stops succeed when the VM is already stopped. A force-killed controller cannot run its Python cleanup; a later explicit `npm run stop` still controls the owned project without relying on stale PIDs.
+
+The normal app origin remains **https://127.0.0.1:8443**, with isolated runner **https://localhost:8443**. The existing self-signed certificate still needs user-controlled browser trust; the certificate follow-up is separate. The readiness probe validates the configured certificate directly, rather than disabling TLS verification. No startup command installs certificate trust or changes global Docker contexts.
+
+The existing base Compose profile below serves built/static assets for integration/packaging checks. Stop the foreground controller before switching manually between static and development profiles. The longer Lima commands are diagnostics; normal startup uses the npm scripts above.
+
+## Development proxy security and verification
+
+The base application's static CSP and runner policy remain unchanged. The development app adds only its exact local WSS endpoint and a fresh inline-script nonce for React refresh. Vite emits a [nonce placeholder](https://vite.dev/config/shared-options.html#html-cspnonce); Nginx replaces it in HTML using its per-request random request ID and emits the matching policy. Source and reference: [Nginx sub_filter](https://nginx.org/en/docs/http/ngx_http_sub_module.html), [request_id](https://nginx.org/en/docs/http/ngx_http_core_module.html#var_request_id), [Vite WebSocket proxy options](https://vite.dev/config/server-options.html#server-ws). The app still denies Workers and delegates its runner frame to the separate site. The runner never proxies product APIs. Browser console forwarding to the development terminal is disabled.
+
+Development browser checks run against a disposable `code-along-ci`/`code-along-dev-check` project, with a test-only CSS fixture mount. They verify a different matching CSP nonce per HTML response, actual CSRF/API responses, runner API rejection, CSS hot updates without losing typed input, signup/private mail verification/login and workspace/project creation. The mail reader refuses primary/unknown projects, external origins, mismatched published ports and real recipients. Only fake `example.test` accounts are created. Local test credentials live in ignored `.runtime/dev-check.env`, separately from application credentials; CI generates its own `.env` on its disposable runner. No product source is edited by the hot-update test.
+
+For an already running isolated test stack with all three Compose files applied:
+
+```sh
+CODE_ALONG_DEVELOPMENT_PROOF=true \
+CODE_ALONG_DEVELOPMENT_PROJECT=code-along-dev-check \
+CODE_ALONG_DEVELOPMENT_ORIGIN=https://127.0.0.1:18443 \
+corepack pnpm --filter @code-along/browser-proofs test:development
+```
+
+The CI Compose job runs the base image smoke, switches to the watcher/test profile, runs Chromium/WebKit checks and removes only its disposable test project volumes. Account traces remain disabled. Root-controller unit tests exercise port/input validation, engine ownership, locks, startup/readiness failures, terminal signals, repeated shutdown, and explicit mail access. Live start/stop/restart verification also checks the primary database identity/counts and unchanged environment fingerprint.
+
 ## Compose
 
 Install a trusted Docker engine with Compose, Node/Corepack and the pinned Python/uv prerequisites from the README. From the repository root:
@@ -81,7 +122,7 @@ The final M1 rebuild also passed migrations, app/DB/Redis health, React assets, 
 
 ## Frontend and component library
 
-The proxy now serves the React build from `apps/web/dist`. Rebuild containers after frontend changes. For quick UI-only iteration, `corepack pnpm --filter @code-along/web dev` starts Vite; authenticated integration uses the HTTPS proxy above, so no cross-origin credentials/CORS workaround is needed.
+Use root `npm run dev` for connected frontend iteration with live updates. The base Compose profile serves the React build from `apps/web/dist` and requires rebuilding after frontend changes. A standalone `corepack pnpm --filter @code-along/web dev` preview does not start the backend; use the root command for account/project flows. Storybook remains a separate component workspace.
 
 ```sh
 corepack pnpm --filter @code-along/web build

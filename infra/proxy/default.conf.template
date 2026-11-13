@@ -19,7 +19,7 @@ server {
   add_header Cross-Origin-Opener-Policy same-origin always;
   add_header Cross-Origin-Embedder-Policy require-corp always;
   add_header Permissions-Policy 'cross-origin-isolated=(self "${RUNNER_ORIGIN}"), camera=(), microphone=()' always;
-  add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src ${RUNNER_ORIGIN}; worker-src 'none'; base-uri 'none'; frame-ancestors 'none'" always;
+  include /etc/nginx/conf.d/app/csp.conf;
   location /api/ {
     proxy_pass http://api:8000;
     proxy_set_header Host $http_host;
@@ -32,7 +32,7 @@ server {
     proxy_set_header Host $http_host;
     proxy_set_header X-Forwarded-Proto https;
   }
-  location / { try_files $uri $uri/ /index.html; }
+  include /etc/nginx/conf.d/app/content.conf;
 }
 server {
   listen 8443 ssl;

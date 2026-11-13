@@ -1,0 +1,4 @@
+/* A dedicated test fixture; no product styling. */
+:root {
+  --code-along-development-proof: initial;
+}

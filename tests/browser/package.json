@@ -10,7 +10,8 @@
     "test:firefox": "playwright test --project=firefox",
     "test:all": "playwright test",
     "test:foundation": "playwright test --config foundation/playwright.config.ts",
-    "test:product": "playwright test --config product/playwright.config.ts"
+    "test:product": "playwright test --config product/playwright.config.ts",
+    "test:development": "playwright test --config development/playwright.config.ts"
   },
   "dependencies": {
     "@code-along/contracts": "workspace:*",

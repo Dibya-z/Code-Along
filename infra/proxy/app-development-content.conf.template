@@ -1,0 +1,12 @@
+location / {
+  proxy_pass http://web-dev:5173;
+  proxy_http_version 1.1;
+  proxy_set_header Host $http_host;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection "upgrade";
+  proxy_set_header Accept-Encoding "";
+  # Replace Vite's placeholder with this response's random CSP nonce.
+  sub_filter '__CODE_ALONG_DEV_NONCE__' '$request_id';
+  sub_filter_once off;
+  proxy_buffering off;
+}

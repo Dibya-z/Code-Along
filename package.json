@@ -15,7 +15,11 @@
     "test": "vitest run",
     "check": "corepack pnpm run lint && corepack pnpm run format:check && corepack pnpm run typecheck",
     "api:generate": "uv run --locked --offline python tools/dev/generate_api_schema.py && corepack pnpm --filter @code-along/api-client generate",
-    "api:check": "corepack pnpm api:generate && git diff --exit-code -- docs/api/openapi.json docs/api/auth-openapi.json packages/api-client/src/schema.d.ts packages/api-client/src/auth-schema.d.ts"
+    "api:check": "corepack pnpm api:generate && git diff --exit-code -- docs/api/openapi.json docs/api/auth-openapi.json packages/api-client/src/schema.d.ts packages/api-client/src/auth-schema.d.ts",
+    "dev": "uv run --locked --offline python -m tools.dev.development dev",
+    "stop": "uv run --locked --offline python -m tools.dev.development stop",
+    "status": "uv run --locked --offline python -m tools.dev.development status",
+    "mail": "uv run --locked --offline python -m tools.dev.development mail"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -1,0 +1,5 @@
+# Test-only CSS fixture for proving live updates without editing product source.
+services:
+  web-dev:
+    volumes:
+      - ../tests/browser/development:/app/development-proof:ro

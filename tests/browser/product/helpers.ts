@@ -35,7 +35,12 @@ export async function mailLink(
   if (!link) throw new Error('Private development email did not arrive');
   return link;
 }
-export async function register(page: Page, email: string, name = 'River') {
+export async function register(
+  page: Page,
+  email: string,
+  name = 'River',
+  linkProvider: typeof mailLink = mailLink,
+) {
   await page.goto('/auth/signup');
   await page.getByLabel('Display name').fill(name);
   await page.getByLabel('Email address').fill(email);
@@ -44,7 +49,7 @@ export async function register(page: Page, email: string, name = 'River') {
     .getByRole('button', { name: 'Create account', exact: true })
     .click();
   await expect(page.getByRole('status')).toContainText('Check your email.');
-  await page.goto(await mailLink(email, 'verify'));
+  await page.goto(await linkProvider(email, 'verify'));
   await page.getByRole('button', { name: 'Verify email', exact: true }).click();
   await expect(page.getByRole('status')).toContainText(
     'Your email is verified.',

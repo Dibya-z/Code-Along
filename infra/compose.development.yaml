@@ -1,0 +1,38 @@
+# Optional frontend watcher behind the existing same-origin HTTPS proxy.
+services:
+  web-dev:
+    build:
+      context: ..
+      dockerfile: infra/docker/assets.Dockerfile
+      target: development
+    environment:
+      CODE_ALONG_DEV_PROXY: 'true'
+      CODE_ALONG_APP_ORIGIN: https://127.0.0.1:${CODE_ALONG_HTTPS_PORT:-8443}
+    volumes:
+      - ../apps/web/src:/app/apps/web/src:ro
+      - ../apps/web/index.html:/app/apps/web/index.html:ro
+      - ../apps/web/vite.config.ts:/app/apps/web/vite.config.ts:ro
+      - ../packages/design-system/src:/app/packages/design-system/src:ro
+      - ../packages/api-client/src:/app/packages/api-client/src:ro
+      - ../packages/contracts/collaboration:/app/packages/contracts/collaboration:ro
+      - ../packages/contracts/execution:/app/packages/contracts/execution:ro
+    networks: [backend]
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:5173/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+  proxy:
+    environment:
+      APP_HMR_ORIGIN: wss://127.0.0.1:${CODE_ALONG_HTTPS_PORT:-8443}
+    volumes:
+      - ./proxy/app-development-csp.conf.template:/etc/nginx/templates/app/csp.conf.template:ro
+      - ./proxy/app-development-content.conf.template:/etc/nginx/templates/app/content.conf.template:ro
+    depends_on:
+      web-dev: { condition: service_healthy }

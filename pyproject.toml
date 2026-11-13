@@ -47,9 +47,10 @@ markers = ["postgres: requires native PostgreSQL 18 binaries; creates a private 
 
 [tool.mypy]
 python_version = "3.13"
+explicit_package_bases = true
 plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
 mypy_path = "$MYPY_CONFIG_FILE_DIR/apps/api"
-files = ["apps/api/config", "apps/api/code_along", "apps/api/manage.py", "apps/api/conftest.py"]
+files = ["apps/api/config", "apps/api/code_along", "apps/api/manage.py", "apps/api/conftest.py", "tools/dev/development.py", "tools/ci/development_mail.py"]
 exclude = ["/migrations/"]
 strict = true
 # Only these upstream APIs lack callable annotations; own code remains strict.

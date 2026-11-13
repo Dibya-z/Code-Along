@@ -60,6 +60,27 @@ uv sync --locked --no-python-downloads
 
 The first install needs the public registries. Dependency lifecycle scripts and Python source builds are disabled; use the pinned interpreter and wheels. An outdated lock/install fails rather than silently changing dependencies. No global pnpm, Python package or database service is installed by these commands. For app startup, use the [Compose/native setup guide](docs/operations/development-stack.md).
 
+## Run the complete application locally
+
+After the prerequisites above, run from the repository root:
+
+```sh
+npm run dev
+```
+
+Open **https://127.0.0.1:8443** and keep the terminal open. The command builds/starts the backend, database, Redis, HTTPS proxy and React watcher. Frontend source edits update the browser automatically; restart the command after backend/dependency changes to rebuild their images. It uses this workstation's existing owned Lima VM when present, or a working Docker engine on other machines. The first uncached build needs registry access.
+
+```sh
+npm run status                 # Read current state; never starts a stopped VM.
+npm run mail                   # Check whether local verification mail exists.
+npm run mail -- --latest        # Read the latest message privately.
+npm run stop                   # Stop services; preserve database and mail.
+```
+
+Ctrl+C in the development terminal also stops the services. With the dedicated Lima engine, shutdown also stops that owned VM and releases its allocated memory. Direct Docker engines are shared, so only this Compose project is stopped. Duplicate development controllers are rejected; repeated stops are safe. npm and Corepack/pnpm can invoke these same scripts; dependency installation continues to use the pinned pnpm/uv locks.
+
+The app uses `127.0.0.1`; `localhost` serves the separate Python runner. Local HTTPS currently uses the existing self-signed certificate. Installing user-controlled certificate trust is the next follow-up unit; startup does not change system trust settings. Detailed setup and diagnostics are in the [development guide](docs/operations/development-stack.md).
+
 ## Verification
 
 ```sh

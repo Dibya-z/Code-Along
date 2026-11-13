@@ -20,6 +20,13 @@ Allauth's default login/signup/reset/password-change limits use the configured s
 Compose writes messages to its private `mail` volume at `/app/dev-mail`, owned by the API user. It does not send mail externally. After registering, list messages with:
 
 ```sh
+npm run mail
+npm run mail -- --latest
+```
+
+The first command only reports whether messages exist. The second reads the newest message by modification time and prints its link in your private terminal. Open that link to verify the account, then sign in. The foreground `npm run dev` command connects these screens to the real backend; a standalone Vite preview is unnecessary for normal app usage. Messages persist when the development stack stops. Advanced direct Docker commands are below.
+
+```sh
 docker compose --env-file .env -f infra/compose.yaml exec api ls /app/dev-mail
 # Read the chosen message privately, replacing MESSAGE with its filename:
 docker compose --env-file .env -f infra/compose.yaml exec api cat /app/dev-mail/MESSAGE
