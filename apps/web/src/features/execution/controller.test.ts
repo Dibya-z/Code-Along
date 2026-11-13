@@ -102,6 +102,39 @@ async function fixture() {
 }
 afterEach(() => vi.useRealTimers());
 describe('product execution state', () => {
+  it('admits input once only while waiting and records interactive mode in the capture', async () => {
+    const f = await fixture();
+    await f.controller.run([], undefined, 'interactive');
+    expect(f.sessions[0]!.manifest!.stdin_mode).toBe('interactive');
+    expect(f.controller.input('early')).toBe(false);
+    f.event(0, { type: 'state', state: 'waiting_for_input' });
+    expect(f.controller.input('🐍'.repeat(2000))).toBe(false);
+    expect(f.controller.input('River')).toBe(true);
+    expect(f.controller.input('double')).toBe(false);
+    expect(f.sessions[0]!.bridge.input).toHaveBeenCalledExactlyOnceWith(
+      'River',
+    );
+    f.event(0, { type: 'state', state: 'waiting_for_input' });
+    expect(f.controller.input(null)).toBe(true);
+    f.controller.destroy();
+    f.workspace.destroy();
+  });
+  it('retains sequence and raw byte budgets after clearing displayed output', async () => {
+    const f = await fixture();
+    await f.controller.run();
+    for (let sequence = 0; sequence < 128; sequence++)
+      f.event(0, {
+        type: 'output',
+        stream: 'stdout',
+        text: 'a'.repeat(8192),
+        sequence,
+      });
+    f.controller.clearOutput();
+    f.event(0, { type: 'output', stream: 'stdout', text: 'b', sequence: 128 });
+    expect(f.controller.getSnapshot().phase).toBe('output_limit');
+    f.controller.destroy();
+    f.workspace.destroy();
+  });
   it('uses a new bridge for every run and ignores old output/terminal packets', async () => {
     const f = await fixture();
     await f.controller.run();

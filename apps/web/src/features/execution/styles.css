@@ -55,6 +55,53 @@
   color: var(--color-ink);
   white-space: pre;
 }
+.console-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-muted);
+  font-size: var(--text-meta);
+}
+.console-line {
+  display: flex;
+  gap: var(--space-3);
+  min-height: 1.5em;
+}
+.console-stream {
+  color: var(--color-muted);
+  font: var(--text-meta)/1.7 var(--font-ui);
+  flex: none;
+  user-select: none;
+}
+.stderr .console-stream {
+  color: var(--color-error);
+}
+.interactive-input {
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+.interactive-input label {
+  display: grid;
+  gap: var(--space-2);
+}
+.captured-source {
+  margin: var(--space-4);
+  font-size: var(--text-meta);
+  overflow-wrap: anywhere;
+}
+.captured-source summary {
+  cursor: pointer;
+  min-height: var(--target-min);
+  padding-block: var(--space-3);
+}
+.captured-source pre {
+  overflow: auto;
+  max-height: 20rem;
+  font: 1rem/1.5 var(--font-code);
+}
 .execution-output .stderr {
   color: var(--color-error);
 }

@@ -23,5 +23,6 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     reuseExistingServer: false,
     timeout: 60_000,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 30_000 },
   },
 });

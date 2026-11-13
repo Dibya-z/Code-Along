@@ -10,6 +10,7 @@ import type { EditorWorkspace } from '../editor/model/workspace.ts';
 import { ExecutionController, running, type RunPhase } from './controller.ts';
 import { configuredRunnerOrigin, IframeRunnerBridge } from './bridge.ts';
 import './styles.css';
+import { ConsoleView } from './console-view.tsx';
 const labels: Record<RunPhase, string> = {
   idle: 'Ready to run',
   capturing: 'Capturing project…',
@@ -60,6 +61,9 @@ export function ExecutionPanel({
     workspace.getSnapshot,
   );
   const [input, setInput] = useState('');
+  const [mode, setMode] = useState<'batch' | 'interactive'>('batch');
+  const [line, setLine] = useState('');
+  const [inputError, setInputError] = useState('');
   const [selectedRuntime, setSelectedRuntime] = useState('');
   const catalogue = useQuery({
     queryKey: ['runtime-profiles', workspace.accountId],
@@ -98,7 +102,11 @@ export function ExecutionPanel({
             disabled={busy || !complete || paused || !reviewed}
             onClick={() => {
               const lines = input ? input.replace(/\n$/, '').split('\n') : [];
-              void model.run(lines, profile?.identity);
+              void model.run(
+                mode === 'batch' ? lines : [],
+                profile?.identity,
+                mode,
+              );
             }}
           >
             Run code
@@ -167,44 +175,108 @@ export function ExecutionPanel({
           {snapshot.earlierSource && <strong> · Earlier source</strong>}
         </p>
       )}
+      {manifest && (
+        <details className="captured-source">
+          <summary>View captured source</summary>
+          <p>
+            This exact source produced this result. Editing here does not change
+            the capture.
+          </p>
+          {manifest.files.map((file) => (
+            <details key={file.file_id}>
+              <summary>{file.path}</summary>
+              <p>
+                Document {file.document_id} · Generation {file.generation} ·
+                SHA-256 <code>{file.sha256}</code>
+              </p>
+              <pre tabIndex={0}>{file.source}</pre>
+            </details>
+          ))}
+        </details>
+      )}
       {snapshot.error && (
         <Notice tone="error">
           {snapshot.error}
           <RuntimeHelp />
         </Notice>
       )}
-      <label className="execution-input" htmlFor="batch-stdin">
-        Input before Run
-        <span className="muted">One line for each input() call.</span>
-        <textarea
-          id="batch-stdin"
-          rows={3}
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
+      <label className="execution-input">
+        Python input mode
+        <select
+          aria-label="Python input mode"
+          value={mode}
           disabled={busy}
-        />
+          onChange={(event) =>
+            setMode(event.target.value as 'batch' | 'interactive')
+          }
+        >
+          <option value="batch">Input before Run</option>
+          <option value="interactive">Interactive input</option>
+        </select>
+        <span className="muted">
+          Interactive input requires browser isolation. The 30-second limit
+          includes waiting for input.
+        </span>
       </label>
-      <pre className="execution-output" aria-label="Python output" tabIndex={0}>
-        {snapshot.output.length ? (
-          snapshot.output.map((chunk, index) => (
-            <span
-              key={index}
-              className={chunk.stream}
-              aria-label={
-                chunk.stream === 'stderr' ? 'Python error' : undefined
-              }
+      {mode === 'batch' && (
+        <label className="execution-input" htmlFor="batch-stdin">
+          Input before Run
+          <span className="muted">One line for each input() call.</span>
+          <textarea
+            id="batch-stdin"
+            rows={3}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            disabled={busy}
+          />
+        </label>
+      )}
+      {mode === 'interactive' && (
+        <form
+          className="interactive-input"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (model.input(line)) {
+              setLine('');
+              setInputError('');
+            } else
+              setInputError(
+                'Use at most 4 KiB of valid UTF-8 input, while Python is waiting.',
+              );
+          }}
+        >
+          <label>
+            Input for Python
+            <input
+              value={line}
+              disabled={snapshot.phase !== 'waiting_for_input'}
+              onChange={(event) => setLine(event.target.value)}
+            />
+          </label>
+          <div className="actions">
+            <Button
+              type="submit"
+              disabled={snapshot.phase !== 'waiting_for_input'}
             >
-              {chunk.text}
-            </span>
-          ))
-        ) : (
-          <span className="muted">
-            {busy
-              ? 'Output will appear here.'
-              : 'Run the project entrypoint to see its output.'}
-          </span>
-        )}
-      </pre>
+              Send input
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={snapshot.phase !== 'waiting_for_input'}
+              onClick={() => model.input(null)}
+            >
+              Send end of input
+            </Button>
+          </div>
+          {inputError && <p role="alert">{inputError}</p>}
+        </form>
+      )}
+      <ConsoleView
+        key={snapshot.runId}
+        lines={snapshot.output}
+        busy={busy}
+        onClear={() => model.clearOutput()}
+      />
       <p className="execution-scope">
         Local practice · Fresh Python state each run · 30-second limit
       </p>

@@ -14,6 +14,7 @@ import {
 } from '../editor/model/snapshot.ts';
 import type { RunnerBridge } from './bridge.ts';
 import type { RuntimeIdentity } from '@code-along/contracts/execution/profiles';
+import { ConsoleBuffer, type ConsoleLine } from './console-buffer.ts';
 
 export type RunPhase =
   | 'idle'
@@ -22,16 +23,12 @@ export type RunPhase =
   | 'running'
   | 'waiting_for_input'
   | TerminalStatus;
-export interface OutputChunk {
-  readonly stream: 'stdout' | 'stderr';
-  readonly text: string;
-}
 export interface ExecutionSnapshot {
   readonly runId: string;
   readonly phase: RunPhase;
   readonly captured: CapturedRun | null;
   readonly earlierSource: boolean;
-  readonly output: readonly OutputChunk[];
+  readonly output: readonly ConsoleLine[];
   readonly error: string;
 }
 export function running(phase: RunPhase): boolean {
@@ -58,7 +55,8 @@ export class ExecutionController {
   private closed = false;
   private sequence = 0;
   private bytes = 0;
-  private pending: OutputChunk[] = [];
+  private console = new ConsoleBuffer();
+  private outputChanged = false;
   private flushTimer: ReturnType<typeof setTimeout> | undefined;
   private deadline: ReturnType<typeof setTimeout> | undefined;
   private unsubscribe: (() => void) | undefined;
@@ -79,6 +77,7 @@ export class ExecutionController {
   async run(
     stdin: readonly string[] = [],
     runtime?: RuntimeIdentity,
+    mode: 'batch' | 'interactive' = 'batch',
   ): Promise<void> {
     if (this.closed || running(this.snapshot.phase)) return;
     this.unsubscribe ??= this.workspace.subscribe(() => {
@@ -92,7 +91,8 @@ export class ExecutionController {
     this.release();
     this.sequence = 0;
     this.bytes = 0;
-    this.pending = [];
+    this.console = new ConsoleBuffer();
+    this.outputChanged = false;
     const runId = crypto.randomUUID();
     this.publish({
       runId,
@@ -108,11 +108,7 @@ export class ExecutionController {
           'Use at most 100 input lines, 4 KiB per line and 64 KiB total.',
         );
       const input = Object.freeze([...stdin]);
-      const captured = await captureWorkspaceRun(
-        this.workspace,
-        'batch',
-        runtime,
-      );
+      const captured = await captureWorkspaceRun(this.workspace, mode, runtime);
       if (!this.active(runId)) return;
       this.publish({
         phase: 'initializing',
@@ -183,18 +179,20 @@ export class ExecutionController {
       this.finish('output_limit');
       return;
     }
-    this.pending.push(
-      Object.freeze({ stream: event.stream, text: event.text }),
-    );
+    const admitted = this.console.append(event.stream, event.text);
+    this.outputChanged = true;
+    if (!admitted) {
+      this.finish('output_limit', 'The console reached its 5,000-line limit.');
+      return;
+    }
     this.flushTimer ??= setTimeout(() => this.flush(), 32);
   }
   private flush() {
     clearTimeout(this.flushTimer);
     this.flushTimer = undefined;
-    if (!this.pending.length) return;
-    const output = Object.freeze([...this.snapshot.output, ...this.pending]);
-    this.pending = [];
-    this.publish({ output });
+    if (!this.outputChanged) return;
+    this.outputChanged = false;
+    this.publish({ output: this.console.snapshot() });
   }
   private finish(phase: TerminalStatus, error = '') {
     this.flush();
@@ -206,6 +204,22 @@ export class ExecutionController {
       this.bridge?.cancel();
       this.finish('cancelled');
     }
+  }
+  input(text: string | null): boolean {
+    if (
+      this.snapshot.phase !== 'waiting_for_input' ||
+      (text !== null && !validBatchInput([text]))
+    )
+      return false;
+    this.bridge?.input(text);
+    // Prevent double submission while the runner acknowledges this input line.
+    this.publish({ phase: 'running' });
+    return true;
+  }
+  clearOutput(): void {
+    this.console.clear();
+    this.outputChanged = false;
+    this.publish({ output: [] });
   }
   private release() {
     clearTimeout(this.deadline);
@@ -220,6 +234,6 @@ export class ExecutionController {
     this.release();
     this.unsubscribe?.();
     this.listeners.clear();
-    this.pending = [];
+    this.console.clear();
   }
 }

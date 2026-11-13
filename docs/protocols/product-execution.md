@@ -23,3 +23,9 @@ The app denies its own Workers; the separate runner shell and Worker have separa
 ## Reviewed runtime profiles
 
 Core and opt-in NumPy share the pinned Pyodide engine. The authenticated catalogue enables only compiled, reviewed identities; choosing a profile for a local run does not mutate the shared project default. The snapshot records the actual chosen inventory digest. `runtime-inventory.ts` bounds inventories/assets before buffering and verifies their canonical SHA-256. Build tooling admits only pinned official assets, verifies size/digest and emits content-addressed runner URLs. The Worker verifies the inventory/core assets, filters the package lock to the reviewed wheel set and confirms requested packages loaded before learner source. No arbitrary package installation is offered. Profile inventories, licensing and the deferred Matplotlib dependency review are documented in `packages/runtime-profiles/README.md`.
+
+## Console and input
+
+The application coalesces split writes into logical rows, bounds retained rows to 5,000 and renders at most 200 at once. Rows longer than 8,192 UTF-16 units split at code-point boundaries. A streaming constant-space decoder removes ANSI/OSC/control sequences; output and captured source render as React text. Stdout/stderr have text labels as well as colors. Paging and paused following preserve reading position. Clear affects display only, retaining the run sequence and cumulative 1 MiB byte budget.
+
+Input mode is captured before execution. Interactive mode requires the measured embedded capability; an unavailable capability produces an explicit error directing the user to batch input. Input/EOF is accepted once while waiting; a 4 KiB UTF-8 line travels only through the private runner port/mailbox. The 30-second wall deadline includes time waiting for input. Batch limits remain 100 lines/64 KiB total.
