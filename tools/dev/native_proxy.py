@@ -26,6 +26,10 @@ RUNTIME_INVENTORIES = {
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
+    # Every response is length-framed. Keep TLS connections alive while the
+    # browser reads large runtime assets instead of making EOF the boundary.
+    protocol_version = "HTTP/1.1"
+
     def log_message(self, *_args: object) -> None:
         pass  # No request paths, tokens or source payloads in routine dev logs.
 

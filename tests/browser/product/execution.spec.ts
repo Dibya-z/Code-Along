@@ -1,10 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { register, createEditorProject } from './helpers.ts';
+import {
+  register,
+  createEditorProject,
+  runtimeDiagnostics,
+  finishedRun,
+} from './helpers.ts';
 test('frozen multi-file Python runs, fresh globals/files, batch stdin and errors', async ({
   page,
   browserName,
 }) => {
   const errors: string[] = [];
+  runtimeDiagnostics(page);
   page.on('pageerror', (error) => errors.push(error.message));
   await register(page, `execution-${browserName}-${Date.now()}@example.test`);
   await createEditorProject(page);
@@ -30,7 +36,7 @@ test('frozen multi-file Python runs, fresh globals/files, batch stdin and errors
   await editor.fill(source);
   await page.getByRole('button', { name: 'Run code', exact: true }).click();
   await editor.fill('print("edited during the run")\n');
-  await expect(status).toHaveText('Run finished', { timeout: 40_000 });
+  await finishedRun(page);
   await expect(output).toContainText('answer 84');
   await expect(output).toContainText('isolated True');
   await expect(output).toContainText('fresh False False');
@@ -43,7 +49,7 @@ test('frozen multi-file Python runs, fresh globals/files, batch stdin and errors
   );
   await editor.fill(source);
   await page.getByRole('button', { name: 'Run code', exact: true }).click();
-  await expect(status).toHaveText('Run finished', { timeout: 40_000 });
+  await finishedRun(page);
   await expect(output).toContainText('fresh False False');
   await expect(page.locator('.execution-provenance')).not.toContainText(
     'Earlier source',
@@ -51,7 +57,7 @@ test('frozen multi-file Python runs, fresh globals/files, batch stdin and errors
   await editor.fill('name = input("Name: ")\nprint("Hello", name)\n');
   await page.getByLabel('Input before Run').fill('River');
   await page.getByRole('button', { name: 'Run code', exact: true }).click();
-  await expect(status).toHaveText('Run finished', { timeout: 40_000 });
+  await finishedRun(page);
   await expect(output).toContainText('Hello River');
   await editor.fill('raise ValueError("learning error")\n');
   await page.getByRole('button', { name: 'Run code', exact: true }).click();

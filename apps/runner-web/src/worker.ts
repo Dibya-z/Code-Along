@@ -53,14 +53,17 @@ self.onmessage = async (
     buffered.append(stream, text);
   const stdout = new TextDecoder(),
     stderr = new TextDecoder();
+  let startup = 'verified runtime assets';
   try {
     const prepared =
       manifest.version === 2 ? await prepareRuntime(manifest.runtime) : null;
     const base = prepared?.base ?? '/runtime/';
     const runtimeUrl = `${base}pyodide.mjs`;
+    startup = 'Python module import';
     const runtime = (await import(/* @vite-ignore */ runtimeUrl)) as {
       loadPyodide: LoadPyodide;
     };
+    startup = 'interpreter and packages';
     const pyodide = await runtime.loadPyodide({
       indexURL: base,
       stdout: (s) => output('stdout', `${s}\n`),
@@ -163,6 +166,7 @@ self.onmessage = async (
           )?.path;
     if (!entrypoint) throw new Error('The captured entrypoint is missing.');
     pyodide.globals.set('__entrypoint', `/project/${entrypoint}`);
+    startup = '';
     send({ type: 'ready' });
     const result = await pyodide.runPythonAsync(
       'import sys, runpy\nsys.path.insert(0, "/project")\ntry:\n    runpy.run_path(__entrypoint, run_name="__main__")\nfinally:\n    for stream in (sys.stdout, sys.stderr):\n        try:\n            stream.flush()\n        except Exception:\n            pass',
@@ -175,7 +179,12 @@ self.onmessage = async (
   } catch (error) {
     output('stdout', stdout.decode());
     output('stderr', stderr.decode());
-    output('stderr', String(error));
+    output(
+      'stderr',
+      startup
+        ? `Python startup failed (${startup}): ${String(error)}`
+        : String(error),
+    );
     buffered.flush();
     send({ type: 'done', status: 'failed' });
   }

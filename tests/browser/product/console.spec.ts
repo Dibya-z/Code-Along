@@ -1,11 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { register, createEditorProject } from './helpers.ts';
+import {
+  register,
+  createEditorProject,
+  runtimeDiagnostics,
+  finishedRun,
+} from './helpers.ts';
 test('safe coalesced console, output paging, immutable source and interactive input', async ({
   page,
   browserName,
 }) => {
   test.setTimeout(90_000);
   const errors: string[] = [];
+  runtimeDiagnostics(page);
   page.on('pageerror', (error) => errors.push(error.message));
   await register(page, `console-${browserName}-${Date.now()}@example.test`);
   await createEditorProject(page);
@@ -16,7 +22,7 @@ test('safe coalesced console, output paging, immutable source and interactive in
     'import sys\nsys.stdout.write("Hel")\nsys.stdout.flush()\nsys.stdout.write("lo\\n")\nprint("\\x1b[31m<img src=x onerror=alert(1)>\\x1b[0m")\nprint("problem", file=sys.stderr)\n',
   );
   await page.getByRole('button', { name: 'Run code', exact: true }).click();
-  await expect(status).toHaveText('Run finished', { timeout: 40_000 });
+  await finishedRun(page);
   await expect(output).toContainText('Hello');
   await expect(output).toContainText('<img src=x onerror=alert(1)>');
   await expect(output.locator('img')).toHaveCount(0);
@@ -29,7 +35,7 @@ test('safe coalesced console, output paging, immutable source and interactive in
   );
   await expect(page.locator('.captured-source')).toContainText('sys.stdout');
   await page.getByRole('button', { name: 'Run code', exact: true }).click();
-  await expect(status).toHaveText('Run finished', { timeout: 40_000 });
+  await finishedRun(page);
   await expect(output.locator('.console-line')).toHaveCount(200);
   await expect(output).toContainText('line 599');
   await page
@@ -62,7 +68,9 @@ test('safe coalesced console, output paging, immutable source and interactive in
     'import time\nfor i in range(400):\n    print("reading", i, flush=True)\n    time.sleep(0.02)\n',
   );
   await page.getByRole('button', { name: 'Run code', exact: true }).click();
-  await expect(output).toContainText('reading 40', { timeout: 40_000 });
+  await expect(output).toContainText('reading 40', {
+    timeout: 40_000,
+  });
   await output.evaluate((element) => {
     element.scrollTop = 0;
     element.dispatchEvent(new Event('scroll'));

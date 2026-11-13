@@ -15,15 +15,25 @@ interface LockFile {
   readonly info: Record<string, unknown>;
   readonly packages: Record<string, LockPackage>;
 }
+async function runtimeBytes(url: string, limit: number, label: string) {
+  try {
+    return await readRuntimeResponse(
+      await fetch(url, { credentials: 'omit', cache: 'force-cache' }),
+      limit,
+    );
+  } catch {
+    throw new Error(
+      `Python runtime could not load ${label}. Check the runtime connection and try again.`,
+    );
+  }
+}
 export async function prepareRuntime(identity: RuntimeIdentity) {
   const profile = runtimeProfile(identity.runtime_id);
   if (!profile) throw new Error('This Python runtime profile is not reviewed.');
-  const raw = await readRuntimeResponse(
-    await fetch(
-      `/runtime-manifests/${profile.inventory}?sha256=${identity.manifest_sha256}`,
-      { credentials: 'omit', cache: 'force-cache' },
-    ),
+  const raw = await runtimeBytes(
+    `/runtime-manifests/${profile.inventory}?sha256=${identity.manifest_sha256}`,
     RUNTIME_ASSET_LIMITS.inventoryBytes,
+    'its reviewed inventory',
   );
   const inventory = await verifyRuntimeInventory(
     JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(raw)),
@@ -37,12 +47,10 @@ export async function prepareRuntime(identity: RuntimeIdentity) {
   // Verify executable/stdlib/lock bytes before boot. loadPackage also checks wheel integrity.
   for (const asset of inventory.assets) {
     if (asset.name.endsWith('.whl')) continue;
-    const bytes = await readRuntimeResponse(
-      await fetch(base + asset.name, {
-        credentials: 'omit',
-        cache: 'force-cache',
-      }),
+    const bytes = await runtimeBytes(
+      base + asset.name,
       asset.bytes,
+      asset.name,
     );
     if (bytes.length !== asset.bytes || (await sha256(bytes)) !== asset.sha256)
       throw new Error('A Python runtime asset failed integrity verification.');

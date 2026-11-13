@@ -64,4 +64,12 @@ describe('Worker runtime preparation', () => {
       'integrity verification',
     );
   });
+  it('identifies an unavailable inventory without exposing a URL or retrying admission', async () => {
+    const fetcher = vi.fn().mockRejectedValue(new TypeError('Load failed'));
+    vi.stubGlobal('fetch', fetcher);
+    await expect(prepareRuntime(CORE_RUNTIME)).rejects.toThrow(
+      'could not load its reviewed inventory',
+    );
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
 });

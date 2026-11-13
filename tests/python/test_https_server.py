@@ -5,6 +5,7 @@ import ssl
 import subprocess
 import threading
 from contextlib import contextmanager
+from pathlib import Path
 
 import pytest
 
@@ -53,8 +54,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 @contextmanager
-def serving(context, **kwargs):
-    server = ThreadedHTTPSServer(("127.0.0.1", 0), Handler, context, **kwargs)
+def serving(context, handler=Handler, **kwargs):
+    server = ThreadedHTTPSServer(("127.0.0.1", 0), handler, context, **kwargs)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -110,3 +111,36 @@ def test_invalid_handshake_timeout_is_rejected_before_binding(timeout):
             ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER),
             handshake_timeout=timeout,
         )
+
+
+def test_native_static_responses_keep_large_tls_bodies_length_framed(
+    certificate, tmp_path, monkeypatch
+):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[2] / "tools/dev"))
+    from tools.dev import native_proxy
+
+    payload = bytes(range(256)) * 40_000
+    root = tmp_path / "apps/web/dist"
+    root.mkdir(parents=True)
+    (root / "large.bin").write_bytes(payload)
+    (root / "index.html").write_bytes(b"fixture home")
+    monkeypatch.setattr(native_proxy, "ROOT", tmp_path)
+    server_context, client_context = certificate
+    with serving(server_context, native_proxy.Handler) as address:
+        monkeypatch.setattr(native_proxy, "PORT", address[1])
+        client = http.client.HTTPSConnection(
+            *address, context=client_context, timeout=3
+        )
+        try:
+            for path, expected in [("/large.bin", payload), ("/", b"fixture home")]:
+                client.request("GET", path)
+                connection = client.sock
+                response = client.getresponse()
+                assert response.version == 11
+                assert response.status == 200
+                assert response.getheader("Content-Length") == str(len(expected))
+                assert response.read() == expected
+                assert client.sock is connection
+                assert not response.will_close
+        finally:
+            client.close()
