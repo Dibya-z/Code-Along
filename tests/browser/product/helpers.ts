@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { privateMailLink } from './mail-link.ts';
 export const password = 'orbit-copper-river-83!';
 const mailDirectory = resolve(
   fileURLToPath(new URL('../../../.runtime/mail', import.meta.url)),
@@ -16,14 +17,9 @@ export async function mailLink(
       async () => {
         for (const name of (await readdir(mailDirectory)).reverse()) {
           const data = await readFile(resolve(mailDirectory, name), 'utf8');
-          if (!data.includes(`To: ${email}`)) continue;
-          const found = data.match(
-            new RegExp(
-              `https://127\\.0\\.0\\.1:18443/auth/${kind}\\?key=[^\\s]+`,
-            ),
-          );
+          const found = privateMailLink(data, email, kind);
           if (found) {
-            link = found[0];
+            link = found;
             return true;
           }
         }
