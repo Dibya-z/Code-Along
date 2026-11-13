@@ -4,7 +4,7 @@ M0.4a provides a native test-cluster harness. It creates no application database
 
 ## Prerequisites and commands
 
-Use the repository's pinned Python/uv environment and an installed **matching stable PostgreSQL 18** toolset containing executable `postgres`, `initdb` and `psql`. All three must report the same patch release. macOS arm64 with PostgreSQL **18.7** is verified; this POSIX harness also targets Linux but Linux has not been tested. Windows support is not claimed. Docker is not needed for this harness; the full Compose development stack remains a later task.
+Use the repository's pinned Python/uv environment and an installed **matching stable PostgreSQL 18** toolset containing executable `postgres`, `initdb` and `psql`. All three must report the same patch release. PostgreSQL **18.7** is verified on macOS arm64 and in the M1 Linux CI baseline. Windows support is not claimed. Docker is not needed for this harness; the persistent application uses the separate [Compose development stack](development-stack.md).
 
 From the Code Along repository root, set an absolute path to your trusted installation:
 
@@ -54,9 +54,15 @@ The harness removes inherited PG* connection/password/service/options variables 
 
 `fsync`, `synchronous_commit` and `full_page_writes` are explicitly on. Shared buffers and max connections are small test settings, not performance recommendations. The database uses UTF-8 with C locale. SQL errors and timeouts raised by the helper do not echo the query; PostgreSQL logs stay private and are deleted with the run.
 
-Readiness polling, SQL calls, version probes and shutdown waits are bounded. Normal completion, startup failure, body exceptions and handled CLI interrupts stop owned processes and remove the temporary data/log/socket directories. PostgreSQL receives fast shutdown; timed-out owned processes have a process-group kill fallback. The harness never uses a global pkill or enumerates/deletes other databases.
+Readiness polling, SQL calls, version probes and shutdown waits are bounded. Normal completion, startup failure, body exceptions and handled CLI interrupts stop owned processes and remove the temporary data/log/socket directories. Direct main-thread contexts also unwind on SIGTERM when the caller uses Python's default handler: the handler raises KeyboardInterrupt so pytest ends its session and unwinds fixtures, including during startup. Pytest reports its interrupted-session status (2); standalone Python reports an interrupt, while the CLI retains its existing SIGTERM status of 143. A repeated SIGTERM cannot interrupt that cleanup. Existing caller-owned handlers are preserved, and the previous handler is restored on exit. Callers using worker threads or custom handlers remain responsible for unwinding their contexts. PostgreSQL receives fast shutdown; timed-out owned processes have a process-group kill fallback. The harness never uses a global pkill or enumerates/deletes other databases.
 
 Hard-killing the owner with SIGKILL or losing power bypasses Python cleanup. Such a run can leave its private process/directory behind. Identify that specific failed run and use the matching installation's pg_ctl on its data directory before removing it; do not stop processes or delete directories belonging to another run. Detached child daemons are outside the foreground-command contract.
+
+## Post-M1 termination regression
+
+An inventory after M1 found six orphaned native test servers. Their executable, private `/tmp/ca-pg18-*/data` paths, filesystem owner and `postmaster.pid` identities were verified before graceful shutdown. Application containers, persistent volumes and the reference repository were untouched. Stopped test directories were retained for inspection. Multipass inventory showed only an unrelated stopped VM; its global service and that VM were left unchanged.
+
+A subprocess reproduction showed that direct `postgres_cluster()` usage with the default SIGTERM action exited without running `finally`, leaving the server alive. The CLI already handled this signal, so its existing test did not cover the direct context used by backend fixtures. The context now installs a scoped termination handler where appropriate. New regressions cover termination during startup and active use, repeated termination during shutdown, a real pytest session ending without continuing to later tests, process/directory cleanup, default-handler restoration and custom-handler preservation. The historical parents' exact termination signals were not recorded; the reproduction establishes a verified failure path rather than attributing every old instance to a recorded event.
 
 ## Verified native installation
 
@@ -86,7 +92,7 @@ Set CODE_ALONG_PG_PREFIX to your chosen private installation location before tho
 
 The M0.4a suite verifies version/discovery failures, actual server settings/private permissions, commit/rollback, separation of two simultaneous clusters, SQL diagnostic redaction, cleanup on body/startup failure, child exit propagation and SIGTERM cleanup of both child and database. Commands and real server execution were verified with PostgreSQL 18.7.
 
-These are database-harness tests. They do not establish CRDT convergence, checkpoint idempotency, atomic receipt transactions, stale-save protection, restart recovery or authorization. The separate M0.4b suite now covers storage transactions/CAS/idempotency; M0.4c now adds provider/restart fixture evidence as described below; full product authorization remains M1/M3. There is no application URL or persistent local service after the tests finish. See [PostgreSQL initdb](https://www.postgresql.org/docs/18/app-initdb.html) and [connection settings](https://www.postgresql.org/docs/18/runtime-config-connection.html) for native server behavior.
+These are database-harness tests. They do not establish CRDT convergence, checkpoint idempotency, atomic receipt transactions, stale-save protection, restart recovery or authorization. The separate M0.4b suite now covers storage transactions/CAS/idempotency; M0.4c now adds provider/restart fixture evidence as described below; M1 implements product HTTP authorization, while collaboration admission remains M3. These proof tests create no persistent application service; the separately started development stack has its own lifecycle. See [PostgreSQL initdb](https://www.postgresql.org/docs/18/app-initdb.html) and [connection settings](https://www.postgresql.org/docs/18/runtime-config-connection.html) for native server behavior.
 
 ## Additional M0 integration gates
 
@@ -97,4 +103,4 @@ uv run --locked --offline python tools/dev/postgres_cluster.py -- \
   corepack pnpm --filter @code-along/collaboration test:transport
 ```
 
-The Python suite now has 29 cases and additionally requires Node plus the installed pnpm workspace for `test_checkpoint_recovery.py`. That case saves a real binary checkpoint/receipt, requests immediate shutdown of its owned PostgreSQL postmaster, starts the same owned data directory for WAL recovery, and verifies exact source/idempotency from a fresh Node process. It cleans both process lifetimes/data on success or failure. It does not kill a shared database or claim power-loss/backup/HA coverage. See the [M0 record](../architecture/m0-validation.md).
+The original M0 Python suite had 29 cases and additionally requires Node plus the installed pnpm workspace for `test_checkpoint_recovery.py`. That case saves a real binary checkpoint/receipt, requests immediate shutdown of its owned PostgreSQL postmaster, starts the same owned data directory for WAL recovery, and verifies exact source/idempotency from a fresh Node process. It cleans both process lifetimes/data on success or failure. It does not kill a shared database or claim power-loss/backup/HA coverage. See the [M0 record](../architecture/m0-validation.md).

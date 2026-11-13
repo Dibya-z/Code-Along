@@ -15,6 +15,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
@@ -177,6 +178,29 @@ def _wait_until_ready(cluster: PostgresCluster, timeout: float) -> None:
 
 
 @contextmanager
+def _default_sigterm_cleanup() -> Iterator[None]:
+    """Unwind direct test contexts on SIGTERM, preserving caller-owned handlers."""
+    main_thread = threading.current_thread() is threading.main_thread()
+    previous = signal.getsignal(signal.SIGTERM)
+    installed = main_thread and previous == signal.SIG_DFL
+
+    def terminate(signum: int, _frame: object) -> None:
+        # A second termination must not interrupt server shutdown/finalizers.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        # Pytest treats SystemExit as a failed test and may continue the suite.
+        # KeyboardInterrupt asks it to end the session and unwind its fixtures.
+        raise KeyboardInterrupt
+
+    if installed:
+        signal.signal(signal.SIGTERM, terminate)
+    try:
+        yield
+    finally:
+        if installed:
+            signal.signal(signal.SIGTERM, previous)
+
+
+@contextmanager
 def postgres_cluster(
     directory: Path | None = None, *, startup_timeout: float = 15
 ) -> Iterator[PostgresCluster]:
@@ -186,7 +210,10 @@ def postgres_cluster(
     binaries = find_postgres_binaries(directory)
     # A short path avoids the Unix socket pathname limit on macOS. mkdtemp
     # creates the directory atomically with private owner-only permissions.
-    with tempfile.TemporaryDirectory(prefix="ca-pg18-", dir="/tmp") as temporary:
+    with (
+        _default_sigterm_cleanup(),
+        tempfile.TemporaryDirectory(prefix="ca-pg18-", dir="/tmp") as temporary,
+    ):
         root = Path(temporary)
         data = root / "data"
         sockets = root / "socket"

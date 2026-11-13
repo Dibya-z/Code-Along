@@ -87,6 +87,8 @@ uv run --locked --offline python tools/dev/postgres_cluster.py -- \
 
 Use your own trusted installation path; see [native database prerequisites](docs/operations/postgres-tests.md). These harnesses never migrate an existing/reference database. `-m 'not postgres'` runs explicitly partial Python coverage and does not replace integration tests. Empty suites fail.
 
+Post-M1 maintenance is addressing test-process cleanup and the local startup/certificate workflow before M2. The first cleanup fix is implemented and verified with 208 Python tests; startup and certificate improvements remain pending review of that unit. The [database lifecycle guide](docs/operations/postgres-tests.md) records the reproduced direct-SIGTERM cleanup gap, scoped fix and limits of cleanup after forced termination. Follow-up status is in the implementation tracker.
+
 Build the owned browser fixtures and install Chromium/WebKit explicitly:
 
 ```sh

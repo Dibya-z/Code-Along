@@ -178,3 +178,203 @@ def test_query_timeout_diagnostics_do_not_echo_sql(monkeypatch):
         diagnostic = "".join(traceback.format_exception(failure.value))
         assert "PRIVATE_SOURCE_IN_TIMEOUT" not in diagnostic
         assert failure.value.__suppress_context__ is True
+
+
+@pytest.mark.parametrize("mode", ["ready", "startup", "repeat"])
+def test_direct_context_sigterm_cleans_up_without_the_cli_wrapper(tmp_path, mode):
+    marker = tmp_path / "direct.json"
+    script = "\n".join(
+        [
+            "import json,sys,time",
+            "from pathlib import Path",
+            "from tools.dev import postgres_cluster as module",
+            "def mark(cluster):",
+            "    Path(sys.argv[1]).write_text(json.dumps({'pid':cluster.process.pid, 'root':str(cluster.directory), 'bin':str(cluster.binaries.directory)}))",
+            "def wait(cluster, timeout):",
+            "    mark(cluster)",
+            "    time.sleep(60)",
+            "original_stop = module._stop_owned_process",
+            "def delayed_stop(process):",
+            "    Path(sys.argv[1]).with_suffix('.cleanup').touch()",
+            "    time.sleep(0.25)",
+            "    original_stop(process)",
+            "if sys.argv[2] == 'repeat': module._stop_owned_process = delayed_stop",
+            "if sys.argv[2] == 'startup': module._wait_until_ready = wait",
+            "with module.postgres_cluster() as cluster:",
+            "    mark(cluster)",
+            "    time.sleep(60)",
+        ]
+    )
+    process = subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            script,
+            str(marker),
+            mode,
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    try:
+        deadline = time.monotonic() + 20
+        while not marker.exists() and time.monotonic() < deadline:
+            assert process.poll() is None, "Direct fixture exited before readiness"
+            time.sleep(0.05)
+        assert marker.exists()
+        state = json.loads(marker.read_text())
+        process.terminate()
+        if mode == "repeat":
+            deadline = time.monotonic() + 5
+            while (
+                not marker.with_suffix(".cleanup").exists()
+                and time.monotonic() < deadline
+            ):
+                time.sleep(0.01)
+            assert marker.with_suffix(".cleanup").exists()
+            process.terminate()
+        assert process.wait(timeout=15) in (130, -signal.SIGINT)
+        assert not Path(state["root"]).exists()
+        with pytest.raises(ProcessLookupError):
+            os.kill(state["pid"], 0)
+    finally:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+        # A regression must not make the regression test itself leak a server.
+        if marker.exists():
+            state = json.loads(marker.read_text())
+            data = Path(state["root"]) / "data"
+            pid_file = data / "postmaster.pid"
+            if (
+                pid_file.exists()
+                and int(pid_file.read_text().splitlines()[0]) == state["pid"]
+            ):
+                subprocess.run(
+                    [
+                        str(Path(state["bin"]) / "pg_ctl"),
+                        "-D",
+                        str(data),
+                        "-m",
+                        "fast",
+                        "-w",
+                        "stop",
+                    ],
+                    capture_output=True,
+                    timeout=15,
+                    check=True,
+                )
+
+
+def test_context_restores_default_sigterm_and_preserves_a_custom_handler():
+    previous = signal.getsignal(signal.SIGTERM)
+    try:
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        with postgres_cluster():
+            assert callable(signal.getsignal(signal.SIGTERM))
+        assert signal.getsignal(signal.SIGTERM) == signal.SIG_DFL
+
+        def caller_handler(_signum, _frame):
+            raise KeyboardInterrupt
+
+        signal.signal(signal.SIGTERM, caller_handler)
+        with postgres_cluster():
+            assert signal.getsignal(signal.SIGTERM) is caller_handler
+        assert signal.getsignal(signal.SIGTERM) is caller_handler
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+
+
+def test_pytest_sigterm_stops_the_session_and_cleans_its_fixture(tmp_path):
+    marker = tmp_path / "pytest-cluster.json"
+    continued = tmp_path / "continued.txt"
+    child_test = tmp_path / "test_termination_consumer.py"
+    child_test.write_text(
+        "\n".join(
+            [
+                "import json,os,time,pytest",
+                "from pathlib import Path",
+                "from tools.dev.postgres_cluster import postgres_cluster",
+                "@pytest.fixture(scope='session')",
+                "def database():",
+                "    with postgres_cluster() as cluster:",
+                "        yield cluster",
+                "def test_wait(database):",
+                "    Path(os.environ['CA_TERMINATION_MARKER']).write_text(json.dumps({'pid':database.process.pid,'root':str(database.directory),'bin':str(database.binaries.directory)}))",
+                "    time.sleep(60)",
+                "def test_must_not_continue():",
+                "    Path(os.environ['CA_CONTINUED_MARKER']).touch()",
+            ]
+        )
+    )
+    root = Path(__file__).resolve().parents[2]
+    process = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "-c",
+            str(root / "pyproject.toml"),
+            str(child_test),
+        ],
+        cwd=root,
+        env={
+            **os.environ,
+            "PYTHONPATH": str(root),
+            "CA_TERMINATION_MARKER": str(marker),
+            "CA_CONTINUED_MARKER": str(continued),
+        },
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    try:
+        deadline = time.monotonic() + 20
+        while not marker.exists() and time.monotonic() < deadline:
+            assert process.poll() is None, "Pytest consumer exited before readiness"
+            time.sleep(0.05)
+        assert marker.exists()
+        state = json.loads(marker.read_text())
+        process.terminate()
+        assert process.wait(timeout=15) == 2  # Pytest's interrupted-session status.
+        assert not continued.exists()
+        assert not Path(state["root"]).exists()
+        with pytest.raises(ProcessLookupError):
+            os.kill(state["pid"], 0)
+    finally:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+        if marker.exists():
+            state = json.loads(marker.read_text())
+            data = Path(state["root"]) / "data"
+            pid_file = data / "postmaster.pid"
+            if (
+                pid_file.exists()
+                and int(pid_file.read_text().splitlines()[0]) == state["pid"]
+            ):
+                subprocess.run(
+                    [
+                        str(Path(state["bin"]) / "pg_ctl"),
+                        "-D",
+                        str(data),
+                        "-m",
+                        "fast",
+                        "-w",
+                        "stop",
+                    ],
+                    capture_output=True,
+                    timeout=15,
+                    check=True,
+                )
