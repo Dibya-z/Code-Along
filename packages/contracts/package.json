@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     "./collaboration": "./collaboration/checkpoints.ts",
-    "./execution": "./execution/runner.ts"
+    "./execution": "./execution/runner.ts",
+    "./execution/project": "./execution/project-manifest.ts",
+    "./execution/profiles": "./execution/profiles.ts"
   },
   "scripts": {
     "typecheck": "tsc --project tsconfig.json && tsc --project tsconfig.test.json"

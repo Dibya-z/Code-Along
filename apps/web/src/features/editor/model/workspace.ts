@@ -6,6 +6,11 @@ import {
 } from '@code-along/contracts/execution';
 import type { components } from '@code-along/api-client';
 import type { Project } from '../../projects/types.ts';
+import type { ProjectSnapshot } from '@code-along/contracts/execution/project';
+import {
+  CORE_RUNTIME,
+  type RuntimeIdentity,
+} from '@code-along/contracts/execution/profiles';
 import { EditorDocument, type FileMetadata } from './document.ts';
 
 export type FileSource = components['schemas']['FileSource'];
@@ -26,6 +31,7 @@ export class EditorWorkspace {
   private listeners = new Set<() => void>();
   private destroyed = false;
   private metadataVersion = 0;
+  private runtimeId = '';
   private summary: WorkspaceSummary = Object.freeze({
     revision: 0,
     files: [],
@@ -142,6 +148,7 @@ export class EditorWorkspace {
       if (next.get(id) !== file) file.destroy();
     this.records = next;
     this.metadataVersion = project.metadata_version;
+    this.runtimeId = project.runtime_id;
     this.summary = {
       ...this.summary,
       entrypoint: project.entrypoint_file_id,
@@ -187,6 +194,52 @@ export class EditorWorkspace {
     const file = this.records.get(id);
     if (!file) throw new Error('This file is no longer in the project.');
     file.replace(source);
+  }
+
+  snapshotInput(
+    stdinMode: ProjectSnapshot['stdin_mode'] = 'batch',
+    runtime: RuntimeIdentity = CORE_RUNTIME,
+  ): ProjectSnapshot {
+    if (this.destroyed || this.metadataVersion < 1)
+      throw new Error('Open a complete project before running.');
+    if (runtime.runtime_id !== this.runtimeId)
+      throw new Error('Refresh the project runtime before running.');
+    const documents = this.documents();
+    if (documents.some((file) => !file.loaded || file.disposed))
+      throw new Error(
+        'Wait for every project file to finish loading before running.',
+      );
+    return {
+      project_id: this.projectId,
+      source_kind: 'project',
+      metadata_version: this.metadataVersion,
+      entrypoint_file_id: this.summary.entrypoint,
+      runtime,
+      stdin_mode: stdinMode,
+      files: documents.map((file) => ({
+        file_id: file.metadata.id,
+        document_id: file.metadata.document_id,
+        generation: file.metadata.generation,
+        path: file.metadata.path,
+        source: file.text.toString(),
+      })),
+    };
+  }
+
+  matchesSnapshot(
+    snapshot: Pick<
+      ProjectSnapshot,
+      'project_id' | 'metadata_version' | 'runtime'
+    >,
+    sourceRevision: number,
+  ): boolean {
+    return (
+      !this.destroyed &&
+      snapshot.project_id === this.projectId &&
+      snapshot.metadata_version === this.metadataVersion &&
+      snapshot.runtime.runtime_id === this.runtimeId &&
+      sourceRevision === this.sourceRevision
+    );
   }
 
   destroy(): void {
