@@ -6,7 +6,12 @@ import {
   authErrors,
   replaceSession,
   safeDestination,
+  useIdentity,
 } from './session.ts';
+import {
+  announceLocalLogout,
+  markSessionEnding,
+} from '../recovery/session-events.ts';
 type Kind = 'login' | 'signup' | 'forgot' | 'reset' | 'verify';
 const content = {
   login: {
@@ -190,13 +195,26 @@ export function AccountPage({ kind }: { kind: Kind }) {
   );
 }
 export function AccountActions() {
+  const identity = useIdentity();
   const [failure, setFailure] = useState('');
   const [busy, setBusy] = useState(false);
   async function logout() {
     setBusy(true);
     try {
       await authenticate('session', undefined, 'DELETE');
-      await replaceSession('/');
+      const actor = identity.data?.id;
+      let cleaned = true;
+      if (actor) {
+        markSessionEnding(actor);
+        try {
+          const { recoveryStore } = await import('../recovery/store.ts');
+          await recoveryStore().endSession(actor);
+        } catch {
+          cleaned = false;
+        }
+        announceLocalLogout(actor);
+      }
+      await replaceSession(cleaned ? '/' : '/?local-recovery=unavailable');
     } catch (error) {
       setFailure(authErrors(error).message);
     } finally {

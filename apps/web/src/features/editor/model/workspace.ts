@@ -33,6 +33,7 @@ export class EditorWorkspace {
   private destroyed = false;
   private metadataVersion = 0;
   private runtimeId = '';
+  private restoring = false;
   private summary: WorkspaceSummary = Object.freeze({
     revision: 0,
     files: [],
@@ -40,6 +41,9 @@ export class EditorWorkspace {
     writable: false,
   });
   sourceRevision = 0;
+  get metadataRevision(): number {
+    return this.metadataVersion;
+  }
 
   constructor(
     readonly accountId: string,
@@ -80,6 +84,7 @@ export class EditorWorkspace {
   }
 
   private sourceChanged = (file: EditorDocument, seeded: boolean): void => {
+    if (this.restoring) return;
     this.sourceRevision++;
     const summary = this.summary.files.find(
       (item) => item.id === file.metadata.id,
@@ -195,6 +200,58 @@ export class EditorWorkspace {
     const file = this.records.get(id);
     if (!file) throw new Error('This file is no longer in the project.');
     file.replace(source);
+  }
+
+  /** A reviewed full-state recovery replaces empty local models, never merges duplicate starter seeds. */
+  restoreFiles(
+    files: readonly {
+      metadata: FileMetadata;
+      state: Uint8Array;
+      initial_source: string;
+    }[],
+  ): void {
+    if (
+      this.destroyed ||
+      !this.summary.writable ||
+      files.length !== this.records.size ||
+      new Set(files.map((file) => file.metadata.id)).size !== files.length
+    )
+      throw new Error(
+        'This recovery does not match the writable project. Export it as a separate copy.',
+      );
+    for (const file of files) {
+      const current = this.records.get(file.metadata.id)?.metadata;
+      if (
+        !current ||
+        current.document_id !== file.metadata.document_id ||
+        current.generation !== file.metadata.generation ||
+        current.initial_sha256 !== file.metadata.initial_sha256
+      )
+        throw new Error(
+          'File identities or generations have changed. Export this recovery as a separate copy.',
+        );
+    }
+    const next = new Map<string, EditorDocument>();
+    this.restoring = true;
+    try {
+      for (const old of this.records.values()) {
+        const file = files.find(
+          (item) => item.metadata.id === old.metadata.id,
+        )!;
+        const restored = new EditorDocument(old.metadata, this.sourceChanged);
+        next.set(old.metadata.id, restored);
+        restored.restore(file.state, file.initial_source);
+      }
+    } catch (error) {
+      for (const file of next.values()) file.destroy();
+      throw error;
+    } finally {
+      this.restoring = false;
+    }
+    for (const file of this.records.values()) file.destroy();
+    this.records = next;
+    this.sourceRevision++;
+    this.publish(true);
   }
 
   snapshotInput(

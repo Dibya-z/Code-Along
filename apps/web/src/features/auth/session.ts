@@ -3,6 +3,7 @@ import { productApi } from '../../api/product.ts';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError, clearCsrf } from '../../api/client.ts';
 import { queryClient } from '../../app/providers.tsx';
+import { announceSessionChange } from '../recovery/session-events.ts';
 export type Identity = components['schemas']['CurrentUserOutput'];
 export async function getIdentity(): Promise<Identity | null> {
   try {
@@ -84,7 +85,9 @@ export function authErrors(error: unknown): {
 }
 export async function replaceSession(
   destination = '/workspaces',
+  broadcast = true,
 ): Promise<void> {
+  if (broadcast) announceSessionChange();
   await queryClient.cancelQueries();
   queryClient.clear();
   clearCsrf();

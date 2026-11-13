@@ -47,6 +47,20 @@ export class EditorDocument {
   get dirty(): boolean {
     return this.loaded && this.text.toString() !== this.baseline;
   }
+  get initialSource(): string {
+    if (!this.loaded) throw new Error('Load this file before recovery.');
+    return this.baseline;
+  }
+
+  restore(state: Uint8Array, baseline: string): void {
+    if (this.disposed || this.loaded || this.text.length)
+      throw new Error('Recovery needs an empty document.');
+    this.baseline = baseline;
+    Y.applyUpdate(this.doc, state, SEED);
+    this.loaded = true;
+    this.revision++;
+    this.changed(this, true);
+  }
 
   private observe = (
     _event: Y.YTextEvent,

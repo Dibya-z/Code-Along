@@ -1,5 +1,5 @@
 import { InvitationPage } from '../features/invitations/pages.tsx';
-import { Component, lazy, Suspense, type ReactNode } from 'react';
+import { Component, lazy, Suspense, useEffect, type ReactNode } from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
@@ -9,7 +9,9 @@ import {
   useLocation,
 } from 'react-router';
 import { AccountPage, AccountActions } from '../features/auth/pages.tsx';
-import { useIdentity } from '../features/auth/session.ts';
+import { useIdentity, replaceSession } from '../features/auth/session.ts';
+import { listenForLocalLogout } from '../features/recovery/session-events.ts';
+import { Notice } from '@code-along/design-system';
 import {
   WorkspacesPage,
   WorkspacePage,
@@ -22,6 +24,16 @@ const ProjectPage = lazy(() =>
 function Shell() {
   const location = useLocation();
   const identity = useIdentity();
+  const actor = identity.data?.id;
+  useEffect(
+    () =>
+      actor
+        ? listenForLocalLogout(actor, () => {
+            void replaceSession('/', false);
+          })
+        : undefined,
+    [actor],
+  );
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main">
@@ -72,6 +84,13 @@ function Home() {
   if (identity.data) return <WorkspacesPage />;
   return (
     <div className="page">
+      {new URLSearchParams(location.search).get('local-recovery') ===
+        'unavailable' && (
+        <Notice tone="error">
+          You are signed out. Local drafts could not be cleared. Clear this
+          site’s browser data before leaving a shared computer.
+        </Notice>
+      )}
       <p className="eyebrow">A PLACE TO WORK TOGETHER</p>
       <h1>Your workspaces</h1>
       <p className="lead">

@@ -1,6 +1,7 @@
 import {
   useEffect,
   useLayoutEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -17,6 +18,9 @@ import { FileTabs } from './components/file-tabs.tsx';
 import { FileTree } from './components/file-tree.tsx';
 import { ExecutionPanel } from '../execution/panel.tsx';
 import './styles.css';
+import { RecoveryController } from '../recovery/controller.ts';
+import { recoveryStore } from '../recovery/store.ts';
+import { RecoveryPanel } from '../recovery/panel.tsx';
 
 interface Props {
   accountId: string;
@@ -48,10 +52,20 @@ function ScopedWorkbench({
   fileActions,
   paused,
 }: Props) {
-  const [resource] = useState(() => ({
-    model: new EditorWorkspace(accountId, project.id),
-    leases: 0,
-  }));
+  const name = useRef(project.name);
+  name.current = project.name;
+  const [resource] = useState(() => {
+    const model = new EditorWorkspace(accountId, project.id);
+    return {
+      model,
+      recovery: new RecoveryController(
+        model,
+        () => name.current,
+        recoveryStore(),
+      ),
+      leases: 0,
+    };
+  });
   const workspace = resource.model;
   const summary = useSyncExternalStore(
     workspace.subscribe,
@@ -66,11 +80,15 @@ function ScopedWorkbench({
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     resource.leases++;
+    resource.recovery.start();
     return () => {
       resource.leases--;
       // React StrictMode replays effects; an actual unmount must still release all private buffers.
       queueMicrotask(() => {
-        if (resource.leases === 0) resource.model.destroy();
+        if (resource.leases === 0) {
+          resource.recovery.dispose();
+          resource.model.destroy();
+        }
       });
     };
   }, [resource]);
@@ -201,7 +219,7 @@ function ScopedWorkbench({
           onSelect={onSelect}
         />
         <p className="editor-scope-note">
-          Edits stay in this tab. They have not been saved to the server.
+          Edits are local to this browser. Server saving is not connected yet.
         </p>
       </aside>
       <section className="editor-pane" aria-label="Python workbench">
@@ -280,6 +298,11 @@ function ScopedWorkbench({
         paused={paused}
         toolbar={toolbar}
         onRun={() => setPane('console')}
+      />
+      <RecoveryPanel
+        model={resource.recovery}
+        name={project.name}
+        selectedId={selectedId}
       />
     </div>
   );
