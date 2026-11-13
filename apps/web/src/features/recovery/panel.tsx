@@ -64,8 +64,9 @@ export function RecoveryPanel({
         </p>
       </div>
       <p className="muted">
-        Drafts are stored unencrypted in this browser. Server saving is not
-        connected yet.
+        {model.workspace.canonical
+          ? 'This device copy is unencrypted and supplements server checkpoints. Export important work before leaving a shared computer.'
+          : 'Drafts are stored unencrypted in this browser. They are independent of server projects.'}
       </p>
       {(snapshot.error || error) && (
         <Notice tone="error">{snapshot.error || error}</Notice>
@@ -126,6 +127,31 @@ export function RecoveryPanel({
         )}
         {snapshot.found && (
           <>
+            {model.workspace.canonical &&
+              snapshot.found.data.origin === 'm2-local' && (
+                <Button
+                  variant="secondary"
+                  busy={copying}
+                  onClick={() => {
+                    setCopying(true);
+                    void createLocalDraft(
+                      model.workspace.accountId,
+                      recoveryArchive(snapshot.found!),
+                    )
+                      .then((id) => {
+                        void navigate(`/drafts/${id}`);
+                      })
+                      .catch(() =>
+                        setError(
+                          'The stored copy could not be opened. Export it instead.',
+                        ),
+                      )
+                      .finally(() => setCopying(false));
+                  }}
+                >
+                  Open stored local copy
+                </Button>
+              )}
             <Button
               disabled={!structure.writable || !model.canRestore()}
               onClick={() => model.restore()}
@@ -171,8 +197,11 @@ export function RecoveryPanel({
       </div>
       {snapshot.found && (
         <p>
-          Restoring replaces this tab’s text. Export the current code first if
-          you need it.{' '}
+          {model.workspace.canonical
+            ? snapshot.found.data.origin === 'm2-local'
+              ? 'This older recovery has independent local history. Open it as a new local draft; it cannot be merged into this server project. '
+              : 'Restoring merges this canonical recovery with the same server document generations. Export the current code first if you need it. '
+            : 'Restoring replaces this tab’s text. Export the current code first if you need it. '}
           {!model.canRestore() &&
             'Restoring requires the same writable file identities and generations; this stored copy can still be exported.'}
         </p>

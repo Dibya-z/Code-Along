@@ -24,7 +24,7 @@ export interface RecoveryFile {
 }
 export interface RecoveryData {
   readonly version: 1;
-  readonly origin: 'm2-local';
+  readonly origin: 'm2-local' | 'm3-canonical';
   readonly account_id: string;
   readonly project_id: string;
   readonly kind: 'project' | 'local_draft';
@@ -55,7 +55,14 @@ function invalid(): never {
 }
 const digest = (value: unknown): value is string =>
   typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
-function binarySource(state: Uint8Array): string {
+export function validateRecoveryBinary(state: Uint8Array): string {
+  if (
+    !(state instanceof Uint8Array) ||
+    !(state.buffer instanceof ArrayBuffer) ||
+    state.length < 1 ||
+    state.length > MAX_CHECKPOINT_STATE_BYTES
+  )
+    invalid();
   const doc = new Y.Doc();
   try {
     const decoded = Y.decodeUpdate(state);
@@ -120,7 +127,8 @@ export async function validateRecovery(
       'files',
     ]) ||
     value['version'] !== 1 ||
-    value['origin'] !== 'm2-local' ||
+    !['m2-local', 'm3-canonical'].includes(String(value['origin'])) ||
+    (value['origin'] === 'm3-canonical' && value['kind'] !== 'project') ||
     !isRunnerId(value['account_id']) ||
     !isRunnerId(value['project_id']) ||
     !isRunnerId(value['entrypoint_file_id']) ||
@@ -197,7 +205,7 @@ export async function validateRecovery(
       (await sha256(state)) !== entry['state_sha256']
     )
       invalid();
-    const source = binarySource(state);
+    const source = validateRecoveryBinary(state);
     if ((await sha256(sourceBytes(source))) !== entry['source_sha256'])
       invalid();
     ids.add(meta['id']);
@@ -226,7 +234,7 @@ export async function validateRecovery(
   if (!ids.has(value['entrypoint_file_id'])) invalid();
   const data = Object.freeze({
     version: 1 as const,
-    origin: 'm2-local' as const,
+    origin: value['origin'] as RecoveryData['origin'],
     account_id: value['account_id'],
     project_id: value['project_id'],
     kind: value['kind'] as RecoveryData['kind'],
@@ -265,7 +273,7 @@ export async function captureRecovery(
   );
   return validateRecovery({
     version: 1,
-    origin: 'm2-local',
+    origin: workspace.canonical ? 'm3-canonical' : 'm2-local',
     account_id: workspace.accountId,
     project_id: workspace.projectId,
     kind: input.source_kind,
@@ -284,6 +292,7 @@ export function recoveryMatches(
     current = workspace.documents();
   return (
     data.account_id === workspace.accountId &&
+    data.origin === (workspace.canonical ? 'm3-canonical' : 'm2-local') &&
     data.project_id === workspace.projectId &&
     current.length === data.files.length &&
     data.files.every((file) => {

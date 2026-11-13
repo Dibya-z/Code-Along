@@ -344,13 +344,21 @@ test('a project local copy captures current edits and cannot alter the original 
     source = 'print("copied current text")\n';
   const writes: string[] = [];
   page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
     if (
-      new URL(request.url()).pathname.startsWith('/api/v1/projects/') &&
+      path.startsWith('/api/v1/projects/') &&
+      !(
+        request.method() === 'POST' &&
+        /^\/api\/v1\/projects\/[a-f0-9-]{36}\/documents\/[a-f0-9-]{36}\/ticket\/$/.test(
+          path,
+        )
+      ) &&
       ['POST', 'PATCH', 'DELETE'].includes(request.method())
     )
       writes.push(request.method());
   });
   await page.getByLabel('Python source for main.py').fill(source);
+  await expect(page.locator('.collaboration-status')).toHaveText('Saved');
   await page
     .getByRole('button', { name: 'Open local copy', exact: true })
     .click();
@@ -363,12 +371,13 @@ test('a project local copy captures current edits and cannot alter the original 
     /^Local recovery updated/,
   );
   await page.goto(original);
+  await expect(page.locator('.collaboration-status')).toHaveText('Saved');
   await expect(
     page.getByRole('button', { name: 'Restore local changes', exact: true }),
   ).toBeEnabled();
-  await expect(page.getByLabel('Python source for main.py')).not.toContainText(
-    'copied current text',
-  );
+  expect(
+    (JSON.parse(await backup(page)).files as { source: string }[])[0]!.source,
+  ).toBe(source);
   await page
     .getByRole('button', { name: 'Restore local changes', exact: true })
     .click();

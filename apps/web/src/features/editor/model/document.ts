@@ -2,6 +2,7 @@ import * as Y from 'yjs';
 import { RUN_LIMITS, sourceBytes } from '@code-along/contracts/execution';
 import type { ProjectFile } from '../../projects/types.ts';
 import { EditorController } from './controller.ts';
+import type { HocuspocusProvider } from '@hocuspocus/provider';
 
 const SEED = Symbol('immutable-starter');
 export const LOCAL_EDIT = Symbol('local-editor-change');
@@ -29,13 +30,22 @@ export class EditorDocument {
   );
   private value: Readonly<FileMetadata>;
   private baseline = '';
+  private baselineReady = false;
+  private synchronized = false;
+  private confirmed = false;
+  awareness: HocuspocusProvider['awareness'] = null;
   loaded = false;
   disposed = false;
   revision = 0;
 
   constructor(
     metadata: FileMetadata,
-    private readonly changed: (file: EditorDocument, seeded: boolean) => void,
+    private readonly changed: (
+      file: EditorDocument,
+      seeded: boolean,
+      source?: boolean,
+    ) => void,
+    readonly canonical = false,
   ) {
     this.value = metadataValue(metadata);
     this.text.observe(this.observe);
@@ -45,7 +55,12 @@ export class EditorDocument {
     return this.value;
   }
   get dirty(): boolean {
-    return this.loaded && this.text.toString() !== this.baseline;
+    return (
+      this.loaded &&
+      (this.canonical
+        ? !this.confirmed
+        : this.text.toString() !== this.baseline)
+    );
   }
   get initialSource(): string {
     if (!this.loaded) throw new Error('Load this file before recovery.');
@@ -67,6 +82,7 @@ export class EditorDocument {
     transaction: Y.Transaction,
   ): void => {
     if (this.disposed || transaction.origin === SEED) return;
+    this.confirmed = false;
     this.revision++;
     this.changed(this, false);
   };
@@ -77,6 +93,13 @@ export class EditorDocument {
 
   seed(source: string): void {
     if (this.disposed || this.loaded) return;
+    if (this.canonical) {
+      this.baseline = source;
+      this.baselineReady = true;
+      this.loaded = this.synchronized;
+      this.changed(this, true, false);
+      return;
+    }
     if (this.text.length !== 0)
       throw new Error('This document already contains source.');
     this.baseline = source;
@@ -84,6 +107,20 @@ export class EditorDocument {
     this.doc.transact(() => this.text.insert(0, source), SEED);
     this.revision++;
     this.changed(this, true);
+  }
+
+  /** A server document starts empty; immutable REST source is never inserted. */
+  synchronizedFromServer(): void {
+    if (this.disposed || !this.canonical) return;
+    this.synchronized = true;
+    this.loaded = this.baselineReady;
+    this.changed(this, true, false);
+  }
+
+  markSaved(saved: boolean): void {
+    if (this.disposed || !this.canonical || this.confirmed === saved) return;
+    this.confirmed = saved;
+    this.changed(this, true, false);
   }
 
   replace(source: string): void {

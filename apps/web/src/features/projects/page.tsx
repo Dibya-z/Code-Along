@@ -145,7 +145,7 @@ function ProjectDetails() {
         </div>
         <div className="actions">
           <span className="badge">
-            {project.archived ? 'Archived' : 'Local workbench'}
+            {project.archived ? 'Archived' : 'Shared workbench'}
           </span>
           <Button
             variant="secondary"

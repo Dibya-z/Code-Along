@@ -6,6 +6,7 @@ interface Row {
   revision: number;
   account: string;
   project: string;
+  origin: string;
   hashes: string[];
   keys: string[];
 }
@@ -26,6 +27,7 @@ async function records(page: Page): Promise<Row[]> {
               data: {
                 account_id: string;
                 project_id: string;
+                origin: string;
                 files: { source_sha256: string }[];
               };
             }[];
@@ -34,6 +36,7 @@ async function records(page: Page): Promise<Row[]> {
                 revision: row.revision,
                 account: row.data.account_id,
                 project: row.data.project_id,
+                origin: row.data.origin,
                 hashes: row.data.files.map((file) => file.source_sha256),
                 keys: Object.keys(row.data),
               })),
@@ -48,7 +51,7 @@ async function records(page: Page): Promise<Row[]> {
       }),
   );
 }
-async function saved(page: Page, source: string) {
+async function stored(page: Page, source: string) {
   const hash = createHash('sha256').update(source).digest('hex');
   await expect
     .poll(async () =>
@@ -59,7 +62,35 @@ async function saved(page: Page, source: string) {
     /^Local recovery updated/,
   );
 }
-test('binary recovery, immediate route flush, competing tabs and default logout cleanup', async ({
+async function serverSaved(page: Page) {
+  await expect(page.locator('.collaboration-status')).toHaveText('Saved');
+}
+async function replaceSharedSource(page: Page, source: string): Promise<void> {
+  const modifier = await page.evaluate(() =>
+    /Mac|iPhone|iPad/.test(navigator.platform) ? 'Meta' : 'Control',
+  );
+  await page.getByLabel('Python source for main.py').click();
+  await page.keyboard.press(`${modifier}+a`);
+  await page.keyboard.press('Backspace');
+  await page.keyboard.insertText(source);
+}
+async function archiveSource(page: Page, stored = false): Promise<string> {
+  const downloading = page.waitForEvent('download');
+  await page
+    .getByRole('button', {
+      name: stored ? 'Export stored recovery' : 'Export current code',
+      exact: true,
+    })
+    .click();
+  const path = await (await downloading).path();
+  const archive = JSON.parse(await readFile(path!, 'utf8')) as {
+    files: { path: string; source: string }[];
+  };
+  const file = archive.files.find((file) => file.path === 'main.py');
+  expect(file).toBeDefined();
+  return file!.source;
+}
+test('canonical recovery, immediate route flush, competing local stores and default logout cleanup', async ({
   page,
   browserName,
 }) => {
@@ -70,14 +101,14 @@ test('binary recovery, immediate route flush, competing tabs and default logout 
   await createEditorProject(page);
   const projectUrl = page.url(),
     source = '# 🐍\nprint("private draft")\n';
-  await expect(page.locator('.recovery-status')).toHaveText(
-    'Local recovery ready',
-  );
+  await serverSaved(page);
   await expect(
     page.getByLabel('Keep my local drafts after sign out on this device.'),
   ).not.toBeChecked();
   await page.getByLabel('Python source for main.py').fill(source);
-  await saved(page, source);
+  await stored(page, source);
+  await serverSaved(page);
+  expect((await records(page))[0]!.origin).toBe('m3-canonical');
   expect((await records(page))[0]!.keys.sort()).toEqual(
     [
       'version',
@@ -96,15 +127,12 @@ test('binary recovery, immediate route flush, competing tabs and default logout 
   await expect(
     page.getByRole('button', { name: 'Restore local changes', exact: true }),
   ).toBeEnabled();
-  await expect(page.getByLabel('Python source for main.py')).not.toContainText(
-    'private draft',
-  );
+  await serverSaved(page);
+  expect(await archiveSource(page)).toBe(source);
   await page
     .getByRole('button', { name: 'Restore local changes', exact: true })
     .click();
-  await expect(page.getByLabel('Python source for main.py')).toContainText(
-    'private draft',
-  );
+  expect(await archiveSource(page)).toBe(source);
   await page
     .getByLabel('Python source for main.py')
     .fill('print("route flush")\n');
@@ -122,44 +150,63 @@ test('binary recovery, immediate route flush, competing tabs and default logout 
   await page
     .getByRole('button', { name: 'Restore local changes', exact: true })
     .click();
-  await expect(page.getByLabel('Python source for main.py')).toHaveText(
-    'print("route flush")\n',
-  );
+  await serverSaved(page);
+  expect(await archiveSource(page)).toBe('print("route flush")\n');
   const other = await page.context().newPage();
   await other.goto(projectUrl);
   await other
     .getByRole('button', { name: 'Restore local changes', exact: true })
     .click();
-  await page
-    .getByLabel('Python source for main.py')
-    .fill('print("first tab wins")\n');
-  await saved(page, 'print("first tab wins")\n');
-  await other
-    .getByLabel('Python source for main.py')
-    .fill('print("second tab stays local")\n');
-  await expect(other.locator('.recovery-status')).toHaveText(
-    'Local recovery paused: another tab changed it.',
-  );
-  await expect(other.getByLabel('Python source for main.py')).toHaveText(
-    'print("second tab stays local")\n',
-  );
-  const downloading = other.waitForEvent('download');
-  await other
-    .getByRole('button', { name: 'Export current code', exact: true })
-    .click();
-  const path = await (await downloading).path();
-  expect(JSON.parse(await readFile(path!, 'utf8')).files[0].source).toBe(
-    'print("second tab stays local")\n',
-  );
-  await other
+  await serverSaved(other);
+  const first = 'print("first shared edit")\n',
+    latest = 'print("newer shared edit")\n',
+    pausedLabel = 'Local recovery paused: another tab changed it.';
+  await replaceSharedSource(page, first);
+  await serverSaved(page);
+  await serverSaved(other);
+  expect(await archiveSource(page)).toBe(first);
+  await expect.poll(() => archiveSource(other)).toBe(first);
+  await expect
+    .poll(async () =>
+      (
+        await Promise.all(
+          [page, other].map((tab) =>
+            tab.locator('.recovery-status').textContent(),
+          ),
+        )
+      ).includes(pausedLabel),
+    )
+    .toBe(true);
+  const paused =
+      (await page.locator('.recovery-status').textContent()) === pausedLabel
+        ? page
+        : other,
+    writer = paused === page ? other : page;
+  await expect
+    .poll(async () =>
+      (await records(paused)).some((row) =>
+        row.hashes.includes(createHash('sha256').update(first).digest('hex')),
+      ),
+    )
+    .toBe(true);
+  // Keep the older recovery record intact while the paused tab saves newer canonical work.
+  await writer.getByRole('link', { name: 'Workspaces', exact: true }).click();
+  await expect(writer).toHaveURL(/\/workspaces$/);
+  await replaceSharedSource(paused, latest);
+  await serverSaved(paused);
+  expect(await archiveSource(paused)).toBe(latest);
+  await paused
     .getByRole('button', { name: 'Review newer recovery', exact: true })
     .click();
-  await other
+  expect(await archiveSource(paused, true)).toBe(first);
+  await paused
     .getByRole('button', { name: 'Restore local changes', exact: true })
     .click();
-  await expect(other.getByLabel('Python source for main.py')).toHaveText(
-    'print("first tab wins")\n',
-  );
+  await serverSaved(paused);
+  expect(await archiveSource(paused)).toBe(latest);
+  await writer.goto(projectUrl);
+  await serverSaved(writer);
+  expect(await archiveSource(writer)).toBe(latest);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({
     path: test.info().outputPath('recovery-desktop.png'),
@@ -177,6 +224,7 @@ test('binary recovery, immediate route flush, competing tabs and default logout 
   });
   await page.setViewportSize({ width: 1280, height: 1000 });
   await page.reload();
+  await serverSaved(page);
   await page
     .getByRole('button', { name: "Use this tab's code", exact: true })
     .click();
@@ -189,9 +237,7 @@ test('binary recovery, immediate route flush, competing tabs and default logout 
     page.getByRole('button', { name: 'Export current code', exact: true }),
   ).toBeFocused();
   await expect.poll(async () => (await records(page)).length).toBe(0);
-  await page
-    .getByLabel('Python source for main.py')
-    .fill('print("pending at logout")\n');
+  await replaceSharedSource(page, 'print("pending at logout")\n');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page).toHaveURL('https://127.0.0.1:18443/');
   await expect(other).toHaveURL('https://127.0.0.1:18443/');
@@ -213,7 +259,8 @@ test('explicit retention survives sign out and a different account cannot open t
   const projectUrl = page.url(),
     source = 'print("retained by choice")\n';
   await page.getByLabel('Python source for main.py').fill(source);
-  await saved(page, source);
+  await stored(page, source);
+  await serverSaved(page);
   await page
     .getByLabel('Keep my local drafts after sign out on this device.')
     .check();
@@ -239,10 +286,12 @@ test('explicit retention survives sign out and a different account cannot open t
   await expect(page).toHaveURL('https://127.0.0.1:18443/');
   await login(page, email);
   await page.goto(projectUrl);
+  await serverSaved(page);
+  expect(await archiveSource(page)).toBe(source);
   await page
     .getByRole('button', { name: 'Restore local changes', exact: true })
     .click();
-  await expect(page.getByLabel('Python source for main.py')).toHaveText(source);
+  expect(await archiveSource(page)).toBe(source);
   await page
     .getByLabel('Keep my local drafts after sign out on this device.')
     .uncheck();
@@ -253,7 +302,7 @@ test('explicit retention survives sign out and a different account cannot open t
   await expect(page).toHaveURL('https://127.0.0.1:18443/');
   await expect.poll(async () => (await records(page)).length).toBe(0);
 });
-test('stale document generations refuse restore and quota failure preserves current/exported code', async ({
+test('stale recovery generations cannot replace saved source and quota failure preserves current/exported code', async ({
   page,
   browserName,
 }) => {
@@ -265,7 +314,8 @@ test('stale document generations refuse restore and quota failure preserves curr
   await createEditorProject(page);
   const source = 'print("stored copy")\n';
   await page.getByLabel('Python source for main.py').fill(source);
-  await saved(page, source);
+  await stored(page, source);
+  await serverSaved(page);
   const generation = async (value: number) =>
     page.evaluate(
       (value) =>
@@ -304,12 +354,12 @@ test('stale document generations refuse restore and quota failure preserves curr
   await expect(
     page.getByLabel('Local recovery', { exact: true }),
   ).toContainText('same writable file identities and generations');
-  await expect(page.getByLabel('Python source for main.py')).not.toContainText(
-    'stored copy',
-  );
+  await serverSaved(page);
+  expect(await archiveSource(page)).toBe(source);
   await expect(
     page.getByRole('button', { name: 'Export stored recovery', exact: true }),
   ).toBeEnabled();
+  expect(await archiveSource(page, true)).toBe(source);
   await generation(1);
   await page.reload();
   await page
@@ -334,6 +384,7 @@ test('stale document generations refuse restore and quota failure preserves curr
   await expect(page.locator('.recovery-status')).toHaveText(
     'Local recovery needs attention.',
   );
+  await serverSaved(page);
   await expect(page.getByLabel('Python source for main.py')).toContainText(
     'quota work preserved',
   );
@@ -403,7 +454,7 @@ test('unavailable IndexedDB keeps export and server sign out usable', async ({
   await expect(page.getByRole('alert')).toContainText('You are signed out.');
 });
 
-test('a missing source blocks complete actions but a loaded file can be rescued', async ({
+test('an unavailable verified starter baseline blocks complete actions but a loaded file can be rescued', async ({
   page,
   browserName,
 }) => {

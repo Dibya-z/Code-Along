@@ -30,10 +30,14 @@ The default is to purge the current account's drafts on successful server sign-o
 
 If IndexedDB cleanup fails, server sign-out still succeeds and the landing page reports that local cleanup could not be confirmed. The application does not claim that inaccessible bytes were erased. Retained records become visible only after a fresh verified session for the same account.
 
-## Backup format and future collaboration
+## Backup format and canonical collaboration
 
 `features/project-tools/archive.ts` exports a bounded `.codealong.json` containing only a version, name, runtime, entrypoint path and complete source/path pairs. A loaded individual file can also be downloaded as Python text when another file is unavailable. Exports do not include account IDs, document history, permissions or session data.
 
-The binary record has `origin: "m2-local"`. These documents were independently seeded before canonical server collaboration exists. **M3 must fork legacy M2 recovery into an explicit local draft; never merge that history into a canonical server room.** A recovery label is never a durable server Saved receipt. Server authentication and project authorization remain online API responsibilities.
+M2 binary records have `origin: "m2-local"`. Those documents were independently seeded. M3 offers **Open stored local copy** to fork them through source-only archives into fresh local identities; it disables merging that history into canonical rooms. Keep the original recovery until the fresh copy's storage transaction completes. Export remains available when copying fails.
+
+New server-backed records use `origin: "m3-canonical"`. Restoring requires current authorization and matching account/project/file/document/generation/baseline identities. All merged files are validated before any live application; oversized or invalid merged branches leave every current file unchanged. A canonical restore applies Yjs history to the same document and cannot overwrite newer canonical changes by replacing plaintext. Local-only drafts retain their independent restore behavior.
+
+Wait for **Saved** to confirm server durability in a shared project. **Local recovery updated** confirms only the supplementary copy on this device. Multiple tabs can share canonical source while competing for one device recovery record; a paused local writer does not pause the server checkpoint path. Review or export the stored record explicitly. Server authentication and project authorization remain online API responsibilities; a recovery record never grants access.
 
 Verification lives in `codec.test.ts`, `controller.test.ts` and the real-IndexedDB Chromium/WebKit product recovery cases. They cover deletion-only history, exact Unicode/CRLF bytes, baseline identity, complete over-Run-limit backups, late queued captures, generation mismatch, tab conflicts, unavailable/quota-limited storage, retention and account/session separation.

@@ -170,7 +170,22 @@ export class RecoveryController {
   private enqueue() {
     clearTimeout(this.timer);
     this.timer = undefined;
-    if (!this.eligible()) return;
+    if (!this.eligible()) {
+      const structure = this.workspace.getSnapshot();
+      if (
+        this.workspace.canonical &&
+        !this.blocked &&
+        this.epoch &&
+        this.revision === 0 &&
+        this.lastQueued === '' &&
+        this.snapshot.phase === 'pending' &&
+        structure.writable &&
+        structure.files.length > 0 &&
+        structure.files.every((file) => file.loaded && !file.dirty)
+      )
+        this.publish({ phase: 'ready', updatedAt: 0 });
+      return;
+    }
     const stamp = recoveryStamp(this.workspace);
     if (stamp === this.lastQueued) return;
     this.lastQueued = stamp;
@@ -228,8 +243,11 @@ export class RecoveryController {
     }
     try {
       this.decision++;
-      this.workspace.restoreFiles(found.data.files);
+      if (this.workspace.canonical)
+        this.workspace.mergeCanonicalRecovery(found);
+      else this.workspace.restoreFiles(found.data.files);
       this.lastQueued =
+        !this.workspace.canonical &&
         found.data.metadata_version === this.workspace.metadataRevision
           ? recoveryStamp(this.workspace)
           : '';

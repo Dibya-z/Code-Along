@@ -5,7 +5,12 @@ import {
   sourceBytes,
 } from '@code-along/contracts/execution';
 import type { components } from '@code-along/api-client';
+import * as Y from 'yjs';
 import type { EditorProject } from '../../projects/types.ts';
+import {
+  validateRecoveryBinary,
+  type ValidatedRecovery,
+} from '../../recovery/codec.ts';
 import type { ProjectSnapshot } from '@code-along/contracts/execution/project';
 import {
   reviewedRuntime,
@@ -49,6 +54,7 @@ export class EditorWorkspace {
     readonly accountId: string,
     readonly projectId: string,
     readonly sourceKind: ProjectSnapshot['source_kind'] = 'project',
+    readonly canonical = false,
   ) {
     if (!isRunnerId(accountId) || !isRunnerId(projectId))
       throw new Error('Invalid workbench identity.');
@@ -84,9 +90,13 @@ export class EditorWorkspace {
     for (const listener of this.listeners) listener();
   }
 
-  private sourceChanged = (file: EditorDocument, seeded: boolean): void => {
+  private sourceChanged = (
+    file: EditorDocument,
+    seeded: boolean,
+    source = true,
+  ): void => {
     if (this.restoring) return;
-    this.sourceRevision++;
+    if (source) this.sourceRevision++;
     const summary = this.summary.files.find(
       (item) => item.id === file.metadata.id,
     );
@@ -147,7 +157,7 @@ export class EditorWorkspace {
         previous.metadata.generation === file.generation;
       const document = retained
         ? previous
-        : new EditorDocument(file, this.sourceChanged);
+        : new EditorDocument(file, this.sourceChanged, this.canonical);
       document.updateMetadata(file);
       next.set(file.id, document);
     }
@@ -211,6 +221,10 @@ export class EditorWorkspace {
       initial_source: string;
     }[],
   ): void {
+    if (this.canonical)
+      throw new Error(
+        'Legacy local history must be opened as a separate local draft.',
+      );
     if (
       this.destroyed ||
       !this.summary.writable ||
@@ -253,6 +267,45 @@ export class EditorWorkspace {
     this.records = next;
     this.sourceRevision++;
     this.publish(true);
+  }
+
+  /** Merge only reviewed canonical history belonging to the same server generations. */
+  mergeCanonicalRecovery(recovery: ValidatedRecovery): void {
+    const { data } = recovery,
+      files = data.files;
+    if (
+      !this.canonical ||
+      data.origin !== 'm3-canonical' ||
+      data.account_id !== this.accountId ||
+      data.project_id !== this.projectId ||
+      !this.summary.writable ||
+      files.length !== this.records.size ||
+      new Set(files.map((file) => file.metadata.id)).size !== files.length ||
+      files.some((file) => {
+        const live = this.records.get(file.metadata.id);
+        return (
+          !live?.loaded ||
+          live.metadata.document_id !== file.metadata.document_id ||
+          live.metadata.generation !== file.metadata.generation ||
+          live.metadata.initial_sha256 !== file.metadata.initial_sha256
+        );
+      })
+    )
+      throw new Error(
+        'These server generations changed. Open the recovery as a separate local draft.',
+      );
+    const merged = files.map((file) => {
+      const document = this.records.get(file.metadata.id)!;
+      const state = Y.mergeUpdates([
+        Y.encodeStateAsUpdate(document.doc),
+        file.state,
+      ]);
+      validateRecoveryBinary(state);
+      return { document, state };
+    });
+    // No live document changes until every merged schema/source/binary budget passed.
+    for (const { document, state } of merged)
+      Y.applyUpdate(document.doc, state);
   }
 
   snapshotInput(

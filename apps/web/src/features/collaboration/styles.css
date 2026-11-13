@@ -1,0 +1,68 @@
+.collaboration-panel {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-separator);
+}
+.collaboration-panel h2 {
+  margin: 0;
+  font-size: var(--text-heading-sm);
+}
+.collaboration-status {
+  margin: 0;
+  font-size: var(--text-meta);
+  color: var(--color-muted);
+}
+.collaboration-actions,
+.collaboration-presence {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.collaboration-actions {
+  margin-top: var(--space-3);
+}
+.collaboration-presence {
+  flex: 1 1 20rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.collaboration-presence li {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: var(--space-2);
+  overflow-wrap: anywhere;
+}
+.participant-mark {
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 3px solid var(--color-info);
+  border-radius: 50%;
+}
+.python-editor .cm-ySelectionCaret {
+  outline: 1px solid var(--color-ink);
+}
+.python-editor .cm-ySelectionCaret > .cm-ySelectionInfo {
+  font-family: var(--font-ui);
+  font-size: var(--text-meta);
+  line-height: var(--line-body);
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  max-inline-size: min(24rem, calc(100vw - 2rem));
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  .python-editor .cm-ySelectionCaretDot,
+  .python-editor .cm-ySelectionInfo {
+    transition: none;
+  }
+}

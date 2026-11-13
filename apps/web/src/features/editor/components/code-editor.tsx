@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import * as Y from 'yjs';
 import { EditorState } from '@codemirror/state';
 import {
   EditorView,
@@ -44,15 +45,21 @@ export function CodeEditor({
   file,
   writable,
   onNotice,
+  followClientId,
+  onStopFollowing,
 }: {
   file: EditorDocument;
   writable: boolean;
   onNotice: (message: string) => void;
+  followClientId: number | null;
+  onStopFollowing: () => void;
 }) {
   const parent = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const notice = useRef(onNotice);
   notice.current = onNotice;
+  const following = useRef({ clientId: followClientId, stop: onStopFollowing });
+  following.current = { clientId: followClientId, stop: onStopFollowing };
   const [position, setPosition] = useState({ line: 1, column: 1 });
   const path = file.metadata.path;
   const attributes = () =>
@@ -103,10 +110,20 @@ export function CodeEditor({
           indentOnInput(),
           python(),
           syntaxHighlighting(highlighting),
+          keymap.of([
+            {
+              key: 'Escape',
+              run: () => {
+                if (following.current.clientId === null) return false;
+                following.current.stop();
+                return true;
+              },
+            },
+          ]),
           keymap.of(defaultKeymap),
           file.controller.permissions.of(permissions()),
           file.controller.attributes.of(attributes()),
-          yCollab(file.text, null, { undoManager: file.undo }),
+          yCollab(file.text, file.awareness, { undoManager: file.undo }),
           file.controller.updates.of([]),
         ],
       }),
@@ -156,6 +173,45 @@ export function CodeEditor({
       ],
     });
   }, [file, writable, path]);
+  useEffect(() => {
+    const awareness = file.awareness;
+    if (followClientId === null || !awareness) return;
+    let frame = 0;
+    const scroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const editor = view.current;
+        const cursor = awareness.getStates().get(followClientId)?.['cursor'];
+        if (!editor || !cursor?.head) return;
+        try {
+          const position = Y.createAbsolutePositionFromRelativePosition(
+            Y.createRelativePositionFromJSON(cursor.head),
+            file.doc,
+          );
+          if (
+            position?.type === file.text &&
+            position.index >= 0 &&
+            position.index <= editor.state.doc.length
+          )
+            editor.dispatch({
+              effects: EditorView.scrollIntoView(position.index, {
+                y: 'center',
+              }),
+            });
+        } catch {
+          /* Invalid/stale relative positions cannot move this view. */
+        }
+      });
+    };
+    awareness.on('change', scroll);
+    file.doc.on('update', scroll);
+    scroll();
+    return () => {
+      cancelAnimationFrame(frame);
+      awareness.off('change', scroll);
+      file.doc.off('update', scroll);
+    };
+  }, [file, followClientId]);
   return (
     <>
       <div className="python-editor" ref={parent} />

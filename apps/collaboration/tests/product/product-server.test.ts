@@ -13,6 +13,7 @@ import {
   createProductServer,
   inspectFrame,
 } from '../../src/product/product-server.ts';
+import { parsePresenceIdentity } from '@code-along/contracts/collaboration/presence';
 import { CORE_RUNTIME } from '@code-along/contracts/execution/profiles';
 import { HELPER_RELEASE } from '../../src/product/control.ts';
 import { CheckpointStoreError } from '../../src/persistence/binary-state.ts';
@@ -432,4 +433,93 @@ it('pins initially-live and newly-live capture rooms across cold-load waits and 
       !f.server.hocuspocus.documents.has(`${coldId}:1`) &&
       !f.server.hocuspocus.documents.has(`${documentId}:1`),
   );
+});
+
+it('sends an own server identity and permits immediate idle presence with accurate same-account tab counts', async () => {
+  const f = await setup(),
+    a = f.client(),
+    b = f.client();
+  await f.connect(a);
+  await f.connect(b);
+  await until(() =>
+    [a, b].every((client) =>
+      client.replies.some((reply) => parsePresenceIdentity(reply).ok),
+    ),
+  );
+  for (const client of [a, b]) {
+    const frame = client.replies.find(
+        (reply) => parsePresenceIdentity(reply).ok,
+      )!,
+      parsed = parsePresenceIdentity(frame);
+    if (!parsed.ok) throw new Error('server_identity_required');
+    const identity = parsed.value;
+    expect(identity).toEqual({
+      protocol: 'code-along.presence',
+      version: 1,
+      type: 'presence.identity',
+      document_id: client.grant.document.id,
+      generation: client.grant.document.generation,
+      client_session_id: client.grant.client_session_id,
+      awareness_client_id: client.doc.clientID,
+      user: client.grant.user,
+    });
+    for (const privateField of [
+      'lease_id',
+      'lease_token',
+      'ticket',
+      'initial_source',
+      'initial_sha256',
+      'state_base64',
+      'scope',
+    ])
+      expect(frame).not.toContain(`"${privateField}"`);
+    expect(frame).not.toContain(client.grant.lease_token);
+    expect(frame).not.toContain(client.grant.document.initial_source);
+    // Ordinary equal-clock awareness echo cannot supply our own profile. The
+    // separate admitted identity is applied with the normal local clock API.
+    expect(
+      client.provider.awareness!.getLocalState()?.['user'],
+    ).toBeUndefined();
+    const user = identity.user;
+    client.provider.awareness!.setLocalStateField('user', {
+      ...user,
+      name: user.display_name,
+      colorLight: `${user.color}33`,
+    });
+  }
+  await until(() =>
+    [a, b].every(
+      (client) =>
+        [...client.provider.awareness!.getStates().values()].filter(
+          (state) => state['user']?.id === client.grant.user.id,
+        ).length === 2,
+    ),
+  );
+  expect(a.provider.awareness!.getStates().has(a.doc.clientID)).toBe(true);
+  expect(b.provider.awareness!.getStates().has(b.doc.clientID)).toBe(true);
+});
+it('rejects a forged identity from a client before it can reach another subscriber', async () => {
+  const f = await setup(),
+    a = f.client(),
+    b = f.client();
+  await f.connect(a);
+  await f.connect(b);
+  const forged = {
+    protocol: 'code-along.presence',
+    version: 1,
+    type: 'presence.identity',
+    document_id: documentId,
+    generation: 1,
+    client_session_id: a.grant.client_session_id,
+    awareness_client_id: b.doc.clientID,
+    user: { id: randomUUID(), display_name: 'Forged', color: '#2563eb' },
+  };
+  const bytes = frame(`${documentId}:1`, 5, (out) =>
+    encoding.writeVarString(out, JSON.stringify(forged)),
+  );
+  expect(() => inspectFrame(bytes)).toThrow();
+  (a.socket.webSocket as unknown as WebSocket).send(bytes);
+  await until(() => f.server.hocuspocus.getConnectionsCount() === 1);
+  expect(b.provider.isSynced).toBe(true);
+  expect(b.replies.some((reply) => reply.includes('Forged'))).toBe(false);
 });

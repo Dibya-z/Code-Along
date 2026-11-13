@@ -9,8 +9,9 @@ const id = (n: number) =>
 async function workspace(
   source: string,
   kind: 'project' | 'local_draft' = 'project',
+  canonical = false,
 ) {
-  const model = new EditorWorkspace(id(1), id(2), kind);
+  const model = new EditorWorkspace(id(1), id(2), kind, canonical);
   const file = {
     id: id(3),
     document_id: id(4),
@@ -39,10 +40,45 @@ async function workspace(
     [file],
   );
   await model.loadSource(file);
+  if (canonical) model.file(file.id)!.synchronizedFromServer();
   model.replaceSource(file.id, source);
   return model;
 }
 describe('local recovery decision ordering', () => {
+  it('settles an initial canonical backup that becomes server Saved before debounce without claiming a local record', async () => {
+    const current = await workspace('canonical source', 'project', true);
+    const store = {
+      read: vi.fn().mockResolvedValue({
+        policy: {
+          account_id: id(1),
+          epoch: id(9),
+          retain: false,
+          used_bytes: 0,
+          count: 0,
+        },
+        record: undefined,
+      }),
+      save: vi.fn(),
+      retention: vi.fn(),
+      remove: vi.fn(),
+    };
+    const model = new RecoveryController(current, () => 'Shared', store);
+    vi.useFakeTimers();
+    try {
+      model.start();
+      await Promise.resolve();
+      expect(model.getSnapshot().phase).toBe('pending');
+      current.file(id(3))!.markSaved(true);
+      await vi.advanceTimersByTimeAsync(301);
+      expect(model.getSnapshot().phase).toBe('ready');
+      expect(model.getSnapshot().updatedAt).toBe(0);
+      expect(store.save).not.toHaveBeenCalled();
+    } finally {
+      model.dispose();
+      current.destroy();
+      vi.useRealTimers();
+    }
+  });
   it('abandons a delayed old capture after the user reviews and restores a newer copy', async () => {
     const current = await workspace('old capture'),
       newer = await workspace('newer recovery');

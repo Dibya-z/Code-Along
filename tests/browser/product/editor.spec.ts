@@ -21,7 +21,7 @@ for (const keyboardPlatform of ['native', 'linux']) {
     const original = await source.innerText();
     const draft = 'from helper import answer\nprint("snow: 雪", answer)\n';
     await source.fill(draft);
-    await expect(page.getByText('Local draft', { exact: true })).toBeVisible();
+    await expect(page.locator('.collaboration-status')).toHaveText('Saved');
     await source.press(`${modifier}+Home`);
     await source.press('ArrowRight');
     await source.press('ArrowRight');
@@ -111,7 +111,13 @@ for (const keyboardPlatform of ['native', 'linux']) {
     await page
       .getByRole('button', { name: 'Restore project', exact: true })
       .click();
+    await expect(source).toHaveAttribute('aria-readonly', 'true');
+    await page
+      .getByRole('button', { name: 'Recheck access', exact: true })
+      .click();
+    await expect(page.locator('.collaboration-status')).toHaveText('Saved');
     await expect(source).toHaveAttribute('aria-readonly', 'false');
+    await expect(source).toHaveText(draft, { useInnerText: true });
     expect(errors).toEqual([]);
   });
 }

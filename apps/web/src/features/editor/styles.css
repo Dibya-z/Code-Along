@@ -6,6 +6,9 @@
   background: var(--color-surface);
   overflow: hidden;
 }
+.editor-workbench[data-collaboration='true'] {
+  --workbench-content-row: 3;
+}
 .editor-explorer {
   min-width: 0;
   padding: var(--space-4);
@@ -137,15 +140,15 @@
   }
   .editor-workbench > .execution-panel {
     grid-column: 3;
-    grid-row: 2;
+    grid-row: var(--workbench-content-row, 2);
     border-top: 0;
     border-left: 1px solid var(--color-separator);
   }
   .editor-explorer {
-    grid-row: 2;
+    grid-row: var(--workbench-content-row, 2);
   }
   .editor-pane {
-    grid-row: 2;
+    grid-row: var(--workbench-content-row, 2);
   }
   .console-width {
     display: flex;

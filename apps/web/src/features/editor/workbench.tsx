@@ -22,6 +22,11 @@ import { RecoveryController } from '../recovery/controller.ts';
 import { recoveryStore } from '../recovery/store.ts';
 import { RecoveryPanel } from '../recovery/panel.tsx';
 import type { ValidatedRecovery } from '../recovery/codec.ts';
+import { ProjectCollaboration } from '../collaboration/controller.ts';
+import { CollaborationPanel } from '../collaboration/panel.tsx';
+
+const noSubscription = () => () => {};
+const noCollaboration = () => null;
 
 interface Props {
   accountId: string;
@@ -64,6 +69,7 @@ function ScopedWorkbench({
       accountId,
       project.id,
       local ? 'local_draft' : 'project',
+      !local,
     );
     if (local) {
       model.reconcile(project, files, count);
@@ -71,6 +77,7 @@ function ScopedWorkbench({
     }
     return {
       model,
+      collaboration: local ? null : new ProjectCollaboration(model),
       recovery: new RecoveryController(
         model,
         () => name.current,
@@ -82,12 +89,17 @@ function ScopedWorkbench({
     };
   });
   const workspace = resource.model;
+  const collaboration = useSyncExternalStore(
+    resource.collaboration?.subscribe ?? noSubscription,
+    resource.collaboration?.getEditingSnapshot ?? noCollaboration,
+  );
   const summary = useSyncExternalStore(
     workspace.subscribe,
     workspace.getSnapshot,
   );
   const [open, setOpen] = useState<string[]>(selectedId ? [selectedId] : []);
   const [notice, setNotice] = useState('');
+  const [following, setFollowing] = useState<number | null>(null);
   const [fontSize, setFontSize] = useState('1rem');
   const [pane, setPane] = useState<'editor' | 'console'>('editor');
   const [consoleWidth, setConsoleWidth] = useState('34');
@@ -95,6 +107,7 @@ function ScopedWorkbench({
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     resource.leases++;
+    resource.collaboration?.start();
     resource.recovery.start();
     return () => {
       resource.leases--;
@@ -102,11 +115,15 @@ function ScopedWorkbench({
       queueMicrotask(() => {
         if (resource.leases === 0) {
           resource.recovery.dispose();
+          resource.collaboration?.destroy();
           resource.model.destroy();
         }
       });
     };
   }, [resource]);
+  useEffect(() => {
+    resource.collaboration?.setPaused(paused);
+  }, [resource, paused]);
   useLayoutEffect(() => {
     workspace.reconcile(project, files, count);
     if (localSources)
@@ -123,12 +140,21 @@ function ScopedWorkbench({
       }
   }, [workspace, project, files, count, localSources]);
   useLayoutEffect(() => {
+    setFollowing(null);
     if (selectedId)
       setOpen((previous) =>
         previous.includes(selectedId) ? previous : [...previous, selectedId],
       );
     setNotice('');
   }, [selectedId]);
+  useEffect(() => {
+    if (following === null) return;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFollowing(null);
+    };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  }, [following]);
   const sources = useQueries({
     queries: (local ? [] : files).map((file) => ({
       queryKey: [
@@ -197,6 +223,7 @@ function ScopedWorkbench({
     <div
       className="editor-workbench content-section"
       data-pane={pane}
+      data-collaboration={Boolean(resource.collaboration)}
       style={
         {
           '--editor-font-size': fontSize,
@@ -234,6 +261,15 @@ function ScopedWorkbench({
           {consoleWidth}%
         </label>
       </div>
+      {resource.collaboration && (
+        <CollaborationPanel
+          model={resource.collaboration}
+          selectedId={selectedId}
+          accountId={accountId}
+          following={following}
+          onFollow={setFollowing}
+        />
+      )}
       <aside className="editor-explorer" aria-label="Project files">
         <div className="section-head">
           <h2>Files</h2>
@@ -246,7 +282,9 @@ function ScopedWorkbench({
           onSelect={onSelect}
         />
         <p className="editor-scope-note">
-          Edits are local to this browser. Server saving is not connected yet.
+          {local
+            ? 'This local draft stays in this browser.'
+            : 'Live edits are shared with project members. Saved requires a server checkpoint receipt.'}
         </p>
       </aside>
       <section className="editor-pane" aria-label="Python workbench">
@@ -273,9 +311,17 @@ function ScopedWorkbench({
           <span className="badge">
             {!summary.writable || paused
               ? 'Read only'
-              : active?.dirty
-                ? 'Local draft'
-                : 'Ready to edit'}
+              : collaboration
+                ? collaboration.phase === 'blocked' ||
+                  (collaboration.phase === 'offline' &&
+                    !collaboration.offlineEditable)
+                  ? 'Editing paused'
+                  : collaboration.save === 'saved'
+                    ? 'Saved'
+                    : 'Shared project'
+                : active?.dirty
+                  ? 'Local draft'
+                  : 'Ready to edit'}
           </span>
         </div>
         {notice && <Notice>{notice}</Notice>}
@@ -309,7 +355,18 @@ function ScopedWorkbench({
             <CodeEditor
               key={`${active.metadata.id}:${active.metadata.document_id}:${active.metadata.generation}`}
               file={active}
-              writable={summary.writable && !paused}
+              writable={
+                summary.writable &&
+                !paused &&
+                (!collaboration ||
+                  collaboration.offlineEditable ||
+                  (collaboration.phase === 'connected' &&
+                    !['connecting', 'read_only', 'error'].includes(
+                      collaboration.save,
+                    )))
+              }
+              followClientId={following}
+              onStopFollowing={() => setFollowing(null)}
               onNotice={setNotice}
             />
           )}

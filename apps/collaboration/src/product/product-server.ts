@@ -15,6 +15,11 @@ import { WebSocketServer, WebSocket } from 'ws';
 import * as decoding from 'lib0/decoding';
 import * as Y from 'yjs';
 import {
+  PRESENCE_PROTOCOL,
+  PRESENCE_VERSION,
+  type PresenceIdentity,
+} from '@code-along/contracts/collaboration/presence';
+import {
   parseCheckpointRequest,
   type CheckpointRequest,
 } from '@code-along/contracts/collaboration';
@@ -391,8 +396,24 @@ export function createProductServer(options: ProductServerOptions) {
     async beforeUnloadDocument({ documentName }) {
       if (pins.has(documentName)) throw { reason: 'capture_in_progress' };
     },
-    async connected({ context, documentName }) {
+    async connected({ context, documentName, connection }) {
       requireLive(context, documentName);
+      const grant = context.lease.grant;
+      const identity: PresenceIdentity = {
+        protocol: PRESENCE_PROTOCOL,
+        version: PRESENCE_VERSION,
+        type: 'presence.identity',
+        document_id: grant.document.id,
+        generation: grant.document.generation,
+        client_session_id: grant.client_session_id,
+        awareness_client_id: grant.awareness_client_id,
+        user: {
+          id: grant.user.id,
+          display_name: grant.user.display_name,
+          color: grant.user.color as PresenceIdentity['user']['color'],
+        },
+      };
+      connection.sendStateless(JSON.stringify(identity));
     },
     async onTokenSync({ context }) {
       closeTransport(context.transport, 4403, 'unauthorized');

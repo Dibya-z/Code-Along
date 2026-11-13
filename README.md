@@ -8,16 +8,17 @@ M0 integration proofs, M1 product foundation and the M2 Python IDE are implement
 
 Projects open a multi-file Python editor with stable tabs, syntax highlighting, undo and adjustable text size. Run code executes a complete frozen source snapshot in a fresh, separate-site Python Worker. It offers batch/interactive input, a bounded plain-text console, captured-source inspection, PNG plots and Stop. Core and opt-in NumPy use reviewed, hash-pinned assets; Matplotlib awaits compatible dependencies that pass the advisory gate. See [runtime profiles](packages/runtime-profiles/README.md). Desktop editor/console panes resize with a keyboard-friendly control; small screens retain both panes behind Editor/Console buttons.
 
-Account-scoped [local recovery](docs/protocols/local-recovery.md) preserves edits on this device, with explicit restore, two-tab conflict handling and source exports. It clears on sign-out by default, with optional device retention. Wait for “Local recovery updated” before closing. **Local drafts** offers three original templates, validated `.codealong.json` import, file operations and source exports. **Open local copy** captures project edits into an independent device-only draft.
+Account-scoped [local recovery](docs/protocols/local-recovery.md) supplements server checkpoints with a device copy, explicit recovery review and source exports. It clears on sign-out by default, with optional device retention. Wait for **Saved** for shared-project durability; **Local recovery updated** confirms only the copy on this device. **Local drafts** offers three original templates, validated `.codealong.json` import, file operations and source exports. **Open local copy** captures project edits into an independent device-only draft.
 
 An already open complete project/local draft can run offline after its trusted runner connection and chosen environment are warmed. Large verified runtime assets stay in the frame's bounded memory cache; small scripts still need the browser cache. Stop, navigation, eviction or invalid/untrusted HTTPS can require a connection again. Cold offline login/installation is not provided, and login/API responses are never persisted. See [execution and offline limits](docs/protocols/product-execution.md).
 
-M3 is in progress. Its product collaboration service now has migrated binary storage, a restricted database role, one-use session-bound tickets, renewable authorization leases and bounded authenticated transport. The integrated shared-editor UI, history/sharing, events and chat remain under implementation and verification. See [product collaboration](docs/protocols/product-collaboration.md). Nothing is deployed.
+M3 is in progress. Shared projects now use canonical server documents with live code/cursors/selections, user/tab presence, opt-in cursor following and receipt-based **Saved**. Already synchronized write buffers can be edited through a network partition and reconcile only after fresh admission. Revoked/replaced files stop editing and retain export/local-copy options. Older independently seeded M2 recovery opens as a separate local draft. The service uses a restricted database role, one-use session-bound tickets, renewable authorization leases and bounded transport. Named history/sharing, events and chat remain the next M3 units. See [product collaboration](docs/protocols/product-collaboration.md). Nothing is deployed.
 
 Open **https://127.0.0.1:8443** after starting the [local development stack](docs/operations/development-stack.md). This workstation uses the project-owned Lima VM; that guide includes its exact commands. Development verification/reset emails stay in a private local mail store, described in the [account guide](docs/operations/authentication.md).
 
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): milestones, dependencies, verification, commits and remaining work.
 - [M2 validation report](docs/architecture/m2-validation.md): editor/runner/recovery functionality, browser evidence and remaining boundaries.
+- [M3 validation record](docs/architecture/m3-validation.md): current collaboration evidence and remaining milestone gates.
 - [M1 validation report](docs/architecture/m1-validation.md): completed functionality, test evidence, CI and limitations.
 - [Approved architecture](docs/architecture/approved-architecture.html): decisions, schema, protocols and roadmap. Open the HTML in a browser; some archived investigation links are machine-local.
 - [Design direction](DESIGN.md) and [repository instructions](AGENTS.md).
@@ -33,7 +34,7 @@ Open **https://127.0.0.1:8443** after starting the [local development stack](doc
 | Transient coordination | Redis; shared account/API abuse controls                                                        |
 | Design system          | Original tokens, Radix-based primitives, Tailwind and Storybook                                 |
 | API contracts          | Offline-generated OpenAPI and typed clients with CI drift checks                                |
-| Local editor, M2       | CodeMirror 6 and stable per-file Yjs documents                                                  |
+| Editor                 | CodeMirror 6, stable Yjs documents and independently admitted multiplexed providers             |
 | Local recovery, M2     | Account-scoped Dexie/IndexedDB binary records with revision/epoch checks                        |
 | Collaboration, M3      | Narrow Node/Hocuspocus service; Django authority and restricted-role binary persistence         |
 | Browser execution, M2  | Hash-pinned Pyodide; frozen product runs in a separate-site supervised fresh Worker             |
