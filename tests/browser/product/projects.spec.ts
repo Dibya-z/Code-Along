@@ -67,7 +67,7 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
     await expect(
       page.getByRole('heading', { name: 'Loops together', exact: true }),
     ).toBeVisible();
-    await expect(page.getByLabel('Python starter source')).toContainText(
+    await expect(page.getByLabel('Python source for main.py')).toContainText(
       'def greet',
     );
     const projectUrl = page.url();

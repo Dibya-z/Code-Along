@@ -1,9 +1,16 @@
-import { EditorState } from '@codemirror/state';
+import { Compartment, EditorState } from '@codemirror/state';
 
 /** View-independent state: switching tabs must retain selection and extension state. */
 export class EditorController {
+  readonly permissions = new Compartment();
+  readonly attributes = new Compartment();
+  readonly updates = new Compartment();
   private saved: EditorState | null = null;
   private disposed = false;
+  scrollPosition: Readonly<{ top: number; left: number }> = Object.freeze({
+    top: 0,
+    left: 0,
+  });
 
   constructor(private readonly readSource: () => string | null) {}
 
@@ -31,6 +38,10 @@ export class EditorController {
 
   remember(state: EditorState): void {
     if (!this.disposed) this.saved = state;
+  }
+
+  rememberScroll(top: number, left: number): void {
+    if (!this.disposed) this.scrollPosition = Object.freeze({ top, left });
   }
 
   destroy(): void {

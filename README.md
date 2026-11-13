@@ -4,7 +4,7 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-M0 integration proofs and M1 product foundation are implemented. You can register, verify an email locally, sign in, create a workspace, invite another account and create private projects with explicit editor/viewer access. The responsive React UI includes membership, sharing, ownership and file metadata controls. Starter source is currently read-only; the editor and Python run experience come in M2, followed by collaboration, durable saves and chat in M3. Nothing is deployed.
+M0 integration proofs and M1 product foundation are implemented; M2 is in progress. You can register, verify an email locally, sign in, create a workspace, invite another account and create private projects with explicit editor/viewer access. Projects now open a multi-file Python editor with file tabs, syntax highlighting, undo and adjustable text size. Local edits survive tab switches and metadata refreshes but currently last only in the open browser tab. Python execution and local recovery are the next M2 units; collaboration, durable server saves and chat follow in M3. Nothing is deployed.
 
 Open **https://127.0.0.1:8443** after starting the [local development stack](docs/operations/development-stack.md). This workstation uses the project-owned Lima VM; that guide includes its exact commands. Development verification/reset emails stay in a private local mail store, described in the [account guide](docs/operations/authentication.md).
 

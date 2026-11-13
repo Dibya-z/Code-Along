@@ -143,7 +143,7 @@ test('registration, private email verification and project creation use the real
   await expect(
     page.getByRole('heading', { name: 'Development project', exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel('Python starter source')).toContainText(
+  await expect(page.getByLabel('Python source for main.py')).toContainText(
     'def greet',
   );
 });

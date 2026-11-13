@@ -1,6 +1,5 @@
-import { ProjectPage } from '../features/projects/page.tsx';
 import { InvitationPage } from '../features/invitations/pages.tsx';
-import { Component, type ReactNode } from 'react';
+import { Component, lazy, Suspense, type ReactNode } from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
@@ -15,6 +14,11 @@ import {
   WorkspacesPage,
   WorkspacePage,
 } from '../features/workspaces/pages.tsx';
+const ProjectPage = lazy(() =>
+  import('../features/projects/page.tsx').then((module) => ({
+    default: module.ProjectPage,
+  })),
+);
 function Shell() {
   const location = useLocation();
   const identity = useIdentity();
@@ -136,7 +140,20 @@ const router = createBrowserRouter([
       { path: 'workspaces', element: <WorkspacesPage /> },
       { path: 'workspaces/:workspaceId', element: <WorkspacePage /> },
       { path: 'invitations/:token', element: <InvitationPage /> },
-      { path: 'projects/:projectId', element: <ProjectPage /> },
+      {
+        path: 'projects/:projectId',
+        element: (
+          <Suspense
+            fallback={
+              <div className="page" role="status">
+                Loading workbench…
+              </div>
+            }
+          >
+            <ProjectPage />
+          </Suspense>
+        ),
+      },
       { path: 'login', element: <AccountPage key="login" kind="login" /> },
       {
         path: 'auth/signup',
