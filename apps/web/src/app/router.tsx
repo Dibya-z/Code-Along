@@ -21,6 +21,16 @@ const ProjectPage = lazy(() =>
     default: module.ProjectPage,
   })),
 );
+const LocalDraftsPage = lazy(() =>
+  import('../features/project-tools/hub.tsx').then((module) => ({
+    default: module.LocalDraftsPage,
+  })),
+);
+const LocalDraftPage = lazy(() =>
+  import('../features/project-tools/draft-page.tsx').then((module) => ({
+    default: module.LocalDraftPage,
+  })),
+);
 function Shell() {
   const location = useLocation();
   const identity = useIdentity();
@@ -49,6 +59,7 @@ function Shell() {
         <p className="rail-label">YOUR WORKBENCH</p>
         <nav aria-label="Main navigation">
           <NavLink to="/workspaces">Workspaces</NavLink>
+          <NavLink to="/drafts">Local drafts</NavLink>
         </nav>
         <div className="rail-footer">
           <span className="status-dot" aria-hidden="true" />
@@ -157,6 +168,34 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: 'workspaces', element: <WorkspacesPage /> },
+      {
+        path: 'drafts',
+        element: (
+          <Suspense
+            fallback={
+              <div className="page" role="status">
+                Loading local drafts…
+              </div>
+            }
+          >
+            <LocalDraftsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'drafts/:draftId',
+        element: (
+          <Suspense
+            fallback={
+              <div className="page" role="status">
+                Opening local draft…
+              </div>
+            }
+          >
+            <LocalDraftPage />
+          </Suspense>
+        ),
+      },
       { path: 'workspaces/:workspaceId', element: <WorkspacePage /> },
       { path: 'invitations/:token', element: <InvitationPage /> },
       {

@@ -55,7 +55,11 @@ export class RecoveryController {
     private readonly name: () => string,
     private readonly store: Storage,
     private readonly capture = captureRecovery,
-  ) {}
+    private opened?: ValidatedRecovery,
+  ) {
+    this.openedStamp = recoveryStamp(workspace);
+  }
+  private readonly openedStamp: string;
   getSnapshot = (): Snapshot => this.snapshot;
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -103,14 +107,39 @@ export class RecoveryController {
           found.data.project_id !== this.workspace.projectId)
       )
         throw new RecoverySessionEnded();
-      this.blocked = !!found;
+      const opened = this.opened;
+      this.opened = undefined;
+      if (opened && !found) throw new RecoveryConflict();
+      const acknowledged = !!(
+        found &&
+        opened &&
+        found.data.kind === 'local_draft' &&
+        this.workspace.sourceKind === 'local_draft' &&
+        found.data.metadata_version === opened.data.metadata_version &&
+        found.data.name === opened.data.name &&
+        found.data.runtime_id === opened.data.runtime_id &&
+        found.data.entrypoint_file_id === opened.data.entrypoint_file_id &&
+        recoveryMatches(this.workspace, found) &&
+        found.data.files.length === opened.data.files.length &&
+        found.data.files.every((file) =>
+          opened.data.files.some(
+            (previous) =>
+              previous.metadata.id === file.metadata.id &&
+              previous.state_sha256 === file.state_sha256 &&
+              previous.metadata.path === file.metadata.path,
+          ),
+        )
+      );
+      if (acknowledged && recoveryStamp(this.workspace) === this.openedStamp)
+        this.lastQueued = this.openedStamp;
+      this.blocked = !!found && !acknowledged;
       this.publish({
-        phase: found ? 'found' : 'ready',
-        found,
+        phase: found && !acknowledged ? 'found' : 'ready',
+        found: acknowledged ? null : found,
         retain: scope.policy.retain,
         updatedAt: scope.record?.updated_at ?? 0,
       });
-      if (!found) this.changed();
+      if (!found || acknowledged) this.changed();
     } catch (error) {
       this.blocked = true;
       this.publish({ phase: 'error', error: message(error) });

@@ -8,6 +8,8 @@ import {
 } from '../project-tools/archive.ts';
 import type { RecoveryController } from './controller.ts';
 import './styles.css';
+import { useNavigate } from 'react-router';
+import { createLocalDraft } from '../project-tools/local-draft.ts';
 export function RecoveryPanel({
   model,
   name,
@@ -17,6 +19,8 @@ export function RecoveryPanel({
   name: string;
   selectedId: string;
 }) {
+  const navigate = useNavigate();
+  const [copying, setCopying] = useState(false);
   const snapshot = useSyncExternalStore(model.subscribe, model.getSnapshot);
   const structure = useSyncExternalStore(
     model.workspace.subscribe,
@@ -92,6 +96,34 @@ export function RecoveryPanel({
         >
           Download open file
         </Button>
+        {model.workspace.sourceKind === 'project' && (
+          <Button
+            variant="secondary"
+            disabled={!complete}
+            busy={copying}
+            onClick={() => {
+              setCopying(true);
+              try {
+                const copy = workspaceArchive(model.workspace, name);
+                void createLocalDraft(model.workspace.accountId, copy)
+                  .then((id) => {
+                    void navigate(`/drafts/${id}`);
+                  })
+                  .catch(() =>
+                    setError(
+                      'A local copy could not be stored. Export your current code instead.',
+                    ),
+                  )
+                  .finally(() => setCopying(false));
+              } catch {
+                setCopying(false);
+                setError('Load every file before opening a local copy.');
+              }
+            }}
+          >
+            Open local copy
+          </Button>
+        )}
         {snapshot.found && (
           <>
             <Button

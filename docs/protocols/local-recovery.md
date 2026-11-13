@@ -10,6 +10,8 @@ Validation checks exact fields, SHA-256 digests, UTF-8/source bounds, Python mod
 
 Project recovery requires the currently authorized, writable account/project and the same complete file/document/generation/baseline set. Current server metadata, including renames and entrypoint selection, remains authoritative. A stale generation can be exported but cannot be applied over a different document. No partial project is silently restored or exported.
 
+Opening an explicit local draft restores its validated binary state before the editor becomes interactive. The subsequent store lookup acknowledges the unchanged opened record without applying it again. Typing during that lookup is preserved; a competing record pauses recovery for review. Project recovery continues to require the explicit Restore action.
+
 ## Storage and concurrency
 
 `store.ts` uses Dexie 4.4.7 over IndexedDB database `code-along-local`. The `accounts` table contains an account UUID, random epoch, retention preference, byte accounting and record count. The `drafts` table has compound key `[account_id+project_id]`, revision, timestamp, accounted size and validated data.

@@ -170,7 +170,14 @@ export class RecoveryStore {
   async list(actor: string): Promise<readonly StoredRecovery[]> {
     if (!isRunnerId(actor)) throw new RecoverySessionEnded();
     const { drafts } = await this.open();
-    return drafts.where('account_id').equals(actor).toArray();
+    const records = await drafts
+      .where('account_id')
+      .equals(actor)
+      .limit(RECOVERY_LIMITS.records + 1)
+      .toArray();
+    if (records.length > RECOVERY_LIMITS.records)
+      throw new Error('The local draft list exceeds its record limit.');
+    return records;
   }
   async remove(
     actor: string,

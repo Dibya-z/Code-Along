@@ -10,7 +10,7 @@ import {
 import { useQueries } from '@tanstack/react-query';
 import { Button, Notice } from '@code-along/design-system';
 import { productApi } from '../../api/product.ts';
-import type { Project } from '../projects/types.ts';
+import type { EditorProject } from '../projects/types.ts';
 import { EditorWorkspace } from './model/workspace.ts';
 import type { FileMetadata } from './model/document.ts';
 import { CodeEditor } from './components/code-editor.tsx';
@@ -21,10 +21,11 @@ import './styles.css';
 import { RecoveryController } from '../recovery/controller.ts';
 import { recoveryStore } from '../recovery/store.ts';
 import { RecoveryPanel } from '../recovery/panel.tsx';
+import type { ValidatedRecovery } from '../recovery/codec.ts';
 
 interface Props {
   accountId: string;
-  project: Project;
+  project: EditorProject;
   files: readonly FileMetadata[];
   count: number;
   selectedId: string;
@@ -32,11 +33,13 @@ interface Props {
   addControl: ReactNode;
   fileActions: ReactNode;
   paused: boolean;
+  local?: ValidatedRecovery;
+  localSources?: ReadonlyMap<string, string>;
 }
 export function EditorWorkbench(props: Props) {
   return (
     <ScopedWorkbench
-      key={`${props.accountId}:${props.project.id}`}
+      key={`${props.accountId}:${props.local ? 'draft' : 'project'}:${props.project.id}`}
       {...props}
     />
   );
@@ -51,17 +54,29 @@ function ScopedWorkbench({
   addControl,
   fileActions,
   paused,
+  local,
+  localSources,
 }: Props) {
   const name = useRef(project.name);
   name.current = project.name;
   const [resource] = useState(() => {
-    const model = new EditorWorkspace(accountId, project.id);
+    const model = new EditorWorkspace(
+      accountId,
+      project.id,
+      local ? 'local_draft' : 'project',
+    );
+    if (local) {
+      model.reconcile(project, files, count);
+      model.restoreFiles(local.data.files);
+    }
     return {
       model,
       recovery: new RecoveryController(
         model,
         () => name.current,
         recoveryStore(),
+        undefined,
+        local,
       ),
       leases: 0,
     };
@@ -94,7 +109,19 @@ function ScopedWorkbench({
   }, [resource]);
   useLayoutEffect(() => {
     workspace.reconcile(project, files, count);
-  }, [workspace, project, files, count]);
+    if (localSources)
+      for (const file of files) {
+        const initial_source = localSources.get(file.id);
+        if (initial_source !== undefined && !workspace.file(file.id)?.loaded)
+          void workspace
+            .loadSource({ ...file, initial_source })
+            .catch(() =>
+              setNotice(
+                'The new local file could not be verified. Export your existing files.',
+              ),
+            );
+      }
+  }, [workspace, project, files, count, localSources]);
   useLayoutEffect(() => {
     if (selectedId)
       setOpen((previous) =>
@@ -103,7 +130,7 @@ function ScopedWorkbench({
     setNotice('');
   }, [selectedId]);
   const sources = useQueries({
-    queries: files.map((file) => ({
+    queries: (local ? [] : files).map((file) => ({
       queryKey: [
         'editor-source',
         accountId,

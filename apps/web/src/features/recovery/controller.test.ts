@@ -6,8 +6,11 @@ import { captureRecovery, type ValidatedRecovery } from './codec.ts';
 import { RecoveryController } from './controller.ts';
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-async function workspace(source: string) {
-  const model = new EditorWorkspace(id(1), id(2));
+async function workspace(
+  source: string,
+  kind: 'project' | 'local_draft' = 'project',
+) {
+  const model = new EditorWorkspace(id(1), id(2), kind);
   const file = {
     id: id(3),
     document_id: id(4),
@@ -99,3 +102,77 @@ describe('local recovery decision ordering', () => {
     newer.destroy();
   });
 });
+
+it.each([false, true])(
+  'a delayed local-draft lookup preserves new typing (competing record: %s)',
+  async (competing) => {
+    const current = await workspace('opened source', 'local_draft');
+    const opened = await captureRecovery(current, 'Draft');
+    const other = await workspace('other tab source', 'local_draft');
+    const found = competing ? await captureRecovery(other, 'Draft') : opened;
+    const record = {
+      account_id: id(1),
+      project_id: id(2),
+      revision: 1,
+      updated_at: Date.now(),
+      bytes: found.bytes,
+      data: found.data,
+    };
+    const scope = {
+      policy: {
+        account_id: id(1),
+        epoch: id(9),
+        retain: false,
+        used_bytes: found.bytes,
+        count: 1,
+      },
+      record,
+    };
+    let release!: (value: typeof scope) => void;
+    const store = {
+      read: () =>
+        new Promise<typeof scope>((resolve) => {
+          release = resolve;
+        }),
+      save: vi.fn(
+        async (
+          _account: string,
+          _project: string,
+          _epoch: string,
+          expected: number,
+          recovery: ValidatedRecovery,
+        ) => ({
+          ...record,
+          revision: expected + 1,
+          data: recovery.data,
+          bytes: recovery.bytes,
+        }),
+      ),
+      retention: vi.fn(),
+      remove: vi.fn(),
+    };
+    const model = new RecoveryController(
+      current,
+      () => 'Draft',
+      store,
+      undefined,
+      opened,
+    );
+    model.start();
+    current.replaceSource(id(3), 'typed while opening');
+    release(scope);
+    if (competing) {
+      await vi.waitFor(() => expect(model.getSnapshot().phase).toBe('found'));
+      expect(store.save).not.toHaveBeenCalled();
+    } else {
+      await vi.waitFor(() => expect(store.save).toHaveBeenCalledOnce());
+      const written = store.save.mock.calls[0]![4];
+      expect(written.sources.get(id(3))).toBe('typed while opening');
+      expect(model.getSnapshot().found).toBeNull();
+    }
+    expect(current.file(id(3))!.text.toString()).toBe('typed while opening');
+    model.dispose();
+    current.destroy();
+    other.destroy();
+  },
+);
