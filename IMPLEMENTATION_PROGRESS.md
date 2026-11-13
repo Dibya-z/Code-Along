@@ -1,8 +1,8 @@
 # Code Along implementation progress
 
-Updated: 13 November 2026 (Asia/Kolkata).
+Updated: 14 November 2026 (Asia/Kolkata).
 
-Current position: **M0, M1 and M2 Completed; M3 Not Started**. All M2 feature units and follow-up repairs are verified and pushed. The full final implementation CI run passes foundation and Compose, including all 50 product cases. See the [M2 validation report](docs/architecture/m2-validation.md). Stop before M3 and obtain the owner’s next instruction; M2 commit/push autonomy ends with this verified handoff.
+Current position: **M0, M1 and M2 Completed; post-M2 maintenance Completed; M3 approved, Not Started**. The owner authorized safe storage cleanup, CI efficiency, an autonomous local M2 review and then full M3 on 14 November 2026, including commits/pushes in coherent related feature bundles. Preserve the approved architecture, user data and deferred OS trust decision. See the current authorization/work plan at the end and the [M2 validation report](docs/architecture/m2-validation.md).
 
 ## Approved baseline and tracking rules
 
@@ -84,6 +84,8 @@ Milestone status: **Completed**. M2.1–M2.6 and the final local/remote regressi
 ## M3 — Reliable collaboration, durable saves and chat
 
 Milestone status: **Not Started**.
+
+Approved on 14 November 2026 to begin after storage/CI maintenance and local M2 review. Related tasks may be implemented in coherent verified bundles with autonomous commits/pushes. The acceptance gates below remain unchanged.
 
 | ID   | Task and sub-tasks                                                                                         | Depends on | Status      | Verification / exit criteria                                                                    |
 | ---- | ---------------------------------------------------------------------------------------------------------- | ---------- | ----------- | ----------------------------------------------------------------------------------------------- |
@@ -234,7 +236,7 @@ After an approved commit, replace the pending entry with its actual hash. A comm
 
 ## Pending work, known issues and technical debt
 
-- M0, M1 and M2 feature commits are pushed. M2 commit/push autonomy ends after its final verified documentation handoff; ordinary gates resume before M3. No merge or deployment is authorized.
+- M0, M1 and M2 feature commits are pushed. The owner's 14 November instruction authorizes safe maintenance, an M2 review and all approved M3 work with coherent verified commits/pushes. No merge, deployment, architectural change or M4 work is authorized.
 - Firefox's installed owned engine cannot find fresh profile folders here. Its suite is unverified, not skipped/passed; fix the launcher and execute all cases before claiming support. Chromium/WebKit results do not certify retail browsers, mobile or deployed headers.
 - M2 editing, immutable local execution, console/input/PNG plots, recovery, templates/import/export and warmed offline practice are implemented. M3 production collaboration/admission/leases, durable server saves and chat are not implemented. Local recovery is never a server Saved receipt.
 - M3 must fork legacy `origin: "m2-local"` recovery into a local copy; independently seeded M2 binary history must never merge into a canonical server room. Version the bundled `code_along` helper/app release when durable replay/submissions require reproducibility beyond the current source/runtime-profile digest.
@@ -510,3 +512,22 @@ Final evidence: **278 Python tests**, **279 JavaScript tests**, **20 checkpoint 
 The normal controller stopped the app and its dedicated VM after verification; DB/mail volumes are preserved. No owned native fixtures or checked development/test listeners remain. Run `npm run dev` from Code-Along, then open **https://127.0.0.1:8443**. OS trust remains owner-deferred. Local recovery is unencrypted device storage and is never a server Saved receipt; collaboration/durable saves/chat are M3. Matplotlib, Firefox, full accessibility/retail/mobile certification and production operational gates retain their documented follow-ups.
 
 Final documentation: `AGENTS.md`, README, this tracker, `docs/architecture/m2-validation.md`, development and project guides. Local links/format and the complete diff are reviewed; no secrets/builds/caches/private data are included. Commit: `docs: complete M2`. Its hash and post-push CI conclusion are reported at delivery and can enter the next approved tracker update; no self-hash amendment/bookkeeping loop is required. M2 authority ends here. **Do not begin M3 or automatically commit/push further work without the owner’s next instruction.**
+
+## Current authorization and post-M2 maintenance — 14 November 2026
+
+The owner's new instruction supersedes the historical stop/approval boundaries above: complete safe storage reduction, efficient verification and an autonomous local M2 review, then all approved M3 tasks. Related verified features may be grouped into substantive commits and pushed without further prompts. Architecture changes, M4, merges, deployment, OS trust changes and deletion of unrelated/user data remain excluded.
+
+M2 handoff was committed/pushed as `d76926a319e1cf346384848aba010491a79a7e0d`; final documentation CI [43442424971](https://github.com/Dibya-z/Code-Along/actions/runs/43442424971) passed both jobs.
+
+| Unit                             | Status      | Scope and evidence                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Storage preservation and cleanup | Completed   | Fresh private environment/certificate/DB baseline; reviewed inactive scratch caches/build sources removed; installed native tools unchanged; unused guest build cache removed and guest trimmed. Host free approximately 5.6 → 8.4 GiB; VM allocated approximately 10.5 → 8.9 GiB. Primary volumes/reference/browser state preserved. Normal controller stopped the VM before native review. |
+| Efficient verification           | Completed   | Conservative complete-diff classifier and prose formatting/file-link route retain full application/security/protocol checks and existing job names. 26 meaningful stdlib Git-fixture cases, Ruff and strict mypy pass. Final combined review/CI remain.                                                                                                                                      |
+| Autonomous M2 local review       | Completed   | Focused Chromium/WebKit execution, recovery, project tools and warmed-offline review on disposable services; actual screenshots and results to be recorded before M3 begins.                                                                                                                                                                                                                 |
+| M3 implementation                | Not Started | Approved after the preceding maintenance/review gates; original M3.1–M3.9 requirements remain.                                                                                                                                                                                                                                                                                               |
+
+M3 bundle plan: (1) product binary persistence and restricted service boundary; (2) session-bound tickets, leases and revocation; (3) canonical live editor, awareness, durable receipts and reconnect/legacy recovery; (4) immutable revisions and snapshot/live shares; (5) versioned events/outbox and durable chat; (6) complete concurrency/restart/security/browser verification and handoff. Dependencies determine sequencing; closely related work can share a commit after its checks pass. No tiny bookkeeping commits or unverified feature claims.
+
+Operations guidance: `docs/operations/development-resources.md`. Remaining storage is monitored before heavy work; no broad volume/image pruning or fresh dependency/runtime expansion is planned. The optional unused test images were inspected but retained to avoid unnecessary rebuilds.
+
+Maintenance verification: all **26 CI classifier/link cases**, **279 JS tests**, full JS lint/format/workspace types, Ruff, strict mypy (69 source files), actionlint and Markdown file-link checks pass. The focused autonomous M2 review passed **all 14 Chromium/WebKit cases**: immutable multi-file execution/fresh Python state, warmed offline Core/NumPy/server/local drafts, source backup round-trip, account-scoped deletion/focus and binary recovery/competing tabs/sign-out. Desktop, mobile and dark screenshots were inspected; reflow checks cover 1440/1024/768/390/320 px. No M2 application change was needed. Host free space remained approximately 8.2 GiB during the isolated run. Maintenance is locally verified; the CI source change will receive full remote CI. Commit: `chore: streamline development checks`.

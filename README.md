@@ -169,6 +169,8 @@ Production TLS/domains, SMTP delivery, HSTS, recovery/load/security review and d
 
 Follow **PLAN → IMPLEMENT → TEST → REVIEW → SHOW CHANGES → APPROVAL → COMMIT → UPDATE PROGRESS → NEXT TASK**. Keep meaningful units separate, review the complete staged diff and preserve unrelated files. Normally, each commit needs approval; pushing, merging, deploying or changing accepted architecture also needs explicit authorization.
 
-The owner authorized verified granular commits and pushes throughout M2. That permission ends with its verified handoff; M3 requires a new instruction. A commit's hash is recorded in the next meaningful tracker update rather than amending history or creating a bookkeeping loop.
+The owner authorized safe post-M2 storage/CI maintenance, a local M2 review and the complete approved M3 on 14 November 2026. Verified commits and pushes may proceed in coherent related feature bundles without repeated approval prompts. This scope ends after M3 and excludes architecture changes, merges, deployment, unrelated destructive actions and OS certificate-trust changes. A commit's hash is recorded in the next meaningful tracker update rather than amending history or creating a bookkeeping loop.
+
+See [development storage and verification](docs/operations/development-resources.md) for the low-storage workflow and conservative prose-only CI path. Application, dependency, protocol and security changes retain full verification.
 
 M2 delivers the multi-file IDE and isolated run experience. M3 integrates collaboration, durable saves and chat. M4 adds learning/submission/review workflows, M5 pilot readiness, and optional M6/M7 add trusted grading and extended collaboration. See the tracker for individual tasks and dependencies.
