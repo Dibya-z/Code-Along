@@ -64,9 +64,13 @@ test('frozen multi-file Python runs, fresh globals/files, batch stdin and errors
   await expect(status).toHaveText('Run failed', { timeout: 40_000 });
   await expect(output).toContainText('ValueError: learning error');
   await expect(output.getByLabel('Standard error').first()).toBeVisible();
+  await editor.fill(source);
+  await page.getByRole('button', { name: 'Run code', exact: true }).click();
+  await finishedRun(page);
+  await expect(output).toContainText('fresh False False');
   await expect(
     page.locator('iframe[title="Isolated Python runtime"]'),
-  ).toHaveCount(0);
+  ).toHaveCount(1);
   for (const width of [1440, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
     expect(

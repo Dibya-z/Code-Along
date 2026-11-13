@@ -47,7 +47,7 @@ type BridgeFactory = (
   event: (event: ProductRunnerEvent) => void,
   fault: (message: string) => void,
 ) => RunnerBridge;
-/** UI state owns no writable source. Every run has a new bridge and immutable capture. */
+/** UI state owns no writable source. Immutable runs use fresh Workers on a private runner connection. */
 export class ExecutionController {
   private snapshot: ExecutionSnapshot = Object.freeze({
     runId: '',
@@ -60,6 +60,8 @@ export class ExecutionController {
   });
   private readonly listeners = new Set<() => void>();
   private bridge: RunnerBridge | null = null;
+  private connection = 0;
+  private runsOnBridge = 0;
   private closed = false;
   private sequence = 0;
   private bytes = 0;
@@ -97,7 +99,8 @@ export class ExecutionController {
       )
         this.publish({ earlierSource: true });
     });
-    this.release();
+    this.clearTimers();
+    if (this.runsOnBridge >= 90) this.release();
     this.sequence = 0;
     this.bytes = 0;
     this.plotBytes = 0;
@@ -126,12 +129,23 @@ export class ExecutionController {
         captured,
         earlierSource: !isCurrentRun(this.workspace, captured),
       });
-      this.bridge = this.createBridge(
-        (event) => this.receive(event),
-        (message) => {
-          if (this.active(runId)) this.finish('failed', message);
-        },
-      );
+      if (!this.bridge) {
+        const connection = ++this.connection;
+        this.bridge = this.createBridge(
+          (event) => {
+            if (connection === this.connection) this.receive(event);
+          },
+          (message) => {
+            if (connection !== this.connection || this.closed) return;
+            if (running(this.snapshot.phase)) this.finish('failed', message);
+            else {
+              this.release();
+              this.publish({ error: message });
+            }
+          },
+        );
+      }
+      this.runsOnBridge++;
       this.deadline = setTimeout(
         () => {
           if (this.active(runId))
@@ -175,7 +189,16 @@ export class ExecutionController {
         );
         return;
       }
-      this.finish(event.status);
+      // The trusted shell terminates the Worker before sending this terminal event.
+      const reusable =
+        event.status === 'succeeded' || event.status === 'failed';
+      this.finish(
+        event.status,
+        event.status === 'failed' && this.bytes === 0
+          ? 'Python could not start. Check the runtime connection and try again.'
+          : '',
+        reusable,
+      );
       return;
     }
     if (event.type === 'plot') {
@@ -232,10 +255,11 @@ export class ExecutionController {
     this.outputChanged = false;
     this.publish({ output: this.console.snapshot() });
   }
-  private finish(phase: TerminalStatus, error = '') {
+  private finish(phase: TerminalStatus, error = '', reusable = false) {
     this.flush();
+    this.clearTimers();
+    if (!reusable) this.release();
     this.publish({ phase, error });
-    this.release();
   }
   stop(): void {
     if (running(this.snapshot.phase)) {
@@ -259,12 +283,19 @@ export class ExecutionController {
     this.outputChanged = false;
     this.publish({ output: [] });
   }
-  private release() {
+  private clearTimers() {
     clearTimeout(this.deadline);
     clearTimeout(this.flushTimer);
+    this.deadline = undefined;
     this.flushTimer = undefined;
-    this.bridge?.destroy();
+  }
+  private release() {
+    this.clearTimers();
+    const previous = this.bridge;
     this.bridge = null;
+    this.runsOnBridge = 0;
+    this.connection++;
+    previous?.destroy();
   }
   destroy(): void {
     if (this.closed) return;

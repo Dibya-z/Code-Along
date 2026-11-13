@@ -47,13 +47,15 @@ async function fixture() {
   await workspace.loadSource(file);
   const sessions: {
     emit: (value: ProductRunnerEvent) => void;
+    fault: (message: string) => void;
     bridge: RunnerBridge;
     runId: string;
     manifest: ProjectRunManifest | null;
   }[] = [];
-  const controller = new ExecutionController(workspace, (emit) => {
+  const controller = new ExecutionController(workspace, (emit, fault) => {
     const session = {
       emit,
+      fault,
       runId: '',
       manifest: null as ProjectRunManifest | null,
       bridge: {} as RunnerBridge,
@@ -156,24 +158,95 @@ describe('product execution state', () => {
     f.controller.destroy();
     f.workspace.destroy();
   });
-  it('uses a new bridge for every run and ignores old output/terminal packets', async () => {
+  it('reuses an idle successful connection while rejecting packets from earlier run IDs', async () => {
+    const f = await fixture();
+    await f.controller.run();
+    const oldId = f.sessions[0]!.runId,
+      oldManifest = f.sessions[0]!.manifest!;
+    f.finish();
+    expect(f.sessions[0]!.bridge.destroy).not.toHaveBeenCalled();
+    await f.controller.run();
+    expect(f.sessions).toHaveLength(1);
+    expect(f.sessions[0]!.bridge.start).toHaveBeenCalledTimes(2);
+    f.sessions[0]!.emit({
+      protocol: RUNNER_PROTOCOL,
+      version: 2,
+      session_nonce: id(90),
+      run_id: oldId,
+      type: 'output',
+      stream: 'stdout',
+      text: 'late',
+      sequence: 0,
+    });
+    f.sessions[0]!.emit({
+      protocol: RUNNER_PROTOCOL,
+      version: 2,
+      session_nonce: id(90),
+      run_id: oldId,
+      type: 'terminal',
+      status: 'succeeded',
+      manifest_sha256: oldManifest.sha256,
+      runtime_id: CORE_RUNTIME.runtime_id,
+    });
+    expect(f.controller.getSnapshot().phase).toBe('initializing');
+    expect(f.controller.getSnapshot().output).toEqual([]);
+    f.finish();
+    f.controller.destroy();
+    expect(f.sessions[0]!.bridge.destroy).toHaveBeenCalledOnce();
+    f.workspace.destroy();
+  });
+  it.each([false, true])(
+    'drops a faulted connection and ignores its late callback (active: %s)',
+    async (active) => {
+      const f = await fixture();
+      await f.controller.run();
+      f.finish();
+      if (active) await f.controller.run();
+      f.sessions[0]!.fault('connection lost');
+      expect(f.controller.getSnapshot().phase).toBe(
+        active ? 'failed' : 'succeeded',
+      );
+      expect(f.sessions[0]!.bridge.destroy).toHaveBeenCalledOnce();
+      await f.controller.run();
+      expect(f.sessions).toHaveLength(2);
+      f.sessions[0]!.fault('late connection fault');
+      expect(f.controller.getSnapshot().phase).toBe('initializing');
+      f.controller.stop();
+      expect(f.sessions[1]!.bridge.destroy).toHaveBeenCalledOnce();
+      f.controller.destroy();
+      f.workspace.destroy();
+    },
+  );
+  it('keeps a shell-confirmed failed run reusable but reports a worker that produced no output', async () => {
     const f = await fixture();
     await f.controller.run();
     f.event(0, {
-      type: 'output',
-      stream: 'stdout',
-      text: 'first\n',
-      sequence: 0,
+      type: 'terminal',
+      status: 'failed',
+      manifest_sha256: f.sessions[0]!.manifest!.sha256,
+      runtime_id: CORE_RUNTIME.runtime_id,
     });
-    f.finish();
-    expect(f.controller.getSnapshot().phase).toBe('succeeded');
-    expect(f.sessions[0]!.bridge.destroy).toHaveBeenCalledOnce();
+    expect(f.controller.getSnapshot().phase).toBe('failed');
+    expect(f.controller.getSnapshot().error).toContain(
+      'Python could not start',
+    );
+    expect(f.sessions[0]!.bridge.destroy).not.toHaveBeenCalled();
     await f.controller.run();
-    f.event(0, { type: 'output', stream: 'stdout', text: 'late', sequence: 1 });
-    f.finish(0);
-    expect(f.controller.getSnapshot().phase).toBe('initializing');
-    expect(f.controller.getSnapshot().output).toEqual([]);
-    f.finish(1);
+    expect(f.sessions).toHaveLength(1);
+    f.finish();
+    f.controller.destroy();
+    f.workspace.destroy();
+  });
+  it('rotates successful connections before the supervisor replay-ID budget is exhausted', async () => {
+    const f = await fixture();
+    for (let run = 0; run < 91; run++) {
+      await f.controller.run();
+      f.finish(f.sessions.length - 1);
+    }
+    expect(f.sessions).toHaveLength(2);
+    expect(f.sessions[0]!.bridge.start).toHaveBeenCalledTimes(90);
+    expect(f.sessions[0]!.bridge.destroy).toHaveBeenCalledOnce();
+    expect(f.sessions[1]!.bridge.start).toHaveBeenCalledOnce();
     f.controller.destroy();
     f.workspace.destroy();
   });

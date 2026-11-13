@@ -7,6 +7,7 @@ import { ExecutionSupervisor, type EngineEvent } from './engine.ts';
 import { captureProjectManifest } from '@code-along/contracts/execution/project';
 import { CORE_RUNTIME } from '@code-along/contracts/execution/profiles';
 import { PRACTICE_BUDGETS } from '@code-along/contracts/execution/budgets';
+import { RuntimeAssetCache, type RuntimeAssets } from './asset-cache.ts';
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 class FakeWorker {
@@ -54,6 +55,48 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe('shared trusted Worker supervisor', () => {
+  it.each([false, true])(
+    'does not create a Worker after cancel/disposal during a pending cache copy (dispose: %s)',
+    async (dispose) => {
+      const f = await fixture();
+      const manifest = await captureProjectManifest({
+        project_id: id(10),
+        source_kind: 'project',
+        metadata_version: 1,
+        entrypoint_file_id: id(11),
+        runtime: CORE_RUNTIME,
+        stdin_mode: 'batch',
+        files: [{ ...f.manifest.files[0]!, file_id: id(11) }],
+      });
+      let release!: (value: RuntimeAssets | undefined) => void;
+      const copying = vi
+        .spyOn(RuntimeAssetCache.prototype, 'copy')
+        .mockImplementation(
+          () =>
+            new Promise((resolve) => {
+              release = resolve;
+            }),
+        );
+      const pending = f.supervisor.handle({
+        type: 'run',
+        run_id: id(2),
+        manifest,
+        stdin: [],
+      });
+      await vi.waitFor(() => expect(copying).toHaveBeenCalledOnce());
+      if (dispose) f.supervisor.destroy();
+      else await f.supervisor.handle({ type: 'cancel', run_id: id(2) });
+      release(undefined);
+      await pending;
+      expect(FakeWorker.instances).toHaveLength(0);
+      expect(
+        f.events.filter((event) => event.body.type === 'terminal'),
+      ).toEqual([
+        { id: id(2), body: expect.objectContaining({ status: 'cancelled' }) },
+      ]);
+      f.supervisor.destroy();
+    },
+  );
   it('terminates empty-message floods independently of output byte count', async () => {
     const f = await fixture();
     await f.supervisor.handle({

@@ -1,3 +1,4 @@
+import { RuntimeAssetCache } from './asset-cache.ts';
 import {
   RUN_LIMITS,
   RUNTIME_ID,
@@ -47,10 +48,12 @@ interface ActiveRun {
   plots: number;
   plotBytes: number;
   outputMessages: number;
+  cacheOffered: boolean;
 }
 /** Trusted shell: owns worker handles, time and output budgets; never trusts Python as a grader. */
 export class ExecutionSupervisor {
   private closed = false;
+  private readonly runtimeAssets = new RuntimeAssetCache();
   private active: ActiveRun | null = null;
   private readonly usedIds = new Set<string>();
   constructor(
@@ -125,6 +128,7 @@ export class ExecutionSupervisor {
       plots: 0,
       plotBytes: 0,
       outputMessages: 0,
+      cacheOffered: false,
     };
     this.active = run;
     this.state(run, 'initializing');
@@ -142,6 +146,10 @@ export class ExecutionSupervisor {
       this.finish(run, 'failed');
       return;
     }
+    const runtime_cache =
+      command.manifest.version === 2
+        ? await this.runtimeAssets.copy(command.manifest.runtime)
+        : undefined;
     if (this.active !== run) return;
     if (command.manifest.stdin_mode === 'interactive') {
       if (!crossOriginIsolated || typeof SharedArrayBuffer === 'undefined') {
@@ -169,7 +177,19 @@ export class ExecutionSupervisor {
           return;
         const m = event.data as Record<string, unknown>;
         if (m['run_id'] !== run.id) return;
-        if (m['type'] === 'limit') {
+        if (
+          m['type'] === 'runtime_assets' &&
+          run.manifest.version === 2 &&
+          !run.running &&
+          !run.cacheOffered
+        ) {
+          run.cacheOffered = true;
+          void this.runtimeAssets
+            .admit(m['cache'], run.manifest.runtime)
+            .catch(() => {
+              /* Untrusted/incomplete assets never become a cache entry. */
+            });
+        } else if (m['type'] === 'limit') {
           this.finish(run, 'output_limit');
         } else if (m['type'] === 'ready' && !run.running) {
           run.running = true;
@@ -231,6 +251,7 @@ export class ExecutionSupervisor {
         manifest: command.manifest,
         stdin: command.stdin,
         input: run.input?.buffer,
+        ...(command.manifest.version === 2 ? { runtime_cache } : {}),
       });
     } catch {
       this.finish(run, 'failed');
@@ -238,6 +259,7 @@ export class ExecutionSupervisor {
   }
   destroy(): void {
     this.closed = true;
+    this.runtimeAssets.close();
     if (this.active) this.finish(this.active, 'cancelled');
   }
 }

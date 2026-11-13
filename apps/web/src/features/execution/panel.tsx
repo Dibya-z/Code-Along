@@ -66,6 +66,16 @@ export function ExecutionPanel({
     workspace.subscribe,
     workspace.getSnapshot,
   );
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const changed = () => setOnline(navigator.onLine);
+    window.addEventListener('online', changed);
+    window.addEventListener('offline', changed);
+    return () => {
+      window.removeEventListener('online', changed);
+      window.removeEventListener('offline', changed);
+    };
+  }, []);
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<'batch' | 'interactive'>('batch');
   const [line, setLine] = useState('');
@@ -104,7 +114,7 @@ export function ExecutionPanel({
       <span className="execution-title">Python</span>
       <div className="actions">
         <Button
-          disabled={busy || !complete || paused || !reviewed}
+          disabled={busy || !complete || !reviewed}
           onClick={() => {
             onRun?.();
             const lines = input ? input.replace(/\n$/, '').split('\n') : [];
@@ -138,8 +148,17 @@ export function ExecutionPanel({
             ? 'Checking runtimes…'
             : labels[snapshot.phase]}
       </p>
+      {(!online || paused) && (
+        <Notice>
+          {!online && 'You are offline. '}Local practice uses the complete code
+          already in this tab. A previously loaded Python environment may work
+          offline; Stop, navigation or missing cached assets can require a
+          connection again. Server access still needs verification.
+        </Notice>
+      )}
       {manifest && (
         <p className="execution-provenance">
+          {manifest.source_kind === 'local_draft' && 'Local draft · '}
           Source <code>{manifest.sha256.slice(0, 12)}</code> · Metadata v
           {manifest.metadata_version} · Python {manifest.runtime.python_version}
           {' · '}

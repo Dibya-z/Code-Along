@@ -44,14 +44,15 @@ export function configuredRunnerOrigin(): string {
     throw new Error('The separate-site Python runtime is not configured.');
   }
 }
-/** A fresh frame/port/nonce per run. No session cookies, API helper or app commands cross this port. */
+/** A private connection may survive success; every run still has a fresh supervised Worker. */
 export class IframeRunnerBridge implements RunnerBridge {
   private readonly frame = document.createElement('iframe');
   private readonly channel = new MessageChannel();
   private readonly nonce = crypto.randomUUID();
   private runId = '';
   private closed = false;
-  private ready = false;
+  private capability: ProductRunnerReady | undefined;
+  private connecting: Promise<ProductRunnerReady> | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private rejectReady: ((error: Error) => void) | undefined;
   constructor(
@@ -65,35 +66,51 @@ export class IframeRunnerBridge implements RunnerBridge {
   ): Promise<ProductRunnerReady> {
     if (this.closed || this.runId)
       throw new Error('This Python runtime session is closed.');
-    const origin = configuredRunnerOrigin();
     this.runId = runId;
-    const ready = new Promise<ProductRunnerReady>((resolve, reject) => {
-      this.rejectReady = reject;
-      this.timer = setTimeout(
-        () =>
-          this.fail(
-            'The Python runtime did not connect. Check its separate-site HTTPS certificate and try again.',
-          ),
-        10_000,
+    const capability = await this.connect();
+    if (this.closed) throw new Error('This Python run was stopped.');
+    if (manifest.stdin_mode === 'interactive' && !capability.interactive)
+      throw new Error(
+        'Interactive input is unavailable. Choose input before Run instead.',
       );
-      this.channel.port1.onmessage = (event: MessageEvent<unknown>) => {
-        if (this.closed) return;
-        if (!this.ready) {
-          const message = parseProductReady(event.data, this.nonce);
-          if (!message) return;
-          this.ready = true;
-          clearTimeout(this.timer);
-          this.rejectReady = undefined;
-          resolve(message);
-          return;
-        }
-        const message = parseProductEvent(event.data, this.nonce);
-        if (message && message.run_id === this.runId) this.onEvent(message);
-      };
-      this.channel.port1.onmessageerror = () =>
-        this.fail('The Python runtime connection was lost. Try a fresh run.');
-      this.channel.port1.start();
-    });
+    this.send({ type: 'run', manifest, stdin });
+    return capability;
+  }
+  private connect(): Promise<ProductRunnerReady> {
+    if (this.connecting) return this.connecting;
+    const origin = configuredRunnerOrigin();
+    const ready = (this.connecting = new Promise<ProductRunnerReady>(
+      (resolve, reject) => {
+        this.rejectReady = reject;
+        this.timer = setTimeout(
+          () =>
+            this.fail(
+              'The Python runtime did not connect. Check its separate-site HTTPS certificate and try again.',
+            ),
+          10_000,
+        );
+        this.channel.port1.onmessage = (event: MessageEvent<unknown>) => {
+          if (this.closed) return;
+          if (!this.capability) {
+            const message = parseProductReady(event.data, this.nonce);
+            if (!message) return;
+            this.capability = message;
+            clearTimeout(this.timer);
+            this.rejectReady = undefined;
+            resolve(message);
+            return;
+          }
+          const message = parseProductEvent(event.data, this.nonce);
+          if (message && message.run_id === this.runId) {
+            if (message.type === 'terminal') this.runId = '';
+            this.onEvent(message);
+          }
+        };
+        this.channel.port1.onmessageerror = () =>
+          this.fail('The Python runtime connection was lost. Try a fresh run.');
+        this.channel.port1.start();
+      },
+    ));
     this.frame.title = 'Isolated Python runtime';
     this.frame.hidden = true;
     this.frame.setAttribute('aria-hidden', 'true');
@@ -103,7 +120,11 @@ export class IframeRunnerBridge implements RunnerBridge {
     this.frame.allow = `cross-origin-isolated ${origin}`;
     let transferred = false;
     this.frame.onload = () => {
-      if (this.closed || transferred || !this.frame.contentWindow) return;
+      if (this.closed || !this.frame.contentWindow) return;
+      if (transferred) {
+        this.fail('The Python runtime page changed. Try a fresh run.');
+        return;
+      }
       transferred = true;
       this.frame.contentWindow.postMessage(
         {
@@ -120,14 +141,7 @@ export class IframeRunnerBridge implements RunnerBridge {
       this.fail('The Python runtime page could not load.');
     this.frame.src = `${origin}/`;
     document.body.append(this.frame);
-    const capability = await ready;
-    if (this.closed) throw new Error('This Python run was stopped.');
-    if (manifest.stdin_mode === 'interactive' && !capability.interactive)
-      throw new Error(
-        'Interactive input is unavailable. Choose input before Run instead.',
-      );
-    this.send({ type: 'run', manifest, stdin });
-    return capability;
+    return ready;
   }
   private send(
     body:
@@ -135,7 +149,7 @@ export class IframeRunnerBridge implements RunnerBridge {
       | { type: 'stdin'; text: string | null }
       | { type: 'cancel' },
   ) {
-    if (!this.closed && this.ready) {
+    if (!this.closed && this.capability && this.runId) {
       const message: ProductRunnerCommand = {
         protocol: RUNNER_PROTOCOL,
         version: PRODUCT_RUNNER_VERSION,

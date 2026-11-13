@@ -72,4 +72,24 @@ describe('Worker runtime preparation', () => {
     );
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it('re-verifies warm public bytes and supplies large assets without a network fetch', async () => {
+    await fixture(CORE_RUNTIME);
+    const prepared = await prepareRuntime(CORE_RUNTIME);
+    const cached = await prepared.completeCache();
+    const network = vi
+      .fn()
+      .mockRejectedValue(new TypeError('owned offline fixture'));
+    vi.stubGlobal('fetch', network);
+    const replayed = await prepareRuntime(CORE_RUNTIME, cached);
+    const response = await replayed.fetchAsset(
+      replayed.base + 'pyodide.asm.wasm',
+    );
+    expect(response.headers.get('Content-Type')).toBe('application/wasm');
+    expect((await response.arrayBuffer()).byteLength).toBe(9_598_218);
+    expect(network).not.toHaveBeenCalled();
+    await expect(
+      replayed.fetchAsset('https://runtime.example.test/unreviewed'),
+    ).rejects.toThrow('offline');
+    expect(network).toHaveBeenCalledOnce();
+  });
 });

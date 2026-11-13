@@ -39,6 +39,7 @@ self.onmessage = async (
     manifest: RunManifest | ProjectRunManifest;
     stdin: string[];
     input?: SharedArrayBuffer;
+    runtime_cache?: unknown;
   }>,
 ) => {
   if (started) return;
@@ -56,7 +57,10 @@ self.onmessage = async (
   let startup = 'verified runtime assets';
   try {
     const prepared =
-      manifest.version === 2 ? await prepareRuntime(manifest.runtime) : null;
+      manifest.version === 2
+        ? await prepareRuntime(manifest.runtime, event.data.runtime_cache)
+        : null;
+    if (prepared) self.fetch = prepared.fetchAsset;
     const base = prepared?.base ?? '/runtime/';
     const runtimeUrl = `${base}pyodide.mjs`;
     startup = 'Python module import';
@@ -86,6 +90,8 @@ self.onmessage = async (
       throw new Error(
         'The selected Python packages could not load. Retry with a fresh runtime.',
       );
+    if (prepared && event.data.runtime_cache === undefined)
+      send({ type: 'runtime_assets', cache: await prepared.completeCache() });
     pyodide.setStdout({
       write(bytes) {
         output('stdout', stdout.decode(bytes, { stream: true }));

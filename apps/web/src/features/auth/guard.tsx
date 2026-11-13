@@ -12,7 +12,7 @@ export function SignedIn({ children }: { children: ReactNode }) {
         <Notice>Loading your account…</Notice>
       </div>
     );
-  if (identity.error)
+  if (identity.error && !identity.data)
     return (
       <div className="page">
         <Failure error={identity.error} />
