@@ -60,6 +60,9 @@ function ScopedWorkbench({
   const [open, setOpen] = useState<string[]>(selectedId ? [selectedId] : []);
   const [notice, setNotice] = useState('');
   const [fontSize, setFontSize] = useState('1rem');
+  const [pane, setPane] = useState<'editor' | 'console'>('editor');
+  const [consoleWidth, setConsoleWidth] = useState('34');
+  const [toolbar, setToolbar] = useState<HTMLDivElement | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     resource.leases++;
@@ -148,8 +151,44 @@ function ScopedWorkbench({
   return (
     <div
       className="editor-workbench content-section"
-      style={{ '--editor-font-size': fontSize } as CSSProperties}
+      data-pane={pane}
+      style={
+        {
+          '--editor-font-size': fontSize,
+          '--console-width': `${consoleWidth}%`,
+        } as CSSProperties
+      }
     >
+      <div className="workbench-controls">
+        <div ref={setToolbar} />
+        <nav className="pane-switch" aria-label="Workbench panes">
+          <Button
+            variant="secondary"
+            aria-pressed={pane === 'editor'}
+            onClick={() => setPane('editor')}
+          >
+            Editor
+          </Button>
+          <Button
+            variant="secondary"
+            aria-pressed={pane === 'console'}
+            onClick={() => setPane('console')}
+          >
+            Console
+          </Button>
+        </nav>
+        <label className="console-width">
+          Console width{' '}
+          <input
+            type="range"
+            min="28"
+            max="44"
+            value={consoleWidth}
+            onChange={(event) => setConsoleWidth(event.target.value)}
+          />
+          {consoleWidth}%
+        </label>
+      </div>
       <aside className="editor-explorer" aria-label="Project files">
         <div className="section-head">
           <h2>Files</h2>
@@ -235,8 +274,13 @@ function ScopedWorkbench({
           Delete closes a tab.
         </p>
         {fileActions}
-        <ExecutionPanel workspace={workspace} paused={paused} />
       </section>
+      <ExecutionPanel
+        workspace={workspace}
+        paused={paused}
+        toolbar={toolbar}
+        onRun={() => setPane('console')}
+      />
     </div>
   );
 }

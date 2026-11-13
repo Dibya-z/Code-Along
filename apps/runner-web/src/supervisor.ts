@@ -20,6 +20,7 @@ export class RunnerSupervisor {
     emit: (event: RunnerEvent) => void,
   ) {
     this.engine = new ExecutionSupervisor((runId, event) => {
+      if (event.type === 'plot') return; // Additive product v2 only; v1 remains unchanged.
       const envelope = {
         protocol: RUNNER_PROTOCOL,
         version: RUNNER_VERSION,

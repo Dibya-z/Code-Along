@@ -10,6 +10,11 @@ import {
   verifyProjectManifest,
   type ProjectRunManifest,
 } from '@code-along/contracts/execution/project';
+import {
+  isRasterPlot,
+  PLOT_LIMITS,
+  type RasterPlot,
+} from '@code-along/contracts/execution/plots';
 export type EngineCommand =
   | {
       type: 'run';
@@ -20,6 +25,7 @@ export type EngineCommand =
   | { type: 'cancel'; run_id: string }
   | { type: 'stdin'; run_id: string; text: string | null };
 export type EngineEvent =
+  | RasterPlot
   | Exclude<RunnerEventBody, { type: 'terminal' }>
   | {
       type: 'terminal';
@@ -37,6 +43,8 @@ interface ActiveRun {
   outputBytes: number;
   sequence: number;
   running: boolean;
+  plots: number;
+  plotBytes: number;
 }
 /** Trusted shell: owns worker handles, time and output budgets; never trusts Python as a grader. */
 export class ExecutionSupervisor {
@@ -112,6 +120,8 @@ export class ExecutionSupervisor {
       outputBytes: 0,
       sequence: 0,
       running: false,
+      plots: 0,
+      plotBytes: 0,
     };
     this.active = run;
     this.state(run, 'initializing');
@@ -167,6 +177,23 @@ export class ExecutionSupervisor {
         } else if (m['type'] === 'input' && run.input && !run.waiting) {
           run.waiting = true;
           this.state(run, 'waiting_for_input');
+        } else if (m['type'] === 'plot' && run.manifest.version === 2) {
+          if (
+            !isRasterPlot(m) ||
+            m.index !== run.plots ||
+            run.plotBytes + m.png.length > PLOT_LIMITS.totalBytes
+          ) {
+            this.finish(run, 'output_limit');
+            return;
+          }
+          run.plots++;
+          run.plotBytes += m.png.length;
+          this.send(run, {
+            type: 'plot',
+            index: m.index,
+            title: m.title,
+            png: Uint8Array.from(m.png),
+          });
         } else if (
           m['type'] === 'output' &&
           typeof m['text'] === 'string' &&

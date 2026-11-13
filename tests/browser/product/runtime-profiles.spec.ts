@@ -48,6 +48,7 @@ test('scientific packages are opt-in, pinned, self-hosted and fresh per run', as
     path: testInfo.outputPath('numpy-mobile.png'),
     fullPage: true,
   });
+  await page.setViewportSize({ width: 1280, height: 1000 });
   expect(requests.length).toBe(1);
   expect(
     requests.every((url) =>

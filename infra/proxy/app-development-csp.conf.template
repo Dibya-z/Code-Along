@@ -1,2 +1,2 @@
 # Only the local React refresh preamble receives an inline-script nonce.
-add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'nonce-$request_id'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${APP_HMR_ORIGIN}; frame-src ${RUNNER_ORIGIN}; worker-src 'none'; base-uri 'none'; frame-ancestors 'none'" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'nonce-$request_id'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ${APP_HMR_ORIGIN}; frame-src ${RUNNER_ORIGIN}; worker-src 'none'; base-uri 'none'; frame-ancestors 'none'" always;

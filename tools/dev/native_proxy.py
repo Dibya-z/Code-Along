@@ -212,7 +212,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if worker
             else f"default-src 'none'; script-src 'self'; worker-src 'self'; frame-ancestors {APP}; base-uri 'none'"
             if runner
-            else f"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-src {RUNNER}; worker-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+            else f"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:; frame-src {RUNNER}; worker-src 'none'; frame-ancestors 'none'; base-uri 'none'"
         )
         self.send_header("Content-Security-Policy", csp)
         self.end_headers()

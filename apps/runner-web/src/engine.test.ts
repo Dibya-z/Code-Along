@@ -4,6 +4,8 @@ import {
   RUN_LIMITS,
 } from '@code-along/contracts/execution';
 import { ExecutionSupervisor, type EngineEvent } from './engine.ts';
+import { captureProjectManifest } from '@code-along/contracts/execution/project';
+import { CORE_RUNTIME } from '@code-along/contracts/execution/profiles';
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 class FakeWorker {
@@ -51,6 +53,51 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe('shared trusted Worker supervisor', () => {
+  it('keeps plot indexes independent of stdout and rejects malformed/replayed raster output', async () => {
+    const f = await fixture();
+    const manifest = await captureProjectManifest({
+      project_id: id(10),
+      source_kind: 'project',
+      metadata_version: 1,
+      entrypoint_file_id: id(11),
+      runtime: CORE_RUNTIME,
+      stdin_mode: 'batch',
+      files: [{ ...f.manifest.files[0]!, file_id: id(11) }],
+    });
+    await f.supervisor.handle({
+      type: 'run',
+      run_id: id(2),
+      manifest,
+      stdin: [],
+    });
+    const worker = FakeWorker.instances[0]!;
+    const png = Uint8Array.from(
+      Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAD0lEQVR4nGP4z8DA8J8BAAf/Af8Bf4mnAAAAAElFTkSuQmCC',
+        'base64',
+      ),
+    );
+    worker.send(id(2), { type: 'plot', index: 0, title: 'Sample', png });
+    worker.send(id(2), {
+      type: 'output',
+      stream: 'stdout',
+      text: 'after plot',
+    });
+    expect(
+      f.events.find((event) => event.body.type === 'output')?.body,
+    ).toMatchObject({ sequence: 0 });
+    worker.send(id(2), { type: 'plot', index: 0, title: 'replayed', png });
+    worker.send(id(2), { type: 'done', status: 'succeeded' });
+    expect(f.events.filter((event) => event.body.type === 'plot')).toHaveLength(
+      1,
+    );
+    expect(
+      f.events.filter((event) => event.body.type === 'terminal'),
+    ).toHaveLength(1);
+    expect(f.events.at(-1)?.body).toMatchObject({ status: 'output_limit' });
+    expect(worker.terminated).toBe(true);
+    f.supervisor.destroy();
+  });
   it('reserves startup synchronously and honors cancel/disposal while hashing', async () => {
     const f = await fixture();
     const pending = f.supervisor.handle({

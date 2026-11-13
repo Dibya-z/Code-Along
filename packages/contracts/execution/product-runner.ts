@@ -11,6 +11,7 @@ import {
   type ProjectRunManifest,
 } from './project-manifest.ts';
 import { runtimeProfile } from './profiles.ts';
+import { isRasterPlot, type RasterPlot } from './plots.ts';
 export const PRODUCT_RUNNER_VERSION = 2;
 export interface ProductEnvelope {
   readonly protocol: typeof RUNNER_PROTOCOL;
@@ -29,6 +30,7 @@ export type ProductRunnerCommand = ProductEnvelope &
     | { readonly type: 'cancel' }
   );
 export type ProductRunnerEventBody =
+  | RasterPlot
   | Exclude<RunnerEventBody, { type: 'terminal' }>
   | {
       readonly type: 'terminal';
@@ -138,6 +140,12 @@ export function parseProductEvent(
   nonce: string,
 ): ProductRunnerEvent | null {
   if (!envelope(value, nonce)) return null;
+  if (
+    value['type'] === 'plot' &&
+    exact(value, [...common, 'index', 'title', 'png']) &&
+    isRasterPlot(value)
+  )
+    return value as unknown as ProductRunnerEvent;
   if (
     value['type'] === 'state' &&
     exact(value, [...common, 'state']) &&

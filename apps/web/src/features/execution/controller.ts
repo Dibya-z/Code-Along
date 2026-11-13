@@ -15,6 +15,11 @@ import {
 import type { RunnerBridge } from './bridge.ts';
 import type { RuntimeIdentity } from '@code-along/contracts/execution/profiles';
 import { ConsoleBuffer, type ConsoleLine } from './console-buffer.ts';
+import {
+  isRasterPlot,
+  PLOT_LIMITS,
+  type RasterPlot,
+} from '@code-along/contracts/execution/plots';
 
 export type RunPhase =
   | 'idle'
@@ -29,6 +34,7 @@ export interface ExecutionSnapshot {
   readonly captured: CapturedRun | null;
   readonly earlierSource: boolean;
   readonly output: readonly ConsoleLine[];
+  readonly plots: readonly RasterPlot[];
   readonly error: string;
 }
 export function running(phase: RunPhase): boolean {
@@ -48,6 +54,7 @@ export class ExecutionController {
     captured: null,
     earlierSource: false,
     output: [],
+    plots: [],
     error: '',
   });
   private readonly listeners = new Set<() => void>();
@@ -55,6 +62,7 @@ export class ExecutionController {
   private closed = false;
   private sequence = 0;
   private bytes = 0;
+  private plotBytes = 0;
   private console = new ConsoleBuffer();
   private outputChanged = false;
   private flushTimer: ReturnType<typeof setTimeout> | undefined;
@@ -91,6 +99,7 @@ export class ExecutionController {
     this.release();
     this.sequence = 0;
     this.bytes = 0;
+    this.plotBytes = 0;
     this.console = new ConsoleBuffer();
     this.outputChanged = false;
     const runId = crypto.randomUUID();
@@ -100,6 +109,7 @@ export class ExecutionController {
       captured: null,
       earlierSource: false,
       output: [],
+      plots: [],
       error: '',
     });
     try {
@@ -165,6 +175,29 @@ export class ExecutionController {
         return;
       }
       this.finish(event.status);
+      return;
+    }
+    if (event.type === 'plot') {
+      if (
+        !isRasterPlot(event) ||
+        event.index !== this.snapshot.plots.length ||
+        this.plotBytes + event.png.length > PLOT_LIMITS.totalBytes
+      ) {
+        this.finish('output_limit', 'The plot limit was reached.');
+        return;
+      }
+      this.plotBytes += event.png.length;
+      this.publish({
+        plots: Object.freeze([
+          ...this.snapshot.plots,
+          Object.freeze({
+            type: 'plot' as const,
+            index: event.index,
+            title: event.title,
+            png: Uint8Array.from(event.png),
+          }),
+        ]),
+      });
       return;
     }
     if (event.sequence !== this.sequence++) {

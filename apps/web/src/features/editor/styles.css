@@ -37,7 +37,8 @@
   overflow-wrap: anywhere;
 }
 .editor-file {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   width: 100%;
   min-height: var(--target-min);
   gap: var(--space-2);
@@ -56,20 +57,27 @@
   background: var(--color-raised);
 }
 .file-name {
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .file-kind {
+  grid-column: 1;
+  grid-row: 1;
   flex: none;
   font-size: 0.75rem;
   color: var(--color-info);
 }
 .file-entry {
-  margin-left: auto;
+  grid-column: 2;
+  grid-row: 2;
   color: var(--color-muted);
   font: 0.75rem var(--font-ui);
 }
 .file-draft {
+  grid-column: 3;
+  grid-row: 1;
   color: var(--color-warning);
   min-width: 0.6rem;
   font-size: 0.625rem;
@@ -83,6 +91,65 @@
 }
 .editor-pane {
   min-width: 0;
+}
+.workbench-controls {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--color-separator);
+  background: var(--color-surface);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.workbench-controls > div {
+  flex: 1;
+  min-width: 0;
+}
+.pane-switch {
+  display: none;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+.console-width {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  font-size: var(--text-meta);
+}
+.console-width input {
+  min-height: var(--target-min);
+  width: 6rem;
+  padding: 0;
+}
+.editor-workbench > .execution-panel {
+  grid-column: 2;
+}
+@media (min-width: 80rem) {
+  .editor-workbench {
+    grid-template-columns: 10rem minmax(0, 1fr) minmax(
+        18rem,
+        var(--console-width, 34%)
+      );
+  }
+  .editor-workbench > .execution-panel {
+    grid-column: 3;
+    grid-row: 2;
+    border-top: 0;
+    border-left: 1px solid var(--color-separator);
+  }
+  .editor-explorer {
+    grid-row: 2;
+  }
+  .editor-pane {
+    grid-row: 2;
+  }
+  .console-width {
+    display: flex;
+  }
 }
 .editor-tabs {
   display: flex;
@@ -227,6 +294,21 @@
   .editor-explorer {
     border-right: 0;
     border-bottom: 1px solid var(--color-separator);
+  }
+  .pane-switch {
+    display: flex;
+    width: 100%;
+    padding-top: 0;
+  }
+  .workbench-controls > div {
+    flex-basis: 100%;
+  }
+  .editor-workbench > .execution-panel {
+    grid-column: 1;
+  }
+  .editor-workbench[data-pane='console'] > .editor-pane,
+  .editor-workbench[data-pane='editor'] > .execution-panel {
+    display: none;
   }
   .editor-scope-note {
     margin-top: var(--space-3);

@@ -9,7 +9,7 @@ interface BrowserPyodide {
     writeFile(path: string, bytes: Uint8Array): void;
     chdir(path: string): void;
   };
-  globals: { set(key: string, value: string): void };
+  globals: { set(key: string, value: unknown): void };
   setStdout(options: { write: (bytes: Uint8Array) => number }): void;
   setStderr(options: { write: (bytes: Uint8Array) => number }): void;
   setStdin(options: { stdin: () => string | null }): void;
@@ -27,6 +27,8 @@ type LoadPyodide = (options: {
 import type { RunManifest } from '@code-along/contracts/execution';
 import type { ProjectRunManifest } from '@code-along/contracts/execution/project';
 import { prepareRuntime } from './runtime.ts';
+import helperSource from './code_along.py?raw';
+import { isRasterPlot } from '@code-along/contracts/execution/plots';
 declare const self: DedicatedWorkerGlobalScope;
 let started = false;
 self.onmessage = async (
@@ -112,6 +114,34 @@ self.onmessage = async (
       pyodide.FS.writeFile(target, new TextEncoder().encode(file.source));
     }
     pyodide.FS.chdir('/project');
+    if (manifest.version === 2) {
+      let plotIndex = 0;
+      pyodide.globals.set(
+        '__code_along_png',
+        (data: { toJs(): unknown }, title: string) => {
+          const plot = {
+            type: 'plot',
+            index: plotIndex,
+            title,
+            png: data.toJs(),
+          };
+          if (!isRasterPlot(plot))
+            throw new Error(
+              'Plot limit or PNG validation failed. Use at most four bounded RGB/RGBA PNGs.',
+            );
+          plotIndex++;
+          send({ ...plot, png: Uint8Array.from(plot.png) });
+        },
+      );
+      pyodide.FS.mkdir('/code_along_support');
+      pyodide.FS.writeFile(
+        '/code_along_support/code_along.py',
+        new TextEncoder().encode(helperSource),
+      );
+      await pyodide.runPythonAsync(
+        'import sys, builtins\nbuiltins._code_along_emit_png = __code_along_png\nsys.path.insert(0, "/code_along_support")',
+      );
+    }
     const entrypoint =
       manifest.version === 1
         ? manifest.entrypoint

@@ -9,7 +9,8 @@
     "./execution/project": "./execution/project-manifest.ts",
     "./execution/profiles": "./execution/profiles.ts",
     "./execution/product-runner": "./execution/product-runner.ts",
-    "./execution/runtime-inventory": "./execution/runtime-inventory.ts"
+    "./execution/runtime-inventory": "./execution/runtime-inventory.ts",
+    "./execution/plots": "./execution/plots.ts"
   },
   "scripts": {
     "typecheck": "tsc --project tsconfig.json && tsc --project tsconfig.test.json"
