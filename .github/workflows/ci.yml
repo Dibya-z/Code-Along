@@ -1,0 +1,121 @@
+name: Foundation checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: foundation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  COREPACK_HOME: ${{ github.workspace }}/.pnpm-store/corepack
+  UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache
+  STORYBOOK_DISABLE_TELEMETRY: '1'
+jobs:
+  foundation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.3
+          package-manager-cache: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: 3.13.12
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: 0.10.9
+          enable-cache: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .pnpm-store
+            .uv-cache
+          key: ${{ runner.os }}-${{ runner.arch }}-deps-${{ hashFiles('pnpm-lock.yaml', 'uv.lock') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-deps-
+      - name: Install locked tooling
+        run: |
+          npm install --global corepack@0.36.0
+          corepack pnpm install --frozen-lockfile
+          uv sync --locked --no-python-downloads
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .runtime/ci-services
+          key: ${{ runner.os }}-${{ runner.arch }}-pg18.7-redis8.4.5-v1
+      - name: Build owned native service tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends build-essential bison flex
+          tools/ci/setup_native_services.sh
+      - name: Show owned native build failures
+        if: failure()
+        run: |
+          for ca_log in .runtime/ci-services/*-build.log; do
+            [ ! -f "$ca_log" ] || tail -n 50 "$ca_log"
+          done
+      - name: Quality, locks and generated contract drift
+        run: |
+          corepack pnpm check
+          corepack pnpm api:check
+          uv lock --check --offline
+          uv run --locked --offline ruff check .
+          uv run --locked --offline ruff format --check .
+          uv run --locked --offline mypy
+      - name: Published dependency advisories
+        run: |
+          corepack pnpm audit --audit-level moderate
+          uv run --locked --offline python tools/ci/check_python_advisories.py
+      - name: Backend, protocol and durable transport tests
+        run: |
+          uv run --locked --offline python -m pytest -q
+          corepack pnpm test
+          uv run --locked --offline python tools/dev/postgres_cluster.py -- corepack pnpm --filter @code-along/collaboration test:integration
+          uv run --locked --offline python tools/dev/postgres_cluster.py -- corepack pnpm --filter @code-along/collaboration test:transport
+      - name: Build frontend, runner and component stories
+        run: |
+          corepack pnpm --filter @code-along/web build
+          corepack pnpm --filter @code-along/runner-web build
+          corepack pnpm --filter @code-along/browser-proofs build
+          corepack pnpm --filter @code-along/design-system build-storybook
+      - name: Browser isolation, UI and two-user foundation flows
+        run: |
+          corepack pnpm --filter @code-along/browser-proofs exec playwright install --with-deps chromium webkit
+          corepack pnpm --filter @code-along/browser-proofs test:browser
+          corepack pnpm --filter @code-along/browser-proofs test:foundation
+          corepack pnpm --filter @code-along/browser-proofs test:product
+      - name: Keep failed owned browser evidence
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: owned-browser-failures
+          path: tests/browser/test-results
+          retention-days: 3
+          if-no-files-found: ignore
+  compose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: 3.13.12
+      - name: Build and start only the owned CI stack
+        run: |
+          python tools/dev/init_development.py
+          docker compose -p code-along-ci --env-file .env -f infra/compose.yaml config --quiet
+          docker compose -p code-along-ci --env-file .env -f infra/compose.yaml up --build -d
+          python tools/ci/compose_smoke.py
+      - name: Show bounded service failures
+        if: failure()
+        run: docker compose -p code-along-ci --env-file .env -f infra/compose.yaml logs --no-color --tail 80
+      - name: Remove only disposable CI services and volumes
+        if: always()
+        run: docker compose -p code-along-ci --env-file .env -f infra/compose.yaml down --volumes --remove-orphans
