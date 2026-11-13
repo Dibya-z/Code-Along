@@ -15,6 +15,12 @@ ROOT = Path(__file__).resolve().parents[2]
 PORT = int(os.environ.get("CODE_ALONG_HTTPS_PORT", "8443"))
 APP = f"https://127.0.0.1:{PORT}"
 RUNNER = f"https://localhost:{PORT}"
+RUNTIME_INVENTORIES = {
+    "pyodide-core.json": ROOT
+    / "apps/runner-web/public/runtime-manifests/pyodide-core.json",
+    "pyodide-scientific.json": ROOT
+    / "packages/runtime-profiles/manifests/pyodide-scientific.json",
+}
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -105,7 +111,48 @@ class Handler(http.server.BaseHTTPRequestHandler):
         base = ROOT / ("apps/runner-web/dist" if runner else "apps/web/dist")
         if not runner and not base.exists():
             base = ROOT / "infra/proxy/static"
-        if runner and path.startswith("/runtime/"):
+        if runner and path.startswith("/runtime-manifests/"):
+            inventory_file = RUNTIME_INVENTORIES.get(
+                path.removeprefix("/runtime-manifests/")
+            )
+            if not inventory_file:
+                self.send_error(404)
+                return
+            file = inventory_file
+            data = file.read_bytes()
+        elif runner and path.startswith("/runtime/v2/"):
+            parts = path.split("/")
+            asset = None
+            if len(parts) == 5:
+                for inventory_file in RUNTIME_INVENTORIES.values():
+                    inventory = json.loads(inventory_file.read_text())
+                    digest = hashlib.sha256(
+                        json.dumps(
+                            inventory, sort_keys=True, separators=(",", ":")
+                        ).encode()
+                    ).hexdigest()
+                    if digest == parts[3]:
+                        asset = next(
+                            (
+                                item
+                                for item in inventory["assets"]
+                                if item["name"] == parts[4]
+                            ),
+                            None,
+                        )
+                        break
+            if not asset:
+                self.send_error(404)
+                return
+            file = base / "runtime/v2" / parts[3] / parts[4]
+            data = file.read_bytes()
+            if (
+                len(data) != asset["bytes"]
+                or hashlib.sha256(data).hexdigest() != asset["sha256"]
+            ):
+                self.send_error(503)
+                return
+        elif runner and path.startswith("/runtime/"):
             name = path.removeprefix("/runtime/")
             inventory = json.loads(
                 (
@@ -146,6 +193,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
+        if runner and (
+            path.startswith(("/runtime/v2/", "/runtime-manifests/")) or worker
+        ):
+            self.send_header("Cache-Control", "public, max-age=31536000, immutable")
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
         self.send_header(

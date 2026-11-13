@@ -8,7 +8,8 @@ import type { components } from '@code-along/api-client';
 import type { Project } from '../../projects/types.ts';
 import type { ProjectSnapshot } from '@code-along/contracts/execution/project';
 import {
-  CORE_RUNTIME,
+  reviewedRuntime,
+  runtimeProfile,
   type RuntimeIdentity,
 } from '@code-along/contracts/execution/profiles';
 import { EditorDocument, type FileMetadata } from './document.ts';
@@ -198,12 +199,13 @@ export class EditorWorkspace {
 
   snapshotInput(
     stdinMode: ProjectSnapshot['stdin_mode'] = 'batch',
-    runtime: RuntimeIdentity = CORE_RUNTIME,
+    runtime?: RuntimeIdentity,
   ): ProjectSnapshot {
     if (this.destroyed || this.metadataVersion < 1)
       throw new Error('Open a complete project before running.');
-    if (runtime.runtime_id !== this.runtimeId)
-      throw new Error('Refresh the project runtime before running.');
+    const selectedRuntime = runtime ?? this.defaultRuntime();
+    if (!reviewedRuntime(selectedRuntime))
+      throw new Error('Choose a reviewed Python runtime before running.');
     const documents = this.documents();
     if (documents.some((file) => !file.loaded || file.disposed))
       throw new Error(
@@ -214,7 +216,7 @@ export class EditorWorkspace {
       source_kind: 'project',
       metadata_version: this.metadataVersion,
       entrypoint_file_id: this.summary.entrypoint,
-      runtime,
+      runtime: selectedRuntime,
       stdin_mode: stdinMode,
       files: documents.map((file) => ({
         file_id: file.metadata.id,
@@ -237,9 +239,12 @@ export class EditorWorkspace {
       !this.destroyed &&
       snapshot.project_id === this.projectId &&
       snapshot.metadata_version === this.metadataVersion &&
-      snapshot.runtime.runtime_id === this.runtimeId &&
       sourceRevision === this.sourceRevision
     );
+  }
+
+  defaultRuntime(): RuntimeIdentity | undefined {
+    return runtimeProfile(this.runtimeId)?.identity;
   }
 
   destroy(): void {

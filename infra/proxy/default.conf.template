@@ -47,6 +47,7 @@ server {
   add_header X-Content-Type-Options nosniff always;
   add_header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; worker-src 'self'; frame-ancestors ${APP_ORIGIN}; base-uri 'none'; form-action 'none'" always;
   location ~ ^/assets/worker-[A-Za-z0-9_-]+\.js$ {
+    expires 1y;
     add_header Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'none'" always;
     add_header Cross-Origin-Embedder-Policy require-corp always;
     add_header Cross-Origin-Resource-Policy cross-origin always;
@@ -54,6 +55,8 @@ server {
     try_files $uri =404;
   }
   location /api/ { return 404; }
+  location /runtime-manifests/ { expires 1y; try_files $uri =404; }
+  location /runtime/v2/ { expires 1y; try_files $uri =404; }
   location /runtime/ { try_files $uri =404; }
   location /assets/ { try_files $uri =404; }
   location = / { try_files /index.html =404; }

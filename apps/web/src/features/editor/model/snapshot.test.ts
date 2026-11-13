@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CORE_RUNTIME } from '@code-along/contracts/execution/profiles';
+import {
+  CORE_RUNTIME,
+  SCIENTIFIC_RUNTIME,
+} from '@code-along/contracts/execution/profiles';
 import { sha256, sourceBytes } from '@code-along/contracts/execution';
 import type { Project } from '../../projects/types.ts';
 import { EditorWorkspace } from './workspace.ts';
@@ -38,6 +41,19 @@ async function fixture() {
   return { workspace, project, files };
 }
 describe('complete editor snapshot capture', () => {
+  it('captures an explicit local runtime choice without changing the project default', async () => {
+    const { workspace, files } = await fixture();
+    await Promise.all(files.map((file) => workspace.loadSource(file)));
+    const captured = await captureWorkspaceRun(
+      workspace,
+      'batch',
+      SCIENTIFIC_RUNTIME,
+    );
+    expect(captured.manifest.runtime).toEqual(SCIENTIFIC_RUNTIME);
+    expect(workspace.defaultRuntime()).toEqual(CORE_RUNTIME);
+    expect(isCurrentRun(workspace, captured)).toBe(true);
+    workspace.destroy();
+  });
   it('refuses missing files instead of silently running a partial project', async () => {
     const { workspace, files } = await fixture();
     await workspace.loadSource(files[0]!);

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node ../../tools/dev/copy_runtime.mjs",
     "typecheck": "tsc --project tsconfig.json && tsc --project tsconfig.worker.json && tsc --project tsconfig.test.json"
   },
   "dependencies": {

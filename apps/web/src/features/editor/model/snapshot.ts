@@ -3,10 +3,7 @@ import {
   type ProjectRunManifest,
   type ProjectSnapshot,
 } from '@code-along/contracts/execution/project';
-import {
-  CORE_RUNTIME,
-  type RuntimeIdentity,
-} from '@code-along/contracts/execution/profiles';
+import { type RuntimeIdentity } from '@code-along/contracts/execution/profiles';
 import type { EditorWorkspace } from './workspace.ts';
 
 export interface CapturedRun {
@@ -16,7 +13,7 @@ export interface CapturedRun {
 export async function captureWorkspaceRun(
   workspace: EditorWorkspace,
   stdinMode: ProjectSnapshot['stdin_mode'] = 'batch',
-  runtime: RuntimeIdentity = CORE_RUNTIME,
+  runtime?: RuntimeIdentity,
 ): Promise<CapturedRun> {
   const sourceRevision = workspace.sourceRevision;
   // No await may separate these model reads from the manifest's own byte copy.

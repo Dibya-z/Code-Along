@@ -13,6 +13,7 @@ import {
   type CapturedRun,
 } from '../editor/model/snapshot.ts';
 import type { RunnerBridge } from './bridge.ts';
+import type { RuntimeIdentity } from '@code-along/contracts/execution/profiles';
 
 export type RunPhase =
   | 'idle'
@@ -75,7 +76,10 @@ export class ExecutionController {
     this.snapshot = Object.freeze({ ...this.snapshot, ...update });
     for (const listener of this.listeners) listener();
   }
-  async run(stdin: readonly string[] = []): Promise<void> {
+  async run(
+    stdin: readonly string[] = [],
+    runtime?: RuntimeIdentity,
+  ): Promise<void> {
     if (this.closed || running(this.snapshot.phase)) return;
     this.unsubscribe ??= this.workspace.subscribe(() => {
       if (
@@ -104,7 +108,11 @@ export class ExecutionController {
           'Use at most 100 input lines, 4 KiB per line and 64 KiB total.',
         );
       const input = Object.freeze([...stdin]);
-      const captured = await captureWorkspaceRun(this.workspace, 'batch');
+      const captured = await captureWorkspaceRun(
+        this.workspace,
+        'batch',
+        runtime,
+      );
       if (!this.active(runId)) return;
       this.publish({
         phase: 'initializing',

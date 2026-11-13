@@ -2,6 +2,7 @@
 // Pinned browser-only adapter surface. Upstream declarations also require DOM,
 // Node and Emscripten globals; keep those out of this Worker's type environment.
 interface BrowserPyodide {
+  readonly loadedPackages: Readonly<Record<string, string>>;
   FS: {
     mkdir(path: string): void;
     mkdirTree(path: string): void;
@@ -18,9 +19,14 @@ type LoadPyodide = (options: {
   indexURL: string;
   stdout: (s: string) => void;
   stderr: (s: string) => void;
+  lockFileContents?: unknown;
+  packageBaseUrl?: string;
+  packages?: string[];
+  checkIntegrity?: boolean;
 }) => Promise<BrowserPyodide>;
 import type { RunManifest } from '@code-along/contracts/execution';
 import type { ProjectRunManifest } from '@code-along/contracts/execution/project';
+import { prepareRuntime } from './runtime.ts';
 declare const self: DedicatedWorkerGlobalScope;
 let started = false;
 self.onmessage = async (
@@ -40,15 +46,35 @@ self.onmessage = async (
       send({ type: 'output', stream, text: text.slice(i, i + 4096) });
   };
   try {
-    const runtimeUrl = '/runtime/pyodide.mjs';
+    const prepared =
+      manifest.version === 2 ? await prepareRuntime(manifest.runtime) : null;
+    const base = prepared?.base ?? '/runtime/';
+    const runtimeUrl = `${base}pyodide.mjs`;
     const runtime = (await import(/* @vite-ignore */ runtimeUrl)) as {
       loadPyodide: LoadPyodide;
     };
     const pyodide = await runtime.loadPyodide({
-      indexURL: '/runtime/',
+      indexURL: base,
       stdout: (s) => output('stdout', `${s}\n`),
       stderr: (s) => output('stderr', `${s}\n`),
+      ...(prepared
+        ? {
+            lockFileContents: prepared.lock,
+            packageBaseUrl: base,
+            packages: prepared.packages,
+            checkIntegrity: true,
+          }
+        : {}),
     });
+    if (
+      prepared &&
+      prepared.packages.some(
+        (name) => !Object.hasOwn(pyodide.loadedPackages, name),
+      )
+    )
+      throw new Error(
+        'The selected Python packages could not load. Retry with a fresh runtime.',
+      );
     const stdout = new TextDecoder(),
       stderr = new TextDecoder();
     pyodide.setStdout({

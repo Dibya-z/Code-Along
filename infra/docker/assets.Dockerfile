@@ -7,11 +7,10 @@ COPY apps/runner-web ./apps/runner-web
 COPY apps/web ./apps/web
 COPY apps/collaboration/package.json ./apps/collaboration/package.json
 COPY tests/browser/package.json ./tests/browser/package.json
+COPY tools/dev/copy_runtime.mjs tools/dev/runtime_assets.ts ./tools/dev/
 RUN corepack pnpm install --frozen-lockfile
 RUN corepack pnpm --filter @code-along/runner-web build
 RUN corepack pnpm --filter @code-along/web build
-COPY tools/dev/copy_runtime.mjs ./tools/dev/copy_runtime.mjs
-RUN node tools/dev/copy_runtime.mjs
 FROM build AS development
 RUN mkdir -p /app/apps/web/node_modules/.vite /app/apps/web/node_modules/.vite-temp /app/node_modules/.vite-temp && chown -R node:node /app/apps/web/node_modules/.vite /app/apps/web/node_modules/.vite-temp /app/node_modules/.vite-temp
 USER node

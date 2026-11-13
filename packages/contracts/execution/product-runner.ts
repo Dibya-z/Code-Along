@@ -10,7 +10,7 @@ import {
   isProjectRunManifest,
   type ProjectRunManifest,
 } from './project-manifest.ts';
-import { CORE_RUNTIME } from './profiles.ts';
+import { runtimeProfile } from './profiles.ts';
 export const PRODUCT_RUNNER_VERSION = 2;
 export interface ProductEnvelope {
   readonly protocol: typeof RUNNER_PROTOCOL;
@@ -165,7 +165,7 @@ export function parseProductEvent(
     ) &&
     typeof value['manifest_sha256'] === 'string' &&
     /^[a-f0-9]{64}$/.test(value['manifest_sha256']) &&
-    value['runtime_id'] === CORE_RUNTIME.runtime_id
+    !!runtimeProfile(value['runtime_id'])
   )
     return value as unknown as ProductRunnerEvent;
   return null;

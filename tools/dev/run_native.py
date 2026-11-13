@@ -4,6 +4,8 @@ Requires matching PG18 tools, Redis 8, installed workspace and built web/runner.
 User data is intentionally disposable here; Compose provides persistent volumes.
 """
 
+from __future__ import annotations
+
 import os
 import secrets
 import shutil
@@ -24,8 +26,18 @@ def main() -> None:
     if not redis:
         raise SystemExit("Set CODE_ALONG_REDIS_BIN to a trusted Redis 8 executable.")
     children: list[subprocess.Popen[bytes]] = []
+    previous_signals = {
+        sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)
+    }
+
+    def protect_cleanup() -> None:
+        # Playwright may signal the process group repeatedly during shutdown.
+        # Do not interrupt the ExitStack before its private PostgreSQL exits.
+        for sig in previous_signals:
+            signal.signal(sig, signal.SIG_IGN)
 
     def cleanup() -> None:
+        protect_cleanup()
         for child in reversed(children):
             if child.poll() is None:
                 child.terminate()
@@ -37,9 +49,11 @@ def main() -> None:
                 child.wait(timeout=5)
 
     def stop(*_args: object) -> None:
+        protect_cleanup()
         raise KeyboardInterrupt
 
-    signal.signal(signal.SIGTERM, stop)
+    for sig in previous_signals:
+        signal.signal(sig, stop)
     try:
         with ExitStack() as stack:
             cluster = stack.enter_context(postgres_cluster())
@@ -134,7 +148,11 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     finally:
-        cleanup()
+        try:
+            cleanup()
+        finally:
+            for sig, previous in previous_signals.items():
+                signal.signal(sig, previous)
 
 
 if __name__ == "__main__":

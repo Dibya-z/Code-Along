@@ -34,6 +34,7 @@ async function result<T>(
   return value.data as T;
 }
 export const productApi = {
+  runtimeProfiles: () => result(client().GET('/api/v1/runtime-profiles/')),
   me: () => result(client().GET('/api/v1/me/')),
   workspaces: (offset = 0) =>
     result(
