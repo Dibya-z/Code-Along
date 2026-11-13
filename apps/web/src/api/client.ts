@@ -15,17 +15,14 @@ export class ApiError extends Error {
   }
 }
 let csrf: string | undefined;
+let pendingCsrf: Promise<string> | undefined;
 export function clearCsrf(): void {
   csrf = undefined;
+  pendingCsrf = undefined;
 }
-export async function api<T>(
-  path: string,
-  options: { method?: string; body?: unknown; signal?: AbortSignal } = {},
-): Promise<T> {
-  if (!path.startsWith('/api/') || path.includes('://') || path.includes('\\'))
-    throw new Error('Only local API paths are allowed.');
-  const method = options.method ?? 'GET';
-  if (!['GET', 'HEAD'].includes(method) && !csrf) {
+async function csrfToken(): Promise<string> {
+  if (csrf) return csrf;
+  pendingCsrf ??= (async () => {
     const response = await fetch('/api/v1/csrf/', {
       credentials: 'same-origin',
       cache: 'no-store',
@@ -40,21 +37,33 @@ export async function api<T>(
     )
       throw new Error('Invalid security response.');
     csrf = value.csrfToken;
+    return value.csrfToken;
+  })();
+  try {
+    return await pendingCsrf;
+  } finally {
+    pendingCsrf = undefined;
   }
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  if (options.body !== undefined) headers['Content-Type'] = 'application/json';
-  if (csrf && !['GET', 'HEAD'].includes(method)) headers['X-CSRFToken'] = csrf;
+}
+export async function secureFetch(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  if (!path.startsWith('/api/') || path.includes('://') || path.includes('\\'))
+    throw new Error('Only local API paths are allowed.');
+  const method = (options.method ?? 'GET').toUpperCase();
+  const headers = new Headers(options.headers);
+  headers.set('Accept', 'application/json');
+  if (!['GET', 'HEAD'].includes(method))
+    headers.set('X-CSRFToken', await csrfToken());
   let response: Response;
   try {
     response = await fetch(path, {
+      ...options,
       method,
       headers,
       credentials: 'same-origin',
       cache: 'no-store',
-      ...(options.body !== undefined
-        ? { body: JSON.stringify(options.body) }
-        : {}),
-      ...(options.signal ? { signal: options.signal } : {}),
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError')
@@ -63,13 +72,45 @@ export async function api<T>(
       cause: error,
     });
   }
-  const body: unknown =
-    response.status === 204
-      ? undefined
-      : await response.json().catch(() => null);
-  if (!response.ok) {
-    if (response.status === 403) clearCsrf();
-    throw new ApiError(response.status, body);
+  if (response.status === 403) clearCsrf();
+  if (
+    !response.ok &&
+    !response.headers.get('Content-Type')?.includes('application/json')
+  )
+    return new Response(
+      JSON.stringify({ detail: 'The request could not be completed.' }),
+      {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
+  return response;
+}
+export async function api<T>(
+  path: string,
+  options: { method?: string; body?: unknown; signal?: AbortSignal } = {},
+): Promise<T> {
+  const response = await secureFetch(path, {
+    method: options.method ?? 'GET',
+    ...(options.body !== undefined
+      ? {
+          body: JSON.stringify(options.body),
+          headers: { 'Content-Type': 'application/json' },
+        }
+      : {}),
+    ...(options.signal ? { signal: options.signal } : {}),
+  });
+  let body: unknown;
+  if (response.status !== 204) {
+    try {
+      body = await response.json();
+    } catch (error) {
+      throw new Error(
+        'The server returned an unreadable response. Please try again.',
+        { cause: error },
+      );
+    }
   }
+  if (!response.ok) throw new ApiError(response.status, body);
   return body as T;
 }

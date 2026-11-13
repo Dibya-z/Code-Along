@@ -40,3 +40,5 @@ corepack pnpm --filter @code-along/browser-proofs test:product
 ```
 
 It owns disposable services on HTTPS 18443/API 18001, stops them afterward, and does not migrate the Compose/reference database. Social sign-in and MFA are not enabled in M1.
+
+Product APIs also use a shared per-identity 120-request/minute coarse budget. Anonymous CSRF bootstrap uses the caller IP. Forwarded IP trust is explicit and matches the owned proxy policy; no raw client forwarding header is trusted when proxy trust is disabled. Framework cache throttles are abuse controls, not atomic execution quotas or measured capacity guarantees.

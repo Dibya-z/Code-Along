@@ -1,3 +1,4 @@
+import { productApi } from '../../api/product.ts';
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -6,8 +7,7 @@ import { api } from '../../api/client.ts';
 import { Failure } from '../../api/feedback.tsx';
 import { queryClient } from '../../app/providers.tsx';
 import { SignedIn } from '../auth/guard.tsx';
-import type { Page } from '../workspaces/types.ts';
-import type { Project, ProjectFile } from './types.ts';
+import type { ProjectFile } from './types.ts';
 import { ProjectSharing } from './sharing.tsx';
 export function ProjectPage() {
   return (
@@ -24,18 +24,18 @@ function ProjectDetails() {
   const [renameOpen, setRenameOpen] = useState(false);
   const query = useQuery({
     queryKey: ['project', projectId],
-    queryFn: () => api<Project>(base),
+    queryFn: () => productApi.project(projectId ?? ''),
   });
   const project = query.data;
   const files = useQuery({
     queryKey: ['files', projectId],
-    queryFn: () => api<Page<ProjectFile>>(base + 'files/'),
+    queryFn: () => productApi.files(projectId ?? ''),
     enabled: Boolean(project),
   });
   const selectedId = selected || project?.entrypoint_file_id;
   const source = useQuery({
     queryKey: ['starter-source', projectId, selectedId],
-    queryFn: () => api<ProjectFile>(base + `files/${selectedId}/`),
+    queryFn: () => productApi.file(projectId ?? '', selectedId ?? ''),
     enabled: Boolean(project && selectedId),
   });
   async function refresh() {
@@ -58,10 +58,21 @@ function ProjectDetails() {
       method?: string;
       body?: Record<string, unknown>;
     }) =>
-      api<unknown>(base + suffix, {
-        method,
-        body: { ...body, expected_version: project?.metadata_version },
-      }),
+      api<unknown>(
+        base +
+          suffix +
+          (method === 'DELETE'
+            ? `?expected_version=${project?.metadata_version}`
+            : ''),
+        {
+          method,
+          ...(method === 'DELETE'
+            ? {}
+            : {
+                body: { ...body, expected_version: project?.metadata_version },
+              }),
+        },
+      ),
     onSuccess: async (_data, job) => {
       if (job.method === 'DELETE') setSelected('');
       await refresh();

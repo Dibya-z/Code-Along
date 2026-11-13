@@ -1,14 +1,12 @@
+import type { components } from '@code-along/api-client';
+import { productApi } from '../../api/product.ts';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError, clearCsrf } from '../../api/client.ts';
 import { queryClient } from '../../app/providers.tsx';
-export interface Identity {
-  id: string;
-  email: string;
-  display_name: string;
-}
+export type Identity = components['schemas']['CurrentUserOutput'];
 export async function getIdentity(): Promise<Identity | null> {
   try {
-    return await api<Identity>('/api/v1/me/');
+    return await productApi.me();
   } catch (error) {
     if (
       error instanceof ApiError &&

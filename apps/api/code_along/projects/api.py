@@ -2,12 +2,15 @@ import uuid
 from typing import Any
 
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema_view
 from rest_framework import serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from code_along.common import schemas as dto
 from code_along.common.api import BodySerializer, actor, page_values
+from code_along.common.schema_helpers import endpoint
 from code_along.workspaces.policies import visible_workspaces
 
 from . import services
@@ -49,7 +52,7 @@ class GrantBody(BodySerializer):
     role = serializers.ChoiceField(choices=["editor", "viewer"])
 
 
-class TransferBody(VersionBody):
+class ProjectTransferBody(VersionBody):
     new_owner_id = serializers.UUIDField()
 
 
@@ -85,6 +88,12 @@ def project_data(project: Project, role: str) -> dict[str, Any]:
     }
 
 
+@extend_schema_view(
+    get=endpoint("list_projects", dto.ProjectPage, paginated=True),
+    post=endpoint(
+        "create_project", dto.ProjectOutput, request=CreateProjectBody, status=201
+    ),
+)
 class ProjectListView(APIView):
     def get(self, request: Request, workspace_id: uuid.UUID) -> Response:
         get_object_or_404(visible_workspaces(actor(request)), id=workspace_id)
@@ -120,6 +129,10 @@ class ProjectListView(APIView):
         return Response(project_data(project, "owner"), status=201)
 
 
+@extend_schema_view(
+    get=endpoint("get_project", dto.ProjectOutput),
+    patch=endpoint("update_project", dto.ProjectOutput, request=ProjectBody),
+)
 class ProjectDetailView(APIView):
     def get(self, request: Request, project_id: uuid.UUID) -> Response:
         project = get_object_or_404(
@@ -139,6 +152,10 @@ class ProjectDetailView(APIView):
         return Response(project_data(project, project_role(project, actor(request))))
 
 
+@extend_schema_view(
+    get=endpoint("list_project_files", dto.FilePage),
+    post=endpoint("create_project_file", dto.FileSource, request=FileBody, status=201),
+)
 class FileListView(APIView):
     def get(self, request: Request, project_id: uuid.UUID) -> Response:
         project = get_object_or_404(visible_projects(actor(request)), id=project_id)
@@ -158,6 +175,11 @@ class FileListView(APIView):
         return Response(file_data(file, source=True), status=201)
 
 
+@extend_schema_view(
+    get=endpoint("get_project_file", dto.FileSource),
+    patch=endpoint("rename_project_file", dto.FileMetadata, request=RenameBody),
+    delete=endpoint("remove_project_file", status=204, version_query=True),
+)
 class FileDetailView(APIView):
     def get(
         self, request: Request, project_id: uuid.UUID, file_id: uuid.UUID
@@ -180,12 +202,13 @@ class FileDetailView(APIView):
     def delete(
         self, request: Request, project_id: uuid.UUID, file_id: uuid.UUID
     ) -> Response:
-        body = VersionBody(data=request.data)
+        body = VersionBody(data=request.query_params.dict())
         body.is_valid(raise_exception=True)
         services.delete_file(actor(request), project_id, file_id, **body.validated_data)
         return Response(status=204)
 
 
+@extend_schema_view(get=endpoint("list_project_grants", dto.GrantPage, paginated=True))
 class GrantListView(APIView):
     def get(self, request: Request, project_id: uuid.UUID) -> Response:
         project = get_object_or_404(
@@ -211,6 +234,10 @@ class GrantListView(APIView):
         )
 
 
+@extend_schema_view(
+    put=endpoint("set_project_grant", request=GrantBody, status=204),
+    delete=endpoint("revoke_project_grant", status=204),
+)
 class GrantDetailView(APIView):
     def put(
         self, request: Request, project_id: uuid.UUID, user_id: uuid.UUID
@@ -229,9 +256,12 @@ class GrantDetailView(APIView):
         return Response(status=204)
 
 
+@extend_schema_view(
+    post=endpoint("transfer_project", dto.ProjectOutput, request=ProjectTransferBody)
+)
 class ProjectOwnershipView(APIView):
     def post(self, request: Request, project_id: uuid.UUID) -> Response:
-        body = TransferBody(data=request.data)
+        body = ProjectTransferBody(data=request.data)
         body.is_valid(raise_exception=True)
         project = services.transfer_project(
             actor(request), project_id, **body.validated_data
@@ -239,6 +269,7 @@ class ProjectOwnershipView(APIView):
         return Response(project_data(project, project_role(project, actor(request))))
 
 
+@extend_schema_view(get=endpoint("list_runtime_profiles", dto.RuntimePage))
 class RuntimeListView(APIView):
     def get(self, request: Request) -> Response:
         return Response(

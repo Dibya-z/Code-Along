@@ -1,0 +1,22 @@
+{
+  "name": "@code-along/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.d.ts",
+    "./auth-schema": "./src/auth-schema.d.ts"
+  },
+  "scripts": {
+    "generate": "openapi-typescript ../../docs/api/openapi.json -o src/schema.d.ts && openapi-typescript ../../docs/api/auth-openapi.json -o src/auth-schema.d.ts && corepack pnpm --workspace-root exec prettier --write packages/api-client/src/schema.d.ts packages/api-client/src/auth-schema.d.ts docs/api/openapi.json docs/api/auth-openapi.json",
+    "typecheck": "corepack pnpm --workspace-root exec tsc --project packages/api-client/tsconfig.json"
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}

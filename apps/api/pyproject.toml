@@ -11,7 +11,8 @@ dependencies = [
     "psycopg[binary]==3.3.9",
     "redis==8.1.0",
     "channels-redis==4.3.0",
-    "django-allauth[headless]==65.22.0",
+    "django-allauth[headless,headless-spec]==65.22.0",
+    "drf-spectacular==0.30.0",
 ]
 
 # This is a runnable Django application, not a published Python library.

@@ -2,12 +2,15 @@ import uuid
 from typing import Any
 
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema_view
 from rest_framework import serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from code_along.common import schemas as dto
 from code_along.common.api import BodySerializer, actor, page_values
+from code_along.common.schema_helpers import endpoint
 
 from . import services
 from .models import Workspace, WorkspaceMembership
@@ -27,7 +30,7 @@ class MemberBody(BodySerializer):
     role = serializers.ChoiceField(choices=["instructor", "learner"])
 
 
-class TransferBody(BodySerializer):
+class WorkspaceTransferBody(BodySerializer):
     new_owner_id = serializers.UUIDField()
 
 
@@ -41,6 +44,12 @@ def workspace_data(workspace: Workspace, role: str) -> dict[str, Any]:
     }
 
 
+@extend_schema_view(
+    get=endpoint("list_workspaces", dto.WorkspacePage, paginated=True),
+    post=endpoint(
+        "create_workspace", dto.WorkspaceOutput, request=WorkspaceBody, status=201
+    ),
+)
 class WorkspaceListView(APIView):
     def get(self, request: Request) -> Response:
         offset, limit = page_values(request)
@@ -73,6 +82,10 @@ class WorkspaceListView(APIView):
         )
 
 
+@extend_schema_view(
+    get=endpoint("get_workspace", dto.WorkspaceOutput),
+    patch=endpoint("update_workspace", dto.WorkspaceOutput, request=WorkspaceUpdate),
+)
 class WorkspaceDetailView(APIView):
     def get(self, request: Request, workspace_id: uuid.UUID) -> Response:
         workspace = get_object_or_404(
@@ -97,6 +110,9 @@ class WorkspaceDetailView(APIView):
         )
 
 
+@extend_schema_view(
+    get=endpoint("list_workspace_members", dto.MemberPage, paginated=True)
+)
 class MemberListView(APIView):
     def get(self, request: Request, workspace_id: uuid.UUID) -> Response:
         workspace = get_object_or_404(
@@ -121,6 +137,10 @@ class MemberListView(APIView):
         )
 
 
+@extend_schema_view(
+    patch=endpoint("update_workspace_member", request=MemberBody, status=204),
+    delete=endpoint("remove_workspace_member", status=204),
+)
 class MemberDetailView(APIView):
     def patch(
         self, request: Request, workspace_id: uuid.UUID, user_id: uuid.UUID
@@ -139,9 +159,14 @@ class MemberDetailView(APIView):
         return Response(status=204)
 
 
+@extend_schema_view(
+    post=endpoint(
+        "transfer_workspace", dto.WorkspaceOutput, request=WorkspaceTransferBody
+    )
+)
 class OwnershipView(APIView):
     def post(self, request: Request, workspace_id: uuid.UUID) -> Response:
-        body = TransferBody(data=request.data)
+        body = WorkspaceTransferBody(data=request.data)
         body.is_valid(raise_exception=True)
         workspace = services.transfer_ownership(
             actor(request), workspace_id, body.validated_data["new_owner_id"]

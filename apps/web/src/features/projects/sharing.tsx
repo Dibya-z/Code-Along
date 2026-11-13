@@ -1,3 +1,4 @@
+import type { components } from '@code-along/api-client';
 import { useState, type FormEvent } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button, Dialog, Field, Notice } from '@code-along/design-system';
@@ -6,17 +7,8 @@ import { Failure } from '../../api/feedback.tsx';
 import { queryClient } from '../../app/providers.tsx';
 import type { Member, Page } from '../workspaces/types.ts';
 import type { Project } from './types.ts';
-interface Grant {
-  user_id: string;
-  display_name: string;
-  role: 'editor' | 'viewer';
-}
-interface Invitation {
-  id: string;
-  recipient_email: string;
-  role: string;
-  status: string;
-}
+type Grant = components['schemas']['GrantOutput'];
+type Invitation = components['schemas']['InvitationOutput'];
 export function ProjectSharing({ project }: { project: Project }) {
   const [open, setOpen] = useState(false);
   const [link, setLink] = useState('');

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM"],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/index.ts", "src/schema.d.ts", "src/auth-schema.d.ts"]
+}

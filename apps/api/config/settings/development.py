@@ -5,6 +5,7 @@ from config.environment import load_environment
 from config.services import service_settings
 
 from .base import *  # noqa: F403
+from .base import REST_FRAMEWORK as BASE_REST_FRAMEWORK
 
 _environment = load_environment(os.environ, development=True)
 SECRET_KEY = _environment.secret_key
@@ -20,3 +21,8 @@ SECURE_HSTS_SECONDS = 0
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 globals().update(service_settings(os.environ))
 globals().update(account_settings(os.environ, production=False))
+
+REST_FRAMEWORK = {
+    **BASE_REST_FRAMEWORK,
+    "NUM_PROXIES": 1 if os.environ.get("CODE_ALONG_TRUST_PROXY") == "true" else 0,
+}

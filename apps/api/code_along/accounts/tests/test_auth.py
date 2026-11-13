@@ -324,3 +324,17 @@ def test_account_responses_cannot_be_stored_by_shared_caches(client: Client) -> 
     response = client.get(BASE + "session", secure=True)
     assert response["Cache-Control"] == "no-store"
     assert "Cookie" in response["Vary"]
+
+
+def test_product_api_rate_budget_is_shared_per_identity() -> None:
+    from rest_framework.throttling import UserRateThrottle
+
+    user = verified_user()
+    first = Client()
+    first.force_login(user)
+    second = Client()
+    second.force_login(user)
+    with patch.dict(UserRateThrottle.THROTTLE_RATES, {"user": "2/min"}):
+        assert first.get("/api/v1/me/", secure=True).status_code == 200
+        assert second.get("/api/v1/me/", secure=True).status_code == 200
+        assert second.get("/api/v1/me/", secure=True).status_code == 429

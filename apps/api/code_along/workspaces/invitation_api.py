@@ -4,12 +4,15 @@ from typing import Any
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema_view
 from rest_framework import serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from code_along.common import schemas as dto
 from code_along.common.api import BodySerializer, actor, page_values
+from code_along.common.schema_helpers import endpoint
 
 from . import invitations
 from .models import WorkspaceInvitation
@@ -47,6 +50,15 @@ def invitation_data(invitation: WorkspaceInvitation) -> dict[str, Any]:
     }
 
 
+@extend_schema_view(
+    get=endpoint("list_workspace_invitations", dto.InvitationPage, paginated=True),
+    post=endpoint(
+        "create_workspace_invitation",
+        dto.InvitationCreated,
+        request=InvitationBody,
+        status=201,
+    ),
+)
 class InvitationListView(APIView):
     def get(self, request: Request, workspace_id: uuid.UUID) -> Response:
         workspace = get_object_or_404(
@@ -81,6 +93,7 @@ class InvitationListView(APIView):
         )
 
 
+@extend_schema_view(delete=endpoint("revoke_workspace_invitation", status=204))
 class InvitationRevokeView(APIView):
     def delete(
         self, request: Request, workspace_id: uuid.UUID, invitation_id: uuid.UUID
@@ -89,6 +102,9 @@ class InvitationRevokeView(APIView):
         return Response(status=204)
 
 
+@extend_schema_view(
+    post=endpoint("preview_invitation", dto.InvitationPreview, request=TokenBody)
+)
 class InvitationPreviewView(APIView):
     def post(self, request: Request) -> Response:
         body = TokenBody(data=request.data)
@@ -105,6 +121,9 @@ class InvitationPreviewView(APIView):
         )
 
 
+@extend_schema_view(
+    post=endpoint("accept_invitation", dto.InvitationAccepted, request=TokenBody)
+)
 class InvitationAcceptView(APIView):
     def post(self, request: Request) -> Response:
         body = TokenBody(data=request.data)

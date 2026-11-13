@@ -1,7 +1,7 @@
+import { productApi } from '../../api/product.ts';
 import { ProjectsPanel } from '../projects/list.tsx';
 import { SignedIn } from '../auth/guard.tsx';
 import { Pagination } from '../../components/pagination.tsx';
-import type { Workspace, Member, Page } from './types.ts';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -23,12 +23,10 @@ function WorkspaceList() {
   const navigate = useNavigate();
   const query = useQuery({
     queryKey: ['workspaces', offset],
-    queryFn: () =>
-      api<Page<Workspace>>(`/api/v1/workspaces/?limit=50&offset=${offset}`),
+    queryFn: () => productApi.workspaces(offset),
   });
   const create = useMutation({
-    mutationFn: (name: string) =>
-      api<Workspace>('/api/v1/workspaces/', { method: 'POST', body: { name } }),
+    mutationFn: (name: string) => productApi.createWorkspace(name),
     onSuccess: async (workspace) => {
       await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
       await navigate(`/workspaces/${workspace.id}`);
@@ -137,12 +135,11 @@ function WorkspaceDetail() {
   const base = `/api/v1/workspaces/${workspaceId}/`;
   const query = useQuery({
     queryKey: ['workspace', workspaceId],
-    queryFn: () => api<Workspace>(base),
+    queryFn: () => productApi.workspace(workspaceId ?? ''),
   });
   const members = useQuery({
     queryKey: ['members', workspaceId, memberOffset],
-    queryFn: () =>
-      api<Page<Member>>(`${base}members/?limit=100&offset=${memberOffset}`),
+    queryFn: () => productApi.members(workspaceId ?? '', memberOffset),
     enabled: Boolean(query.data),
   });
   const update = useMutation({

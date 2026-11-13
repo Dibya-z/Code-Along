@@ -12,6 +12,7 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.headless",
     "rest_framework",
+    "drf_spectacular",
     "channels",
     "code_along.accounts.apps.AccountsConfig",
     "code_along.workspaces.apps.WorkspacesConfig",
@@ -62,6 +63,10 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_PROXY_SSL_HEADER = None
 USE_X_FORWARDED_HOST = False
 REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.UserRateThrottle"],
+    "DEFAULT_THROTTLE_RATES": {"user": "120/min"},
+    "NUM_PROXIES": 0,
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication"
     ],
@@ -103,3 +108,21 @@ PUBLIC_APP_ORIGIN = ""
 DEFAULT_FROM_EMAIL = "Code Along <noreply@code-along.localhost>"
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 512 * 1024
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Code Along product API",
+    "VERSION": "0.1.0",
+    "OAS_VERSION": "3.1.0",
+    "DESCRIPTION": "Session-authenticated product API. Unsafe requests require a masked X-CSRFToken from /api/v1/csrf/. Workspace roles never imply private project access.",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "COMPONENT_SPLIT_PATCH": False,
+    "ENUM_NAME_OVERRIDES": {
+        "WorkspaceRole": ["owner", "instructor", "learner"],
+        "WorkspaceAssignableRole": ["instructor", "learner"],
+        "ProjectRole": ["owner", "editor", "viewer"],
+        "ProjectGrantRole": ["editor", "viewer"],
+        "InvitationRole": ["learner", "instructor", "editor", "viewer"],
+        "InvitationStatus": ["pending", "accepted", "revoked", "expired"],
+        "FileKind": ["python"],
+    },
+}

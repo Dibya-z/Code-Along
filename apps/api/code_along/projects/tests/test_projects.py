@@ -345,3 +345,45 @@ def test_database_requires_owner_membership_in_same_workspace() -> None:
         Project.objects.filter(id=project.id).update(owner=outsider)
         with connection.cursor() as cursor:
             cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")
+
+
+def test_actual_api_responses_match_public_response_contracts() -> None:
+    from code_along.common.schemas import (
+        CurrentUserOutput,
+        FileSource,
+        ProjectOutput,
+        WorkspaceOutput,
+    )
+
+    owner = person("owner")
+    workspace = workspaces.create_workspace(owner, "Group")
+    project = services.create_project(owner, workspace.id, "Project")
+    client = signed_in(owner)
+    from code_along.common.api import BodySerializer
+
+    cases: list[tuple[type[BodySerializer], str]] = [
+        (CurrentUserOutput, "/api/v1/me/"),
+        (WorkspaceOutput, f"/api/v1/workspaces/{workspace.id}/"),
+        (ProjectOutput, f"/api/v1/projects/{project.id}/"),
+        (
+            FileSource,
+            f"/api/v1/projects/{project.id}/files/{project.entrypoint_file_id}/",
+        ),
+    ]
+    for serializer_type, url in cases:
+        response = client.get(url)
+        assert response.status_code == 200
+        serializer = serializer_type(data=response.json())
+        assert serializer.is_valid(), serializer.errors
+
+
+def test_file_delete_uses_explicit_version_query_precondition() -> None:
+    owner = person("owner")
+    workspace = workspaces.create_workspace(owner, "Group")
+    project = services.create_project(owner, workspace.id, "Project")
+    file = services.add_file(owner, project.id, 1, "helper.py")
+    client = signed_in(owner)
+    path = f"/api/v1/projects/{project.id}/files/{file.id}/"
+    assert client.delete(path).status_code == 400
+    assert client.delete(path + "?expected_version=1").status_code == 409
+    assert client.delete(path + "?expected_version=2").status_code == 204

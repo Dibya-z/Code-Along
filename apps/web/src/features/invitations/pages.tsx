@@ -1,3 +1,4 @@
+import type { components } from '@code-along/api-client';
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -8,14 +9,7 @@ import { queryClient } from '../../app/providers.tsx';
 import { SignedIn } from '../auth/guard.tsx';
 import { Pagination } from '../../components/pagination.tsx';
 import type { Workspace, Page } from '../workspaces/types.ts';
-interface Invitation {
-  id: string;
-  recipient_email: string;
-  role: string;
-  expires_at: string;
-  status: string;
-  workspace_id: string;
-}
+type Invitation = components['schemas']['InvitationOutput'];
 export function InvitationsPanel({ workspace }: { workspace: Workspace }) {
   const [open, setOpen] = useState(false);
   const [link, setLink] = useState('');
@@ -178,16 +172,14 @@ function InvitationDetails() {
   const preview = useQuery({
     queryKey: ['invitation', token],
     queryFn: () =>
-      api<{
-        workspace_name: string;
-        project_name: string | null;
-        role: string;
-        accepted: boolean;
-      }>('/api/v1/invitations/preview/', { method: 'POST', body: { token } }),
+      api<components['schemas']['InvitationPreview']>(
+        '/api/v1/invitations/preview/',
+        { method: 'POST', body: { token } },
+      ),
   });
   const accept = useMutation({
     mutationFn: () =>
-      api<{ workspace_id: string; project_id: string | null }>(
+      api<components['schemas']['InvitationAccepted']>(
         '/api/v1/invitations/accept/',
         {
           method: 'POST',

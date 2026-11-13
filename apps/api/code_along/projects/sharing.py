@@ -6,6 +6,7 @@ from django.conf import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema_view
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.request import Request
@@ -14,7 +15,9 @@ from rest_framework.views import APIView
 
 from code_along.accounts.managers import UserManager
 from code_along.accounts.models import User
+from code_along.common import schemas as dto
 from code_along.common.api import BodySerializer, actor, page_values
+from code_along.common.schema_helpers import endpoint
 from code_along.workspaces.invitation_api import invitation_data
 from code_along.workspaces.invitations import digest
 from code_along.workspaces.models import WorkspaceInvitation, WorkspaceMembership
@@ -94,6 +97,15 @@ def revoke_project_invitation(
         invitation.save(update_fields=["revoked_at"])
 
 
+@extend_schema_view(
+    get=endpoint("list_project_invitations", dto.InvitationPage, paginated=True),
+    post=endpoint(
+        "create_project_invitation",
+        dto.InvitationCreated,
+        request=ProjectInvitationBody,
+        status=201,
+    ),
+)
 class ProjectInvitationListView(APIView):
     def get(self, request: Request, project_id: uuid.UUID) -> Response:
         project = get_object_or_404(
@@ -124,6 +136,7 @@ class ProjectInvitationListView(APIView):
         )
 
 
+@extend_schema_view(delete=endpoint("revoke_project_invitation", status=204))
 class ProjectInvitationRevokeView(APIView):
     def delete(
         self, request: Request, project_id: uuid.UUID, invitation_id: uuid.UUID

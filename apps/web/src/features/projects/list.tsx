@@ -1,24 +1,21 @@
+import { productApi } from '../../api/product.ts';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button, Dialog, Field, Notice } from '@code-along/design-system';
-import { api } from '../../api/client.ts';
 import { Failure } from '../../api/feedback.tsx';
 import { queryClient } from '../../app/providers.tsx';
 import { Pagination } from '../../components/pagination.tsx';
-import type { Workspace, Page } from '../workspaces/types.ts';
-import type { Project } from './types.ts';
+import type { Workspace } from '../workspaces/types.ts';
 export function ProjectsPanel({ workspace }: { workspace: Workspace }) {
   const [offset, setOffset] = useState(0);
   const navigate = useNavigate();
-  const base = `/api/v1/workspaces/${workspace.id}/projects/`;
   const query = useQuery({
     queryKey: ['projects', workspace.id, offset],
-    queryFn: () => api<Page<Project>>(`${base}?offset=${offset}`),
+    queryFn: () => productApi.projects(workspace.id, offset),
   });
   const create = useMutation({
-    mutationFn: (name: string) =>
-      api<Project>(base, { method: 'POST', body: { name } }),
+    mutationFn: (name: string) => productApi.createProject(workspace.id, name),
     onSuccess: async (project) => {
       await queryClient.invalidateQueries({
         queryKey: ['projects', workspace.id],

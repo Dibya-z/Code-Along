@@ -1,4 +1,4 @@
-from code_along.accounts.api import CurrentUserView
+from code_along.accounts.api import CsrfTokenView, CurrentUserView
 from code_along.projects.api import RuntimeListView
 from code_along.workspaces.invitation_api import (
     InvitationAcceptView,
@@ -6,7 +6,7 @@ from code_along.workspaces.invitation_api import (
 )
 from django.urls import include, path
 
-from .views import csrf_token, liveness, readiness
+from .views import liveness, readiness
 
 urlpatterns = [
     path("api/v1/projects/", include("code_along.projects.urls")),
@@ -16,7 +16,7 @@ urlpatterns = [
     path("api/v1/workspaces/", include("code_along.workspaces.urls")),
     path("api/v1/auth/", include("allauth.headless.urls")),
     path("api/v1/me/", CurrentUserView.as_view(), name="current-user"),
-    path("api/v1/csrf/", csrf_token, name="csrf-token"),
+    path("api/v1/csrf/", CsrfTokenView.as_view(), name="csrf-token"),
     path("health/live/", liveness, name="liveness"),
     path("health/ready/", readiness, name="readiness"),
 ]
