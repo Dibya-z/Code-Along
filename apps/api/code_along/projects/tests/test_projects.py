@@ -1,7 +1,5 @@
 import hashlib
-import json
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -11,7 +9,6 @@ from code_along.projects.models import (
     Project,
     ProjectAccess,
     ProjectFile,
-    RuntimeProfile,
 )
 from code_along.projects.runtime_catalog import PROFILE_ID
 from code_along.workspaces import services as workspaces
@@ -21,27 +18,6 @@ from django.db import IntegrityError, close_old_connections, connection, transac
 from rest_framework.exceptions import NotFound, ValidationError
 
 pytestmark = [pytest.mark.postgres, pytest.mark.django_db]
-
-
-@pytest.fixture(autouse=True)
-def runtime_catalog() -> None:
-    # Transactional tests flush data-migration rows; restore only this owned test DB.
-    profile = json.loads(
-        (
-            Path(__file__).resolve().parents[5]
-            / "apps/runner-web/public/runtime-manifests/pyodide-core.json"
-        ).read_text()
-    )
-    RuntimeProfile.objects.get_or_create(
-        id=PROFILE_ID,
-        defaults={
-            "runtime_id": profile["runtime_id"],
-            "manifest": profile,
-            "manifest_sha256": hashlib.sha256(
-                json.dumps(profile, sort_keys=True, separators=(",", ":")).encode()
-            ).hexdigest(),
-        },
-    )
 
 
 def test_project_creation_seeds_atomic_file_document_and_frozen_runtime() -> None:

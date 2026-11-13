@@ -1,3 +1,4 @@
+import { ProjectsPanel } from '../projects/list.tsx';
 import { SignedIn } from '../auth/guard.tsx';
 import { Pagination } from '../../components/pagination.tsx';
 import type { Workspace, Member, Page } from './types.ts';
@@ -163,6 +164,9 @@ function WorkspaceDetail() {
         queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] }),
         queryClient.invalidateQueries({ queryKey: ['members', workspaceId] }),
         queryClient.invalidateQueries({ queryKey: ['workspaces'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['invitations', workspaceId],
+        }),
       ]);
     },
   });
@@ -224,10 +228,7 @@ function WorkspaceDetail() {
           make changes.
         </Notice>
       )}
-      <section className="content-section" aria-labelledby="projects-heading">
-        <h2 id="projects-heading">Projects</h2>
-        <p className="muted">No projects yet.</p>
-      </section>
+      <ProjectsPanel workspace={workspace} />
       <section className="content-section" aria-labelledby="members-heading">
         <h2 id="members-heading">Members</h2>
         {members.error && <Failure error={members.error} />}

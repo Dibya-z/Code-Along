@@ -30,6 +30,22 @@ def invitation_for_token(token: str) -> WorkspaceInvitation:
 
 
 def validate_invitation(invitation: WorkspaceInvitation, user: User) -> None:
+    if invitation.project_id:
+        from code_along.projects.models import ProjectAccess
+
+        project = invitation.project
+        if project is None or project.archived_at is not None:
+            raise NotFound("Invitation unavailable.")
+        if not WorkspaceMembership.objects.filter(
+            workspace=project.workspace, user=user, active=True
+        ).exists():
+            raise NotFound("Invitation unavailable.")
+        if (
+            invitation.accepted_at
+            and project.owner_id != user.id
+            and not ProjectAccess.objects.filter(project=project, user=user).exists()
+        ):
+            raise NotFound("Invitation unavailable.")
     if (
         invitation.recipient_email != user.email
         or invitation.revoked_at is not None
@@ -86,7 +102,7 @@ def revoke_invitation(
     workspace = lock_workspace(workspace_id)
     require_membership(workspace, user, owner=True)
     invitation = WorkspaceInvitation.objects.filter(
-        workspace=workspace, id=invitation_id
+        workspace=workspace, id=invitation_id, project__isnull=True
     ).first()
     if invitation is None:
         raise NotFound("Invitation unavailable.")
@@ -113,13 +129,30 @@ def accept_invitation(user: User, token: str) -> Workspace:
     validate_invitation(invitation, user)
     if invitation.accepted_at:
         return workspace
-    member, created = WorkspaceMembership.objects.get_or_create(
-        workspace=workspace, user=user, defaults={"role": invitation.role}
-    )
-    if not created and not member.active:
-        member.active = True
-        member.role = invitation.role
-        member.save(update_fields=["active", "role"])
+    if invitation.project_id:
+        from code_along.projects.models import ProjectAccess
+
+        if invitation.project is not None and invitation.project.owner_id != user.id:
+            ProjectAccess.objects.get_or_create(
+                project=invitation.project,
+                user=user,
+                defaults={"role": invitation.role},
+            )
+        from django.db.models import F
+
+        from code_along.projects.models import Project
+
+        Project.objects.filter(id=invitation.project_id).update(
+            acl_version=F("acl_version") + 1
+        )
+    else:
+        member, created = WorkspaceMembership.objects.get_or_create(
+            workspace=workspace, user=user, defaults={"role": invitation.role}
+        )
+        if not created and not member.active:
+            member.active = True
+            member.role = invitation.role
+            member.save(update_fields=["active", "role"])
     # Existing active membership keeps its role; invitations cannot silently replace it.
     invitation.accepted_by = user
     invitation.accepted_at = timezone.now()

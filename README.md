@@ -216,3 +216,5 @@ The tracker distinguishes verified work from committed work. A commit cannot con
 The account forms now support registration, email verification, login/logout and password reset. See [account flows and private development email](docs/operations/authentication.md). Open the local HTTPS app and choose **Create an account**; verification links are in the private development mail store. Product access requires verified email. Nothing sends real email unless production SMTP is explicitly configured.
 
 Workspace creation, lists, membership roles, owner transfer and archive/restore are implemented. See [workspace policy and APIs](docs/operations/workspaces.md). Recipient-bound invitation links now support workspace join, expiry and revocation; see [invitation behavior](docs/operations/invitations.md). Project foundation follows in M1.7.
+
+Projects now support private creation, starter-file previews, file metadata, explicit editor/viewer grants, recipient-bound project invitations and ownership transfer. See [project behavior and APIs](docs/operations/projects.md). Editor/Python runs are M2; collaboration/durable saves are M3.

@@ -1,3 +1,4 @@
+import { ProjectPage } from '../features/projects/page.tsx';
 import { InvitationPage } from '../features/invitations/pages.tsx';
 import { Component, type ReactNode } from 'react';
 import {
@@ -135,6 +136,7 @@ const router = createBrowserRouter([
       { path: 'workspaces', element: <WorkspacesPage /> },
       { path: 'workspaces/:workspaceId', element: <WorkspacePage /> },
       { path: 'invitations/:token', element: <InvitationPage /> },
+      { path: 'projects/:projectId', element: <ProjectPage /> },
       { path: 'login', element: <AccountPage key="login" kind="login" /> },
       {
         path: 'auth/signup',

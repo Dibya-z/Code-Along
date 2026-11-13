@@ -39,6 +39,7 @@ def invitation_data(invitation: WorkspaceInvitation) -> dict[str, Any]:
     return {
         "id": str(invitation.id),
         "workspace_id": str(invitation.workspace_id),
+        "project_id": str(invitation.project_id) if invitation.project_id else None,
         "recipient_email": invitation.recipient_email,
         "role": invitation.role,
         "expires_at": invitation.expires_at.isoformat(),
@@ -53,7 +54,9 @@ class InvitationListView(APIView):
         )
         require_membership(workspace, actor(request), owner=True)
         offset, limit = page_values(request)
-        query = WorkspaceInvitation.objects.filter(workspace=workspace)
+        query = WorkspaceInvitation.objects.filter(
+            workspace=workspace, project__isnull=True
+        )
         return Response(
             {
                 "items": [
@@ -95,6 +98,7 @@ class InvitationPreviewView(APIView):
         return Response(
             {
                 "workspace_name": invitation.workspace.name,
+                "project_name": invitation.project.name if invitation.project else None,
                 "role": invitation.role,
                 "accepted": invitation.accepted_at is not None,
             }
@@ -108,4 +112,12 @@ class InvitationAcceptView(APIView):
         workspace = invitations.accept_invitation(
             actor(request), body.validated_data["token"]
         )
-        return Response({"workspace_id": str(workspace.id)})
+        invitation = invitations.invitation_for_token(body.validated_data["token"])
+        return Response(
+            {
+                "workspace_id": str(workspace.id),
+                "project_id": str(invitation.project_id)
+                if invitation.project_id
+                else None,
+            }
+        )

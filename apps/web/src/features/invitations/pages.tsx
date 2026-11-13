@@ -178,20 +178,30 @@ function InvitationDetails() {
   const preview = useQuery({
     queryKey: ['invitation', token],
     queryFn: () =>
-      api<{ workspace_name: string; role: string; accepted: boolean }>(
-        '/api/v1/invitations/preview/',
-        { method: 'POST', body: { token } },
-      ),
+      api<{
+        workspace_name: string;
+        project_name: string | null;
+        role: string;
+        accepted: boolean;
+      }>('/api/v1/invitations/preview/', { method: 'POST', body: { token } }),
   });
   const accept = useMutation({
     mutationFn: () =>
-      api<{ workspace_id: string }>('/api/v1/invitations/accept/', {
-        method: 'POST',
-        body: { token },
-      }),
+      api<{ workspace_id: string; project_id: string | null }>(
+        '/api/v1/invitations/accept/',
+        {
+          method: 'POST',
+          body: { token },
+        },
+      ),
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-      await navigate(`/workspaces/${data.workspace_id}`, { replace: true });
+      await navigate(
+        data.project_id
+          ? `/projects/${data.project_id}`
+          : `/workspaces/${data.workspace_id}`,
+        { replace: true },
+      );
     },
   });
   return (
@@ -199,7 +209,7 @@ function InvitationDetails() {
       <p className="eyebrow">YOU’RE INVITED</p>
       <h1>
         {preview.data
-          ? `Join ${preview.data.workspace_name}`
+          ? `Join ${preview.data.project_name ?? preview.data.workspace_name}`
           : 'Workspace invitation'}
       </h1>
       {preview.isPending ? (
@@ -209,12 +219,19 @@ function InvitationDetails() {
       ) : (
         <>
           <p>
-            You’re invited as a {preview.data?.role}. Private project access is
-            shared separately.
+            {preview.data?.project_name
+              ? `Accept to open this private project as a ${preview.data.role}.`
+              : `You’re invited as a ${preview.data?.role}. Private project access is shared separately.`}
           </p>
           {accept.error && <Failure error={accept.error} />}
           <Button busy={accept.isPending} onClick={() => accept.mutate()}>
-            {preview.data?.accepted ? 'Open workspace' : 'Join workspace'}
+            {preview.data?.accepted
+              ? preview.data.project_name
+                ? 'Open project'
+                : 'Open workspace'
+              : preview.data?.project_name
+                ? 'Join project'
+                : 'Join workspace'}
           </Button>
         </>
       )}

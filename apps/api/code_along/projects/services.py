@@ -5,7 +5,11 @@ from django.utils import timezone
 from rest_framework.exceptions import APIException, NotFound, ValidationError
 
 from code_along.accounts.models import User
-from code_along.workspaces.models import Workspace, WorkspaceMembership
+from code_along.workspaces.models import (
+    Workspace,
+    WorkspaceInvitation,
+    WorkspaceMembership,
+)
 from code_along.workspaces.policies import require_membership
 from code_along.workspaces.services import lock_workspace, require_open
 
@@ -216,6 +220,19 @@ def delete_file(
     bump_metadata(project)
 
 
+def invalidate_project_invites(
+    project: Project, user_id: uuid.UUID | None = None
+) -> None:
+    query = WorkspaceInvitation.objects.filter(
+        project=project, accepted_at__isnull=True, revoked_at__isnull=True
+    )
+    if user_id is not None:
+        query = query.filter(
+            recipient_email__in=User.objects.filter(id=user_id).values("email")
+        )
+    query.update(revoked_at=timezone.now())
+
+
 @transaction.atomic
 def set_grant(user: User, project_id: uuid.UUID, user_id: uuid.UUID, role: str) -> None:
     project = lock_project(project_id)
@@ -229,6 +246,7 @@ def set_grant(user: User, project_id: uuid.UUID, user_id: uuid.UUID, role: str) 
         workspace=project.workspace, user_id=user_id, active=True, user__is_active=True
     ).exists():
         raise ValidationError({"user_id": "Choose an active workspace member."})
+    invalidate_project_invites(project, user_id)
     ProjectAccess.objects.update_or_create(
         project=project, user_id=user_id, defaults={"role": role}
     )
@@ -245,6 +263,7 @@ def revoke_grant(user: User, project_id: uuid.UUID, user_id: uuid.UUID) -> None:
         raise ValidationError(
             {"detail": "Transfer project ownership before removing owner access."}
         )
+    invalidate_project_invites(project, user_id)
     ProjectAccess.objects.filter(project=project, user_id=user_id).delete()
     project.acl_version += 1
     project.save(update_fields=["acl_version", "updated_at"])
@@ -267,6 +286,7 @@ def transfer_project(
         user__is_active=True,
     ).exists():
         raise ValidationError({"new_owner_id": "Choose an active workspace member."})
+    invalidate_project_invites(project)
     ProjectAccess.objects.filter(project=project, user_id=new_owner_id).delete()
     ProjectAccess.objects.update_or_create(
         project=project, user=user, defaults={"role": "editor"}

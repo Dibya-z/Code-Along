@@ -81,6 +81,7 @@ def project_data(project: Project, role: str) -> dict[str, Any]:
         "metadata_version": project.metadata_version,
         "acl_version": str(project.acl_version),
         "archived": project.archived_at is not None,
+        "workspace_archived": project.workspace.archived_at is not None,
     }
 
 

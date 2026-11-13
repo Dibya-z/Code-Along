@@ -96,7 +96,8 @@ export async function replaceSession(
 export function safeDestination(value: string | null): string {
   return value &&
     (/^\/invitations\/[A-Za-z0-9_-]{43}$/.test(value) ||
-      /^\/workspaces(?:\/[a-f0-9-]{36})?$/.test(value))
+      /^\/workspaces(?:\/[a-f0-9-]{36})?$/.test(value) ||
+      /^\/projects\/[a-f0-9-]{36}$/.test(value))
     ? value
     : '/workspaces';
 }

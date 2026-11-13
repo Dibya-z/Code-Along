@@ -330,3 +330,90 @@ main {
     flex-wrap: wrap;
   }
 }
+
+.compact-form {
+  max-width: 28rem;
+}
+textarea {
+  font: 1rem/1.5 var(--font-code);
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  resize: vertical;
+}
+.project-workbench {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  gap: 2rem;
+  border-block: 1px solid var(--color-separator);
+  padding-block: 1.5rem;
+}
+.project-workbench > * {
+  min-width: 0;
+}
+.file-list {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 1rem;
+}
+.file-button {
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font: 0.875rem/1.5 var(--font-code);
+  overflow-wrap: anywhere;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.file-button:hover,
+.file-button[aria-pressed='true'] {
+  background: var(--color-raised);
+}
+.project-workbench .code-preview {
+  min-height: 16rem;
+}
+@media (max-width: 64rem) {
+  .project-workbench {
+    grid-template-columns: 1fr;
+  }
+  .file-list {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+h1,
+h2,
+h3 {
+  overflow-wrap: anywhere;
+}
+.list-row > div:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.section-head > div {
+  min-width: 0;
+  max-width: 100%;
+}
+.skip-link {
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0;
+  transform: none;
+}
+.skip-link:focus {
+  clip-path: none;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  padding: 0.75rem 1rem;
+}

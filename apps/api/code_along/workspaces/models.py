@@ -68,6 +68,13 @@ class WorkspaceMembership(models.Model):
 
 
 class WorkspaceInvitation(models.Model):
+    project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.PROTECT,
+        related_name="invitations",
+        null=True,
+        blank=True,
+    )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     workspace = models.ForeignKey(
         Workspace, on_delete=models.PROTECT, related_name="invitations"
@@ -79,7 +86,13 @@ class WorkspaceInvitation(models.Model):
     )
     recipient_email = models.EmailField(max_length=254)
     role = models.CharField(
-        max_length=12, choices=[("instructor", "Instructor"), ("learner", "Learner")]
+        max_length=12,
+        choices=[
+            ("instructor", "Instructor"),
+            ("learner", "Learner"),
+            ("editor", "Editor"),
+            ("viewer", "Viewer"),
+        ],
     )
     token_digest = models.CharField(max_length=64, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -104,7 +117,10 @@ class WorkspaceInvitation(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(role__in=["instructor", "learner"]),
+                condition=(
+                    models.Q(project__isnull=True, role__in=["instructor", "learner"])
+                    | models.Q(project__isnull=False, role__in=["editor", "viewer"])
+                ),
                 name="invitation_valid_role",
             ),
             models.CheckConstraint(

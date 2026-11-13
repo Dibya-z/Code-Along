@@ -228,7 +228,7 @@ def test_api_preview_and_accept_are_authenticated_and_validate_tokens() -> None:
     )
     assert recipient_client.post(
         "/api/v1/invitations/accept/", {"token": token}, content_type="application/json"
-    ).json() == {"workspace_id": str(workspace.id)}
+    ).json() == {"workspace_id": str(workspace.id), "project_id": None}
     assert (
         recipient_client.post(
             "/api/v1/invitations/accept/",

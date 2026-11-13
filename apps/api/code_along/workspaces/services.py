@@ -125,7 +125,10 @@ def transfer_ownership(
     if old.id == target.id:
         return workspace
     WorkspaceInvitation.objects.filter(
-        workspace=workspace, accepted_at__isnull=True, revoked_at__isnull=True
+        workspace=workspace,
+        project__isnull=True,
+        accepted_at__isnull=True,
+        revoked_at__isnull=True,
     ).update(revoked_at=timezone.now())
     old.role = WorkspaceMembership.Role.INSTRUCTOR
     old.save(update_fields=["role"])
