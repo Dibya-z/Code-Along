@@ -20,6 +20,7 @@ import {
   PLOT_LIMITS,
   type RasterPlot,
 } from '@code-along/contracts/execution/plots';
+import { PRACTICE_BUDGETS } from '@code-along/contracts/execution/budgets';
 
 export type RunPhase =
   | 'idle'
@@ -198,6 +199,10 @@ export class ExecutionController {
           }),
         ]),
       });
+      return;
+    }
+    if (this.sequence >= PRACTICE_BUDGETS.outputMessages) {
+      this.finish('output_limit');
       return;
     }
     if (event.sequence !== this.sequence++) {

@@ -3,7 +3,7 @@
 // Node and Emscripten globals; keep those out of this Worker's type environment.
 interface BrowserPyodide {
   readonly loadedPackages: Readonly<Record<string, string>>;
-  FS: {
+  FS: BudgetedFS & {
     mkdir(path: string): void;
     mkdirTree(path: string): void;
     writeFile(path: string, bytes: Uint8Array): void;
@@ -29,6 +29,8 @@ import type { ProjectRunManifest } from '@code-along/contracts/execution/project
 import { prepareRuntime } from './runtime.ts';
 import helperSource from './code_along.py?raw';
 import { isRasterPlot } from '@code-along/contracts/execution/plots';
+import { WorkerOutput } from './output-buffer.ts';
+import { installFileBudgets, type BudgetedFS } from './file-budgets.ts';
 declare const self: DedicatedWorkerGlobalScope;
 let started = false;
 self.onmessage = async (
@@ -43,10 +45,14 @@ self.onmessage = async (
   started = true;
   const { run_id, manifest, stdin, input } = event.data;
   const send = (message: object) => self.postMessage({ run_id, ...message });
-  const output = (stream: string, text: string) => {
-    for (let i = 0; i < text.length; i += 4096)
-      send({ type: 'output', stream, text: text.slice(i, i + 4096) });
-  };
+  const buffered = new WorkerOutput(
+    (stream, text) => send({ type: 'output', stream, text }),
+    () => send({ type: 'limit' }),
+  );
+  const output = (stream: 'stdout' | 'stderr', text: string) =>
+    buffered.append(stream, text);
+  const stdout = new TextDecoder(),
+    stderr = new TextDecoder();
   try {
     const prepared =
       manifest.version === 2 ? await prepareRuntime(manifest.runtime) : null;
@@ -77,8 +83,6 @@ self.onmessage = async (
       throw new Error(
         'The selected Python packages could not load. Retry with a fresh runtime.',
       );
-    const stdout = new TextDecoder(),
-      stderr = new TextDecoder();
     pyodide.setStdout({
       write(bytes) {
         output('stdout', stdout.decode(bytes, { stream: true }));
@@ -94,6 +98,7 @@ self.onmessage = async (
     const mailbox = input ? new Int32Array(input) : null;
     pyodide.setStdin({
       stdin: () => {
+        buffered.flush(); // input() prompts must precede Atomics.wait.
         if (!mailbox) return stdin.shift() ?? null;
         Atomics.store(mailbox, 0, 0);
         send({ type: 'input' });
@@ -130,6 +135,7 @@ self.onmessage = async (
               'Plot limit or PNG validation failed. Use at most four bounded RGB/RGBA PNGs.',
             );
           plotIndex++;
+          buffered.flush();
           send({ ...plot, png: Uint8Array.from(plot.png) });
         },
       );
@@ -139,8 +145,15 @@ self.onmessage = async (
         new TextEncoder().encode(helperSource),
       );
       await pyodide.runPythonAsync(
-        'import sys, builtins\nbuiltins._code_along_emit_png = __code_along_png\nsys.path.insert(0, "/code_along_support")',
+        'import sys, builtins\nsys.dont_write_bytecode = True\nbuiltins._code_along_emit_png = __code_along_png\nsys.path.insert(0, "/code_along_support")',
       );
+      installFileBudgets(pyodide.FS, () => {
+        output(
+          'stderr',
+          'Python virtual-file limit reached: 8 MiB of cumulative growth, 64 new files or 128 new filesystem entries per run. Reduce temporary output.\n',
+        );
+        buffered.flush();
+      });
     }
     const entrypoint =
       manifest.version === 1
@@ -152,14 +165,18 @@ self.onmessage = async (
     pyodide.globals.set('__entrypoint', `/project/${entrypoint}`);
     send({ type: 'ready' });
     const result = await pyodide.runPythonAsync(
-      'import sys, runpy\nsys.path.insert(0, "/project")\nrunpy.run_path(__entrypoint, run_name="__main__")',
+      'import sys, runpy\nsys.path.insert(0, "/project")\ntry:\n    runpy.run_path(__entrypoint, run_name="__main__")\nfinally:\n    for stream in (sys.stdout, sys.stderr):\n        try:\n            stream.flush()\n        except Exception:\n            pass',
     );
     result?.destroy?.();
     output('stdout', stdout.decode());
     output('stderr', stderr.decode());
+    buffered.flush();
     send({ type: 'done', status: 'succeeded' });
   } catch (error) {
+    output('stdout', stdout.decode());
+    output('stderr', stderr.decode());
     output('stderr', String(error));
+    buffered.flush();
     send({ type: 'done', status: 'failed' });
   }
 };

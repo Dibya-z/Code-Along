@@ -15,6 +15,7 @@ import {
   PLOT_LIMITS,
   type RasterPlot,
 } from '@code-along/contracts/execution/plots';
+import { PRACTICE_BUDGETS } from '@code-along/contracts/execution/budgets';
 export type EngineCommand =
   | {
       type: 'run';
@@ -45,6 +46,7 @@ interface ActiveRun {
   running: boolean;
   plots: number;
   plotBytes: number;
+  outputMessages: number;
 }
 /** Trusted shell: owns worker handles, time and output budgets; never trusts Python as a grader. */
 export class ExecutionSupervisor {
@@ -122,6 +124,7 @@ export class ExecutionSupervisor {
       running: false,
       plots: 0,
       plotBytes: 0,
+      outputMessages: 0,
     };
     this.active = run;
     this.state(run, 'initializing');
@@ -166,7 +169,9 @@ export class ExecutionSupervisor {
           return;
         const m = event.data as Record<string, unknown>;
         if (m['run_id'] !== run.id) return;
-        if (m['type'] === 'ready' && !run.running) {
+        if (m['type'] === 'limit') {
+          this.finish(run, 'output_limit');
+        } else if (m['type'] === 'ready' && !run.running) {
           run.running = true;
           clearTimeout(run.timer);
           run.timer = setTimeout(
@@ -201,7 +206,10 @@ export class ExecutionSupervisor {
           ['stdout', 'stderr'].includes(String(m['stream']))
         ) {
           const size = new TextEncoder().encode(m['text']).length;
-          if (run.outputBytes + size > RUN_LIMITS.outputBytes) {
+          if (
+            ++run.outputMessages > PRACTICE_BUDGETS.outputMessages ||
+            run.outputBytes + size > RUN_LIMITS.outputBytes
+          ) {
             this.finish(run, 'output_limit');
             return;
           }

@@ -6,6 +6,7 @@ import {
 import { ExecutionSupervisor, type EngineEvent } from './engine.ts';
 import { captureProjectManifest } from '@code-along/contracts/execution/project';
 import { CORE_RUNTIME } from '@code-along/contracts/execution/profiles';
+import { PRACTICE_BUDGETS } from '@code-along/contracts/execution/budgets';
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 class FakeWorker {
@@ -53,6 +54,25 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe('shared trusted Worker supervisor', () => {
+  it('terminates empty-message floods independently of output byte count', async () => {
+    const f = await fixture();
+    await f.supervisor.handle({
+      type: 'run',
+      run_id: id(2),
+      manifest: f.manifest,
+      stdin: [],
+    });
+    const worker = FakeWorker.instances[0]!;
+    for (let n = 0; n < PRACTICE_BUDGETS.outputMessages + 2; n++)
+      worker.send(id(2), { type: 'output', text: '', stream: 'stdout' });
+    worker.send(id(2), { type: 'done', status: 'succeeded' });
+    expect(worker.terminated).toBe(true);
+    expect(
+      f.events.filter((event) => event.body.type === 'terminal'),
+    ).toHaveLength(1);
+    expect(f.events.at(-1)?.body).toMatchObject({ status: 'output_limit' });
+    f.supervisor.destroy();
+  });
   it('keeps plot indexes independent of stdout and rejects malformed/replayed raster output', async () => {
     const f = await fixture();
     const manifest = await captureProjectManifest({

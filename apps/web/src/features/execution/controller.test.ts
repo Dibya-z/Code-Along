@@ -102,6 +102,27 @@ async function fixture() {
 }
 afterEach(() => vi.useRealTimers());
 describe('product execution state', () => {
+  it('caps empty output packets and keeps repeated Stop/late events terminal exactly once', async () => {
+    const f = await fixture();
+    await f.controller.run();
+    const phases: string[] = [];
+    const unsubscribe = f.controller.subscribe(() =>
+      phases.push(f.controller.getSnapshot().phase),
+    );
+    f.controller.stop();
+    f.controller.stop();
+    f.event(0, { type: 'state', state: 'running' });
+    expect(phases.filter((phase) => phase === 'cancelled')).toHaveLength(1);
+    await f.controller.run();
+    for (let sequence = 0; sequence < 4098; sequence++)
+      f.event(1, { type: 'output', stream: 'stdout', text: '', sequence });
+    f.finish(1);
+    expect(f.controller.getSnapshot().phase).toBe('output_limit');
+    expect(phases.filter((phase) => phase === 'output_limit')).toHaveLength(1);
+    unsubscribe();
+    f.controller.destroy();
+    f.workspace.destroy();
+  });
   it('admits input once only while waiting and records interactive mode in the capture', async () => {
     const f = await fixture();
     await f.controller.run([], undefined, 'interactive');
