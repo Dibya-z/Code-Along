@@ -609,6 +609,59 @@
         "required": ["items"],
         "type": "object"
       },
+      "ScopeEnum": {
+        "description": "* `read` - read\n* `write` - write",
+        "enum": ["read", "write"],
+        "type": "string"
+      },
+      "TicketBodyRequest": {
+        "properties": {
+          "awareness_client_id": {
+            "format": "int64",
+            "maximum": 4294967295,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "client_session_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "generation": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ScopeEnum"
+          }
+        },
+        "required": [
+          "awareness_client_id",
+          "client_session_id",
+          "generation",
+          "scope"
+        ],
+        "type": "object"
+      },
+      "TicketOutput": {
+        "properties": {
+          "document_name": {
+            "maxLength": 48,
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "ticket": {
+            "maxLength": 43,
+            "minLength": 43,
+            "type": "string"
+          }
+        },
+        "required": ["document_name", "expires_at", "ticket"],
+        "type": "object"
+      },
       "TokenBodyRequest": {
         "properties": {
           "token": {
@@ -1146,6 +1199,110 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProjectOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["projects"]
+      }
+    },
+    "/api/v1/projects/{project_id}/documents/{document_id}/ticket/": {
+      "post": {
+        "operationId": "create_collaboration_ticket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketBodyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOutput"
                 }
               }
             },

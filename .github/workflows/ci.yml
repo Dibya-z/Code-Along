@@ -103,6 +103,7 @@ jobs:
           corepack pnpm test
           uv run --locked --offline python tools/dev/postgres_cluster.py -- corepack pnpm --filter @code-along/collaboration test:integration
           uv run --locked --offline python tools/dev/postgres_cluster.py -- corepack pnpm --filter @code-along/collaboration test:transport
+          uv run --locked --offline python tools/dev/postgres_cluster.py -- corepack pnpm --filter @code-along/collaboration test:product
       - name: Build frontend, runner and component stories
         if: steps.changes.outputs.mode != 'docs'
         run: |

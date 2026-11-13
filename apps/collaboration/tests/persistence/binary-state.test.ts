@@ -5,6 +5,7 @@ import {
   CheckpointStoreError,
   mergeBinaryState,
   validateInitialState,
+  validateSource,
 } from '../../src/persistence/binary-state.ts';
 
 function state(text: string): Uint8Array {
@@ -106,4 +107,18 @@ describe('binary source state validation', () => {
       ),
     ).toThrowError(new CheckpointStoreError('resource_limit'));
   });
+});
+
+it('rejects NUL, unpaired Unicode and malformed UTF-8 before peer application', () => {
+  expect(() => validateSource('\ud800')).toThrowError(
+    new CheckpointStoreError('invalid_state'),
+  );
+  expect(() => validateInitialState(state('secret\0source'))).toThrowError(
+    new CheckpointStoreError('invalid_state'),
+  );
+  const invalid = Uint8Array.from(state('x'));
+  invalid[invalid.indexOf(120)] = 255;
+  expect(() => validateInitialState(invalid)).toThrowError(
+    new CheckpointStoreError('invalid_state'),
+  );
 });

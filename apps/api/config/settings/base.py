@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     "code_along.accounts.apps.AccountsConfig",
     "code_along.workspaces.apps.WorkspacesConfig",
     "code_along.projects.apps.ProjectsConfig",
+    "code_along.collaboration.apps.CollaborationConfig",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -77,6 +78,9 @@ REST_FRAMEWORK = {
 # No in-memory substitute for Redis and no product WebSocket subscriptions yet.
 CHANNEL_LAYERS: dict[str, object] = {}
 REDIS_CONNECTION_SECRET: str | None = None
+COLLABORATION_SECRET = ""
+COLLABORATION_CONTROL_SECRET = ""
+COLLABORATION_CONTROL_URL = ""
 
 TEMPLATES = [
     {

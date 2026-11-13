@@ -1,6 +1,7 @@
 import http.client
 import http.server
 import socket
+import socketserver
 import ssl
 import subprocess
 import threading
@@ -111,6 +112,114 @@ def test_invalid_handshake_timeout_is_rejected_before_binding(timeout):
             ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER),
             handshake_timeout=timeout,
         )
+
+
+def test_native_websocket_tunnel_preserves_upgrade_bytes_and_bidirectional_data(
+    certificate, monkeypatch
+):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[2] / "tools/dev"))
+    from tools.dev import native_proxy
+
+    requests = []
+    payload = bytes(range(256)) * 300
+    greeting = b"HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\nfirst-frame"
+
+    class Upstream(socketserver.BaseRequestHandler):
+        def handle(self):
+            data = bytearray()
+            while b"\r\n\r\n" not in data:
+                data.extend(self.request.recv(4096))
+            requests.append(bytes(data))
+            self.request.sendall(greeting)
+            received = bytearray()
+            while len(received) < len(payload):
+                part = self.request.recv(65536)
+                if not part:
+                    return
+                received.extend(part)
+            self.request.sendall(bytes(received))
+
+    upstream = socketserver.ThreadingTCPServer(("127.0.0.1", 0), Upstream)
+    thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+    thread.start()
+    try:
+        monkeypatch.setenv(
+            "CODE_ALONG_NATIVE_COLLABORATION_PORT", str(upstream.server_address[1])
+        )
+        server_context, client_context = certificate
+        with serving(server_context, native_proxy.Handler) as address:
+            monkeypatch.setattr(native_proxy, "PORT", address[1])
+            origin = f"https://127.0.0.1:{address[1]}"
+            monkeypatch.setattr(native_proxy, "APP", origin)
+            with socket.create_connection(address, timeout=3) as tcp:
+                with client_context.wrap_socket(
+                    tcp, server_hostname="127.0.0.1"
+                ) as client:
+                    client.sendall(
+                        (
+                            f"GET /collab HTTP/1.1\r\nHost: 127.0.0.1:{address[1]}\r\nOrigin: {origin}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nCookie: codealong_session=fixture\r\nX-Forwarded-Proto: attacker\r\n\r\n"
+                        ).encode()
+                    )
+                    received = bytearray()
+                    while len(received) < len(greeting):
+                        part = client.recv(4096)
+                        assert part
+                        received.extend(part)
+                    assert received == greeting
+                    client.sendall(payload)
+                    echoed = bytearray()
+                    while len(echoed) < len(payload):
+                        part = client.recv(65536)
+                        assert part
+                        echoed.extend(part)
+                    assert bytes(echoed) == payload
+            assert len(requests) == 1
+            assert b"Cookie: codealong_session=fixture\r\n" in requests[0]
+            assert b"X-Forwarded-Proto: https\r\n" in requests[0]
+            assert b"attacker" not in requests[0]
+    finally:
+        upstream.shutdown()
+        upstream.server_close()
+        thread.join(timeout=2)
+
+
+@pytest.mark.parametrize(
+    "path,origin,status",
+    [
+        ("/collab", "https://attacker.invalid", 403),
+        ("/collab?ticket=must-not-route", "valid", 404),
+        ("/internal/v1/collaboration/consume/", "valid", 404),
+    ],
+)
+def test_native_websocket_boundary_denies_wrong_origin_token_urls_and_private_routes(
+    certificate, monkeypatch, path, origin, status
+):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[2] / "tools/dev"))
+    from tools.dev import native_proxy
+
+    server_context, client_context = certificate
+    with serving(server_context, native_proxy.Handler) as address:
+        monkeypatch.setattr(native_proxy, "PORT", address[1])
+        expected_origin = f"https://127.0.0.1:{address[1]}"
+        monkeypatch.setattr(native_proxy, "APP", expected_origin)
+        client = http.client.HTTPSConnection(
+            *address, context=client_context, timeout=3
+        )
+        try:
+            client.request(
+                "GET",
+                path,
+                headers={
+                    "Origin": expected_origin if origin == "valid" else origin,
+                    "Upgrade": "websocket",
+                    "Connection": "Upgrade",
+                },
+            )
+            response = client.getresponse()
+            assert response.status == status
+            assert b"must-not-route" not in response.read()
+        finally:
+            client.close()
 
 
 def test_native_static_responses_keep_large_tls_bodies_length_framed(

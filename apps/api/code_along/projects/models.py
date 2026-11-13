@@ -136,6 +136,13 @@ class CollaborationDocument(models.Model):
 
     class Meta:
         constraints = [
+            models.UniqueConstraint(
+                fields=["id", "generation"], name="document_id_generation_pair"
+            ),
+            models.UniqueConstraint(
+                fields=["id", "project", "generation"],
+                name="document_project_generation",
+            ),
             models.CheckConstraint(
                 condition=models.Q(
                     kind="text", file__isnull=False, generation__gte=1, schema_version=1

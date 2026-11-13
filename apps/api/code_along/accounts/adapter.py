@@ -12,6 +12,13 @@ from .models import User
 
 
 class AccountAdapter(DefaultAccountAdapter):
+    def logout(self, request: HttpRequest) -> None:
+        from code_along.collaboration.services import revoke_leases
+
+        if request.session.session_key:
+            revoke_leases(session_key=request.session.session_key)
+        super().logout(request)
+
     def clean_email(self, email: str) -> str:
         try:
             return UserManager.normalize_email(email)

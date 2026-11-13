@@ -3,12 +3,14 @@
   "compilerOptions": {
     "lib": ["ES2023", "DOM"],
     "types": ["node"],
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true
   },
   "include": [
     "src/**/*.ts",
     "tests/**/*.ts",
     "vitest.integration.config.ts",
-    "vitest.transport.config.ts"
+    "vitest.transport.config.ts",
+    "vitest.product.config.ts"
   ]
 }

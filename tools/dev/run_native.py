@@ -81,6 +81,9 @@ def main() -> None:
                 if not k.startswith("CODE_ALONG_")
             }
             https_port = os.environ.get("CODE_ALONG_HTTPS_PORT", "8443")
+            collaboration_port = os.environ.get(
+                "CODE_ALONG_NATIVE_COLLABORATION_PORT", "18002"
+            )
             env.update(
                 DJANGO_SETTINGS_MODULE="config.settings.development",
                 CODE_ALONG_DEBUG="false",
@@ -94,6 +97,13 @@ def main() -> None:
                 CODE_ALONG_TRUST_PROXY="true",
                 CODE_ALONG_HTTPS_PORT=https_port,
                 CODE_ALONG_APP_ORIGIN=f"https://127.0.0.1:{https_port}",
+                CODE_ALONG_COLLABORATION_SECRET=secrets.token_urlsafe(32),
+                CODE_ALONG_COLLABORATION_CONTROL_SECRET=secrets.token_urlsafe(32),
+                CODE_ALONG_COLLABORATION_DB_PASSWORD=secrets.token_urlsafe(32),
+                CODE_ALONG_COLLABORATION_DB_USER="code_along_collaboration",
+                CODE_ALONG_SESSION_COOKIE_NAME="codealong_session",
+                CODE_ALONG_COLLABORATION_CONTROL_URL=f"http://127.0.0.1:{collaboration_port}",
+                CODE_ALONG_NATIVE_COLLABORATION_PORT=collaboration_port,
             )
             # Private file mail spool is enabled by the account milestone.
             env["CODE_ALONG_MAIL_DIR"] = str(ROOT / ".runtime/mail")
@@ -122,6 +132,15 @@ def main() -> None:
             )
             if result.returncode:
                 raise RuntimeError("Owned native migration failed")
+            provision = subprocess.run(
+                [sys.executable, "apps/api/manage.py", "provision_collaboration_role"],
+                cwd=ROOT,
+                env=env,
+                stdout=log,
+                stderr=log,
+            )
+            if provision.returncode:
+                raise RuntimeError("Owned collaboration role setup failed")
             api_port = env["CODE_ALONG_NATIVE_API_PORT"] = os.environ.get(
                 "CODE_ALONG_NATIVE_API_PORT", "18000"
             )
@@ -135,6 +154,22 @@ def main() -> None:
                     "config.asgi:application",
                 ],
                 {**env, "PYTHONPATH": str(ROOT / "apps/api")},
+            )
+            spawn(
+                ["node", "apps/collaboration/src/main.ts"],
+                {
+                    **env,
+                    "CODE_ALONG_COLLABORATION_HOST": "127.0.0.1",
+                    "CODE_ALONG_COLLABORATION_PORT": collaboration_port,
+                    "CODE_ALONG_COLLABORATION_API_URL": f"http://127.0.0.1:{api_port}",
+                    "PGHOST": str(cluster.socket_directory),
+                    "PGPORT": "5432",
+                    "PGDATABASE": "postgres",
+                    "PGUSER": "code_along_collaboration",
+                    "PGSSLMODE": "disable",
+                    "NODE_OPTIONS": "--max-old-space-size=256",
+                    "PGPASSWORD": env["CODE_ALONG_COLLABORATION_DB_PASSWORD"],
+                },
             )
             proxy = spawn([sys.executable, "tools/dev/native_proxy.py"], env)
             print(

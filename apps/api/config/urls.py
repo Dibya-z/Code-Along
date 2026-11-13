@@ -1,4 +1,5 @@
 from code_along.accounts.api import CsrfTokenView, CurrentUserView
+from code_along.collaboration.api import TicketView
 from code_along.projects.api import RuntimeListView
 from code_along.workspaces.invitation_api import (
     InvitationAcceptView,
@@ -9,6 +10,11 @@ from django.urls import include, path
 from .views import liveness, readiness
 
 urlpatterns = [
+    path("internal/v1/collaboration/", include("code_along.collaboration.urls")),
+    path(
+        "api/v1/projects/<uuid:project_id>/documents/<uuid:document_id>/ticket/",
+        TicketView.as_view(),
+    ),
     path("api/v1/projects/", include("code_along.projects.urls")),
     path("api/v1/runtime-profiles/", RuntimeListView.as_view()),
     path("api/v1/invitations/preview/", InvitationPreviewView.as_view()),

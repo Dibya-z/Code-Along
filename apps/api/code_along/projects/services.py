@@ -142,6 +142,10 @@ def update_project(
         project.entrypoint_file = file_for_project(project, entrypoint_file_id)
     project.save(update_fields=["name", "archived_at", "entrypoint_file", "updated_at"])
     bump_metadata(project)
+    if archived is not None:
+        from code_along.collaboration.services import revoke_leases
+
+        revoke_leases(project_id=project.id)
     return project
 
 
@@ -217,6 +221,9 @@ def delete_file(
         )
     file.deleted_at = timezone.now()
     file.save(update_fields=["deleted_at"])
+    from code_along.collaboration.services import revoke_leases
+
+    revoke_leases(document_id=file.document.id)
     bump_metadata(project)
 
 
@@ -252,6 +259,9 @@ def set_grant(user: User, project_id: uuid.UUID, user_id: uuid.UUID, role: str) 
     )
     project.acl_version += 1
     project.save(update_fields=["acl_version", "updated_at"])
+    from code_along.collaboration.services import revoke_leases
+
+    revoke_leases(project_id=project.id, user_id=user_id)
 
 
 @transaction.atomic
@@ -267,6 +277,9 @@ def revoke_grant(user: User, project_id: uuid.UUID, user_id: uuid.UUID) -> None:
     ProjectAccess.objects.filter(project=project, user_id=user_id).delete()
     project.acl_version += 1
     project.save(update_fields=["acl_version", "updated_at"])
+    from code_along.collaboration.services import revoke_leases
+
+    revoke_leases(project_id=project.id, user_id=user_id)
 
 
 @transaction.atomic
@@ -295,6 +308,9 @@ def transfer_project(
     project.acl_version += 1
     project.save(update_fields=["owner", "acl_version", "updated_at"])
     bump_metadata(project)
+    from code_along.collaboration.services import revoke_leases
+
+    revoke_leases(project_id=project.id)
     return project
 
 

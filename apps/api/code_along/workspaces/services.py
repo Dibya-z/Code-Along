@@ -27,6 +27,9 @@ def require_open(workspace: Workspace) -> None:
 def bump_acl(workspace: Workspace) -> None:
     workspace.acl_version += 1
     workspace.save(update_fields=["acl_version", "updated_at"])
+    from code_along.collaboration.services import revoke_leases
+
+    revoke_leases(workspace_id=workspace.id)
 
 
 @transaction.atomic
@@ -54,6 +57,9 @@ def update_workspace(
         workspace.archived_at = timezone.now() if archived else None
     workspace.acl_version += 1
     workspace.save(update_fields=["name", "archived_at", "acl_version", "updated_at"])
+    from code_along.collaboration.services import revoke_leases
+
+    revoke_leases(workspace_id=workspace.id)
     return workspace
 
 

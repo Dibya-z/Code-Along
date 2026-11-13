@@ -60,13 +60,13 @@ def test_scientific_data_migration_reverses_and_reapplies_on_owned_empty_profile
     None
 ):
     previous = ("projects", "0002_parent_constraints_and_runtime")
-    target = ("projects", "0003_scientific_runtime")
+    restore_targets = MigrationExecutor(connection).loader.graph.leaf_nodes()
     try:
         MigrationExecutor(connection).migrate([previous])
         assert not RuntimeProfile.objects.filter(id=SCIENTIFIC_PROFILE_ID).exists()
         assert RuntimeProfile.objects.filter(id=PROFILE_ID).exists()
     finally:
-        MigrationExecutor(connection).migrate([target])
+        MigrationExecutor(connection).migrate(restore_targets)
     assert (
         RuntimeProfile.objects.get(id=SCIENTIFIC_PROFILE_ID).manifest_sha256
         == "eb2bfd5f172ccce38411575452b4c723f939a14e095a94a612fb1f9d5fdf21ea"

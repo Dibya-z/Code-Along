@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 from urllib.parse import urlsplit
 
+from code_along.collaboration.config import collaboration_settings
 from django.core.exceptions import ImproperlyConfigured
 
 
@@ -16,6 +17,7 @@ def service_settings(environ: Mapping[str, str]) -> dict[str, object]:
         else None,
         "REDIS_CONNECTION_SECRET": None,
     }
+    result.update(collaboration_settings(environ))
     value = environ.get("CODE_ALONG_REDIS_URL", "")
     if value:
         try:

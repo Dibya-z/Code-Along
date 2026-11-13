@@ -12,6 +12,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from https_server import ThreadedHTTPSServer
+from websocket_proxy import proxy_websocket
 
 ROOT = Path(__file__).resolve().parents[2]
 PORT = int(os.environ.get("CODE_ALONG_HTTPS_PORT", "8443"))
@@ -55,6 +56,21 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_error(421)
             return
         path = urlsplit(self.path).path
+        if path.startswith("/internal/"):
+            self.send_error(404)
+            return
+        if path == "/collab" or path.startswith("/events/"):
+            if runner or self.path != path:
+                self.send_error(404)
+                return
+            proxy_websocket(
+                self,
+                int(os.environ.get("CODE_ALONG_NATIVE_COLLABORATION_PORT", "18002"))
+                if path == "/collab"
+                else int(os.environ.get("CODE_ALONG_NATIVE_API_PORT", "18000")),
+                APP,
+            )
+            return
         if not runner and path.startswith(("/api/", "/health/")):
             try:
                 length = int(self.headers.get("Content-Length", "0"))

@@ -151,3 +151,17 @@ corepack pnpm --filter @code-along/browser-proofs test:foundation
 ```
 
 Storybook serves on loopback 6006. Its build and the frontend build stay ignored. The design package uses strict source/stories checks with `skipLibCheck` limited to its third-party declaration files because Storybook 10.6.7 declarations conflict with TypeScript's exact optional properties; application source remains checked. The browser gate uses fresh owned Chromium/WebKit contexts, checks 320–1440px reflow, the skip link, routing, dialog focus trapping/Escape/return. Safari's macOS default link navigation uses Option-Tab, as documented by [Apple](https://support.apple.com/en-lamr/guide/safari/cpsh003/mac). This is automated keyboard/layout evidence, not a screen-reader audit or retail-browser certification.
+
+## M3 collaboration service setup
+
+The normal controller now starts the private Node/Hocuspocus service alongside Django. `npm run dev` adds missing collaboration credentials to the ignored `.env` atomically, preserving existing values. It does not rotate the application secret/database password or alter the local CA/trust decision. Migration and dedicated-role provisioning complete before the collaboration service starts. Only the HTTPS proxy is published on loopback; private authorization/control routes are denied there.
+
+The service uses a separate `code_along_collaboration` database account, an explicit development-only non-TLS private database connection, bounded queues/connections, a 256 MiB JavaScript heap and a 512 MiB container ceiling. The product schema remains Django-owned. Never substitute the API/database-owner credentials for the collaboration role. Development containers use local settings; these private connection settings are not production deployment instructions.
+
+Run the product persistence integration gate separately from the M0 proofs:
+
+```sh
+uv run --locked --offline python tools/dev/postgres_cluster.py -- corepack pnpm --filter @code-along/collaboration test:product
+```
+
+It requires the documented owned PostgreSQL 18 tools and installed Python/Node workspaces, creates actual Django migrations and a restricted test role, and cleans up its disposable cluster. It does not use the persistent app database. The full CI source path includes this gate. See [product collaboration](../protocols/product-collaboration.md) for ticket, lease, binary initialization and receipt semantics. M3's integrated editor/history/chat and final restart/browser gates are tracked separately until verified.

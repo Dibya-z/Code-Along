@@ -10,7 +10,9 @@ Projects open a multi-file Python editor with stable tabs, syntax highlighting, 
 
 Account-scoped [local recovery](docs/protocols/local-recovery.md) preserves edits on this device, with explicit restore, two-tab conflict handling and source exports. It clears on sign-out by default, with optional device retention. Wait for “Local recovery updated” before closing. **Local drafts** offers three original templates, validated `.codealong.json` import, file operations and source exports. **Open local copy** captures project edits into an independent device-only draft.
 
-An already open complete project/local draft can run offline after its trusted runner connection and chosen environment are warmed. Large verified runtime assets stay in the frame's bounded memory cache; small scripts still need the browser cache. Stop, navigation, eviction or invalid/untrusted HTTPS can require a connection again. Cold offline login/installation is not provided, and login/API responses are never persisted. See [execution and offline limits](docs/protocols/product-execution.md). Collaboration, durable server saves and chat follow in M3. Nothing is deployed.
+An already open complete project/local draft can run offline after its trusted runner connection and chosen environment are warmed. Large verified runtime assets stay in the frame's bounded memory cache; small scripts still need the browser cache. Stop, navigation, eviction or invalid/untrusted HTTPS can require a connection again. Cold offline login/installation is not provided, and login/API responses are never persisted. See [execution and offline limits](docs/protocols/product-execution.md).
+
+M3 is in progress. Its product collaboration service now has migrated binary storage, a restricted database role, one-use session-bound tickets, renewable authorization leases and bounded authenticated transport. The integrated shared-editor UI, history/sharing, events and chat remain under implementation and verification. See [product collaboration](docs/protocols/product-collaboration.md). Nothing is deployed.
 
 Open **https://127.0.0.1:8443** after starting the [local development stack](docs/operations/development-stack.md). This workstation uses the project-owned Lima VM; that guide includes its exact commands. Development verification/reset emails stay in a private local mail store, described in the [account guide](docs/operations/authentication.md).
 
@@ -33,7 +35,7 @@ Open **https://127.0.0.1:8443** after starting the [local development stack](doc
 | API contracts          | Offline-generated OpenAPI and typed clients with CI drift checks                                |
 | Local editor, M2       | CodeMirror 6 and stable per-file Yjs documents                                                  |
 | Local recovery, M2     | Account-scoped Dexie/IndexedDB binary records with revision/epoch checks                        |
-| Collaboration, M3      | Narrow Node/Hocuspocus service; checkpoint/transport proofs await product integration           |
+| Collaboration, M3      | Narrow Node/Hocuspocus service; Django authority and restricted-role binary persistence         |
 | Browser execution, M2  | Hash-pinned Pyodide; frozen product runs in a separate-site supervised fresh Worker             |
 | Later trusted grading  | Separate Linux sandbox hosts and external scoring; never Django or ordinary application workers |
 
@@ -42,7 +44,7 @@ Workspace teaching roles do not grant access to private projects. Provider synch
 ```text
 apps/api/                 Django config, accounts, workspaces and projects
 apps/web/                 React routes, feature screens and credential transport
-apps/collaboration/       Binary checkpoint/transport proofs (M3 integration later)
+apps/collaboration/       Product document service and independent checkpoint/transport proofs
 apps/runner-web/          Separate-site supervised Pyodide product runner and v1 proof adapter
 packages/api-client/      Generated product/auth types and client factories
 packages/contracts/       Versioned checkpoint and execution contracts

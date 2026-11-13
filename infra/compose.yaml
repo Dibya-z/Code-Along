@@ -16,6 +16,9 @@ x-api: &api
     CODE_ALONG_TRUST_PROXY: 'true'
     CODE_ALONG_APP_ORIGIN: https://127.0.0.1:${CODE_ALONG_HTTPS_PORT:-8443}
     CODE_ALONG_MAIL_DIR: /app/dev-mail
+    CODE_ALONG_COLLABORATION_SECRET: ${CODE_ALONG_COLLABORATION_SECRET:?Run npm run dev to prepare local secrets}
+    CODE_ALONG_COLLABORATION_CONTROL_SECRET: ${CODE_ALONG_COLLABORATION_CONTROL_SECRET:?Run npm run dev first}
+    CODE_ALONG_COLLABORATION_CONTROL_URL: http://collaboration:1234
   volumes: [mail:/app/dev-mail]
   networks: [backend]
   depends_on:
@@ -62,6 +65,55 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+  collaboration-role:
+    <<: *api
+    command: [/app/.venv/bin/python, manage.py, provision_collaboration_role]
+    environment:
+      <<: *api-env
+      CODE_ALONG_COLLABORATION_DB_USER: code_along_collaboration
+      CODE_ALONG_COLLABORATION_DB_PASSWORD: ${CODE_ALONG_COLLABORATION_DB_PASSWORD:?Run npm run dev first}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+  collaboration:
+    build:
+      context: ..
+      dockerfile: infra/docker/collaboration.Dockerfile
+    environment:
+      NODE_OPTIONS: --max-old-space-size=256
+      CODE_ALONG_APP_ORIGIN: https://127.0.0.1:${CODE_ALONG_HTTPS_PORT:-8443}
+      CODE_ALONG_COLLABORATION_HOST: 0.0.0.0
+      CODE_ALONG_COLLABORATION_PORT: '1234'
+      CODE_ALONG_COLLABORATION_API_URL: http://api:8000
+      CODE_ALONG_SESSION_COOKIE_NAME: codealong_session
+      CODE_ALONG_COLLABORATION_SECRET: ${CODE_ALONG_COLLABORATION_SECRET:?Run npm run dev first}
+      CODE_ALONG_COLLABORATION_CONTROL_SECRET: ${CODE_ALONG_COLLABORATION_CONTROL_SECRET:?Run npm run dev first}
+      PGHOST: db
+      PGPORT: '5432'
+      PGDATABASE: code_along
+      PGUSER: code_along_collaboration
+      PGPASSWORD: ${CODE_ALONG_COLLABORATION_DB_PASSWORD:?Run npm run dev first}
+      PGSSLMODE: disable
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 64
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    networks: [backend]
+    depends_on:
+      api: { condition: service_healthy }
+      collaboration-role: { condition: service_completed_successfully }
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:1234/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
   proxy:
     build:
       context: ..
@@ -74,6 +126,7 @@ services:
     networks: [backend]
     depends_on:
       api: { condition: service_healthy }
+      collaboration: { condition: service_healthy }
 networks:
   backend:
 volumes:

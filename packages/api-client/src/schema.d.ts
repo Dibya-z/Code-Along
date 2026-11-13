@@ -84,6 +84,22 @@ export interface paths {
     patch: operations['update_project'];
     trace?: never;
   };
+  '/api/v1/projects/{project_id}/documents/{document_id}/ticket/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['create_collaboration_ticket'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/projects/{project_id}/files/': {
     parameters: {
       query?: never;
@@ -558,6 +574,26 @@ export interface components {
     RuntimePage: {
       items: components['schemas']['RuntimeOutput'][];
     };
+    /**
+     * @description * `read` - read
+     *     * `write` - write
+     * @enum {string}
+     */
+    ScopeEnum: 'read' | 'write';
+    TicketBodyRequest: {
+      /** Format: int64 */
+      awareness_client_id: number;
+      /** Format: uuid */
+      client_session_id: string;
+      generation: number;
+      scope: components['schemas']['ScopeEnum'];
+    };
+    TicketOutput: {
+      document_name: string;
+      /** Format: date-time */
+      expires_at: string;
+      ticket: string;
+    };
     TokenBodyRequest: {
       token: string;
     };
@@ -942,6 +978,74 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ProjectOutput'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  create_collaboration_ticket: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+        project_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TicketBodyRequest'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TicketOutput'];
         };
       };
       400: {
