@@ -11,6 +11,8 @@ from contextlib import closing
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from https_server import ThreadedHTTPSServer
+
 ROOT = Path(__file__).resolve().parents[2]
 PORT = int(os.environ.get("CODE_ALONG_HTTPS_PORT", "8443"))
 APP = f"https://127.0.0.1:{PORT}"
@@ -220,12 +222,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(
         ROOT / ".runtime/certs/cert.pem", ROOT / ".runtime/certs/key.pem"
     )
-    server.socket = context.wrap_socket(server.socket, server_side=True)
+    server = ThreadedHTTPSServer(("127.0.0.1", PORT), Handler, context)
     try:
         server.serve_forever()
     finally:

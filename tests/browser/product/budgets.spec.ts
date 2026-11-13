@@ -17,7 +17,14 @@ test('Stop, output floods and virtual file limits leave a fresh usable runtime',
   for (let attempt = 0; attempt < 2; attempt++) {
     await editor.fill('marker = 42\nwhile True: pass\n');
     await run.click();
-    await expect(status).toHaveText('Running', { timeout: 40_000 });
+    await expect(status).toHaveText(
+      /^(Running|Run failed|Run finished|Time limit reached)$/,
+      { timeout: 40_000 },
+    );
+    await expect(
+      status,
+      `${await output.innerText()} ${await page.locator('.execution-panel .notice.error').allTextContents()}`,
+    ).toHaveText('Running');
     const started = Date.now();
     await stop.click();
     await expect(status).toHaveText('Run stopped');
