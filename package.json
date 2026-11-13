@@ -19,7 +19,10 @@
     "dev": "uv run --locked --offline python -m tools.dev.development dev",
     "stop": "uv run --locked --offline python -m tools.dev.development stop",
     "status": "uv run --locked --offline python -m tools.dev.development status",
-    "mail": "uv run --locked --offline python -m tools.dev.development mail"
+    "mail": "uv run --locked --offline python -m tools.dev.development mail",
+    "tls:setup": "uv run --locked --offline python -m tools.dev.local_tls setup",
+    "tls:trust": "uv run --locked --offline python -m tools.dev.local_tls trust",
+    "tls:check": "uv run --locked --offline python -m tools.dev.local_tls check"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

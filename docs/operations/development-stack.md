@@ -22,9 +22,21 @@ npm run stop
 
 Status reads state without starting a stopped VM. Mail listing reports only whether messages exist; `--latest` explicitly prints the newest private message and its access link. Ctrl+C, SIGTERM, terminal SIGHUP or `npm run stop` shuts down this project's services while retaining database/mail volumes. The dedicated Lima VM is stopped too, releasing its 4 GiB allocation. Other Docker engines and unrelated VMs/services are left running. A per-project lock rejects duplicate controllers. Startup failures trigger cleanup, and repeated stops succeed when the VM is already stopped. A force-killed controller cannot run its Python cleanup; a later explicit `npm run stop` still controls the owned project without relying on stale PIDs.
 
-The normal app origin remains **https://127.0.0.1:8443**, with isolated runner **https://localhost:8443**. The existing self-signed certificate still needs user-controlled browser trust; the certificate follow-up is separate. The readiness probe validates the configured certificate directly, rather than disabling TLS verification. No startup command installs certificate trust or changes global Docker contexts.
+The normal app origin remains **https://127.0.0.1:8443**, with isolated runner **https://localhost:8443**. System-wide certificate trust is **optional and deferred by the owner**. The current HTTPS profile can still show a warning; a site-specific exception, where supported by the browser, allows manual inspection of the existing M1 screens. Opening an HTTP URL does not switch this setup to HTTP, and no alternate HTTP profile has been implemented. Future embedded runner/interactive behavior needs its own browser verification. The [optional local HTTPS guide](local-https.md) describes the separate preparation, trust and validation commands. The readiness probe validates the configured certificate directly, rather than disabling TLS verification. No startup command installs certificate trust or changes global Docker contexts. An OS-trust failure from optional `tls:check` is expected while trust installation is deferred and does not imply the API/DB is unhealthy.
 
 The existing base Compose profile below serves built/static assets for integration/packaging checks. Stop the foreground controller before switching manually between static and development profiles. The longer Lima commands are diagnostics; normal startup uses the npm scripts above.
+
+## Try the existing M1 screens
+
+With `npm run dev` already running, open **https://127.0.0.1:8443**. If another terminal owns the foreground controller, the duplicate-start message is expected: open the existing app or use `npm run stop` followed by `npm run dev` to move the session to your terminal. Stopping preserves its accounts/projects/mail. A browser certificate exception may need accepting again after certificate replacement; system-wide CA installation remains optional.
+
+1. Create an account using the signup screen.
+2. Run `npm run mail -- --latest` in your own terminal, open the verification link and select **Verify email**. Sign in with the verified account.
+3. Select **Create workspace**, enter a name and create it.
+4. Select **Create project**, enter a name and open the project. Confirm its starter files appear. Source is read-only in M1; the editor/run experience is M2.
+5. To inspect sharing, use a second account in a separate browser profile, verify it through its own local message, then test workspace/project invitations and editor/viewer access. Workspace membership alone does not open private projects.
+
+The product browser gate repeats registration/verification/login/reset, workspace lifecycle, invitations/removal and project permissions in disposable PostgreSQL/Redis/browser fixtures. It does not create test accounts in the persistent development database. Its loopback test TLS settings do not prove normal-browser trust. The owner's manual walkthrough remains distinct from those automated results.
 
 ## Development proxy security and verification
 
@@ -57,7 +69,7 @@ docker compose --env-file .env -f infra/compose.yaml ps
 curl --insecure --fail https://127.0.0.1:8443/health/ready/
 ```
 
-Initialization creates private ignored `.env` credentials and `.runtime/certs/` self-signed certificates without overwriting existing credentials. Never commit either directory or print resolved Compose configuration into shared logs. The certificate is only for this local setup; `--insecure` is used only for its local smoke check. No system certificate/hosts changes are required. A browser may require accepting the local certificate before visiting the development app.
+Initialization creates private ignored `.env` credentials and, if no certificate exists, `.runtime/certs/` self-signed certificates. It preserves an existing mkcert certificate. Never commit credential/certificate directories or print resolved Compose configuration into shared logs. `--insecure` above is only for the isolated self-signed smoke check. The [local HTTPS trust workflow](local-https.md) is an optional way to remove browser warnings; the owner has deferred its system trust step. It needs no hosts-file changes.
 
 Open **https://127.0.0.1:8443**. The runner uses **https://localhost:8443**, a distinct site, with no product API route. Keep those hostnames distinct: cookies are host-only, and the runner cannot proxy account or project APIs. The proxy strips client forwarding headers and explicitly supplies HTTPS to Django. PostgreSQL and Redis have no host-published ports. HTTP liveness is `/health/live/`; readiness checks both DB and Redis and returns a generic 503 during failure.
 
