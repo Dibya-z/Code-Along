@@ -65,3 +65,23 @@ export async function login(page: Page, email: string, secret = password) {
     page.getByRole('button', { name: 'Sign out', exact: true }),
   ).toBeVisible();
 }
+
+export async function createEditorProject(page: Page) {
+  await page
+    .getByRole('button', { name: 'Create workspace', exact: true })
+    .click();
+  let dialog = page.getByRole('dialog', { name: 'Create a workspace' });
+  await dialog.getByLabel('Workspace name').fill('Editor studio');
+  await dialog
+    .getByRole('button', { name: 'Create workspace', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Create project', exact: true })
+    .click();
+  dialog = page.getByRole('dialog', { name: 'Create a Python project' });
+  await dialog.getByLabel('Project name').fill('A small Python experiment');
+  await dialog
+    .getByRole('button', { name: 'Create project', exact: true })
+    .click();
+  await expect(page.getByLabel('Python source for main.py')).toBeVisible();
+}
