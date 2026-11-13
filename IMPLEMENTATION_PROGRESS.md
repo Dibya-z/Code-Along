@@ -2,6 +2,8 @@
 
 Updated: 13 November 2026 (Asia/Kolkata).
 
+Current position: **M0 and M1 Completed**. **M2 Not Started**. M1 implementation/regression and both Linux CI jobs pass; final documentation is delivered under the owner’s M1 authorization. See the current delivery record at the end and the [M1 validation report](docs/architecture/m1-validation.md).
+
 ## Approved baseline and tracking rules
 
 The project owner approved the [architecture](docs/architecture/approved-architecture.html) on 13 November 2026. Follow that design, its release boundaries and its integration/security gates. Any architectural change requires approval before implementation. PyTogether is a read-only behavioral/source reference; implement Code Along independently.
@@ -23,7 +25,7 @@ The owner explicitly authorized completing the remaining M0 tasks as one review 
 | Milestone                               | Status      | Depends on                       | Exit gate                                                                                                |
 | --------------------------------------- | ----------- | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | M0 — Baseline and integration proofs    | Completed   | Architecture approval (received) | Durable-save and isolated-runner compatibility demonstrated; exact dependencies and contracts documented |
-| M1 — Product foundation and identity    | In Progress | M0                               | Two authenticated users can create/join scoped workspaces/projects; negative permission tests pass       |
+| M1 — Product foundation and identity    | Completed   | M0                               | Two authenticated users can create/join scoped workspaces/projects; negative permission tests pass       |
 | M2 — Multi-file Python IDE              | Not Started | M1; M0 runner proof              | Exact-source local runs, input/output and cancellation work with isolation and resource budgets          |
 | M3 — Collaboration, durability and chat | Not Started | M2; M0 collaboration proof       | Concurrent/reconnect/crash save behavior and durable chat pass integration tests                         |
 | M4 — Learning and instructor workflows  | Not Started | M3                               | Versioned assignments, exact-source submissions and scoped review/progress work                          |
@@ -51,18 +53,18 @@ Initial implementation sequence after the documentation commit: **M0.2 → M0.3 
 
 ## M1 — Product foundation and identity
 
-Milestone status: **In Progress**.
+Milestone status: **Completed**. All M1.1–M1.8 gates pass; see the final delivery record and CI evidence below.
 
-| ID   | Task and sub-tasks                                                                                                                     | Depends on | Status      | Verification / exit criteria                                                                                 |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------- | ------------------------------------------------------------------------------------------------------------ |
-| M1.1 | Django modular backend, initial custom user model before first auth migrations, validated settings, ASGI and safe environment examples | M0         | Completed   | Initial user migration/reversal, startup, validated configuration and M0 regressions pass; committed/pushed  |
-| M1.2 | Reproducible Compose stack, same-origin proxy, isolated runner-site routing, documented native fallback and health checks              | M1.1       | Completed   | Documented fresh setup works; services agree on storage/hosts; secrets excluded from images                  |
-| M1.3 | React routing/providers, typed API/CSRF client, design primitives and Storybook                                                        | M1.2       | Completed   | Type/lint/component checks, keyboard/focus states and error boundaries                                       |
-| M1.4 | User authentication/session flows, registration/verification, login/logout and password reset                                          | M1.3       | Completed   | Session/CSRF/Origin/expiry tests, rate limits and non-disclosing reset behavior                              |
-| M1.5 | Workspace/membership/ownership schema, policies and create/list/update interfaces                                                      | M1.4       | Completed   | Migrations, policy matrix, membership removal and ownership-transfer tests                                   |
-| M1.6 | Expiring invitations, acceptance/revocation and scoped membership UI                                                                   | M1.5       | Completed   | Digest storage, recipient/expiry/use limits and retry/race tests                                             |
-| M1.7 | Project/file metadata, initial document records, explicit grants and policy-controlled APIs/UI                                         | M1.6       | Completed   | Atomic creation; parent association, traversal/collision/quota and cross-tenant negative tests               |
-| M1.8 | API schema generation, CI gates and foundation end-to-end flow                                                                         | M1.7       | In Progress | Local contract/regression/Compose gates pass; first Linux CI and milestone documentation are being finalized |
+| ID   | Task and sub-tasks                                                                                                                     | Depends on | Status    | Verification / exit criteria                                                                                |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------- | ----------------------------------------------------------------------------------------------------------- |
+| M1.1 | Django modular backend, initial custom user model before first auth migrations, validated settings, ASGI and safe environment examples | M0         | Completed | Initial user migration/reversal, startup, validated configuration and M0 regressions pass; committed/pushed |
+| M1.2 | Reproducible Compose stack, same-origin proxy, isolated runner-site routing, documented native fallback and health checks              | M1.1       | Completed | Documented fresh setup works; services agree on storage/hosts; secrets excluded from images                 |
+| M1.3 | React routing/providers, typed API/CSRF client, design primitives and Storybook                                                        | M1.2       | Completed | Type/lint/component checks, keyboard/focus states and error boundaries                                      |
+| M1.4 | User authentication/session flows, registration/verification, login/logout and password reset                                          | M1.3       | Completed | Session/CSRF/Origin/expiry tests, rate limits and non-disclosing reset behavior                             |
+| M1.5 | Workspace/membership/ownership schema, policies and create/list/update interfaces                                                      | M1.4       | Completed | Migrations, policy matrix, membership removal and ownership-transfer tests                                  |
+| M1.6 | Expiring invitations, acceptance/revocation and scoped membership UI                                                                   | M1.5       | Completed | Digest storage, recipient/expiry/use limits and retry/race tests                                            |
+| M1.7 | Project/file metadata, initial document records, explicit grants and policy-controlled APIs/UI                                         | M1.6       | Completed | Atomic creation; parent association, traversal/collision/quota and cross-tenant negative tests              |
+| M1.8 | API schema generation, CI gates and foundation end-to-end flow                                                                         | M1.7       | Completed | Offline contracts, two-user scoped access, full regression and both Linux CI jobs pass                      |
 
 Each schema/migration, API behavior and associated UI may be split into separate verified units when appropriate; do not combine M1 into one commit.
 
@@ -171,7 +173,7 @@ The owner requested one completion bundle after the approved M0.4b commit. Depen
 
 ## Completed M0 bundle
 
-- Task status: **Completed**; final bundle committed as `ffd4a4a` after explicit approval. M1 is **In Progress**.
+- Task status: **Completed**; final bundle committed as `ffd4a4a` after explicit approval. Subsequent M1 delivery is recorded below.
 - New scope: collaboration transport/controller and fixtures, binary DB-restart probe, execution contracts/tests, isolated runner, owned browser tests/HTTPS fixture, hash inventory, original design tokens/DESIGN.md, architecture decisions and consolidated proof report.
 - Existing files updated: workspace/lock/configuration, shared exports/typecheck scopes, README, AGENTS, tracker and existing proof operations documentation.
 - Verification: 153 regular JavaScript tests, 20 native storage cases, 13 native transport cases, 29 Python tests; Chromium 158.0.8127.18 and WebKit 27.2 exercised across the declared 13-case runner matrix. Lint/format/source/test type checks, both fixture builds, runtime asset hashes and dependency audit passed. Clean frozen offline six-workspace install, builds, regular/native tests, native source imports and lock preservation also passed; a mismatched runtime hash was rejected and temporary TLS cleanup verified.
@@ -203,13 +205,14 @@ The owner requested one completion bundle after the approved M0.4b commit. Depen
 | M1.7a fix    | `9c90cab8cbf7695e3f0adf7078a6d9dd66a6f8a0` | Strict test annotation correction; verified, committed and pushed without rewriting history                                                                |
 | M1.7b        | `d82d2a13846bd60879744a35497bb0ae085d56a7` | Project UI/direct sharing/invitations; verified, committed and pushed                                                                                      |
 | M1.8a        | `873676d66beb3b83f34aa7e7ac625edfa769f47a` | Generated API contracts/typed clients; verified, committed and pushed                                                                                      |
-| M1.8b CI     | `d1b405dae94c546c0b09e87955800924101cfd22` | Foundation/Compose CI workflow and owned helpers; locally verified, committed/pushed; observed CI tracked below                                            |
+| M1.8b CI     | `d1b405dae94c546c0b09e87955800924101cfd22` | CI/helpers; local gates and Compose passed; initial product TLS setup failure corrected below                                                              |
+| M1.8b fix    | `980130b4eb3746310722f8cdb146e884e094f285` | TLS prerequisite correction; verified, committed/pushed; complete Linux foundation and Compose jobs passed                                                 |
 
 After an approved commit, replace the pending entry with its actual hash. A commit cannot contain its own final hash: record that hash in the next tracker change and include it in the next approved unit. Do not amend commits or create automatic bookkeeping commits. Record completed units, tests and remaining issues before presenting each subsequent commit.
 
 ## Pending work, known issues and technical debt
 
-- All M0 commits through `ffd4a4a788e3e3258b745a78922dff83774d0aaa` were manually pushed by the user and verified against GitHub main. M1 verified granular commits/pushes were pre-authorized; ordinary gates resume for M2.
+- M0 commits through `ffd4a4a788e3e3258b745a78922dff83774d0aaa` were pushed and verified against GitHub main; the final two were manually pushed by the user. M1 verified granular commits/pushes were pre-authorized; ordinary gates resume for M2.
 - Firefox's installed owned engine cannot find fresh profile folders here. Its suite is unverified, not skipped/passed; fix the launcher and execute all cases before claiming support. Chromium/WebKit results do not certify retail browsers, mobile or deployed headers.
 - M2 editor/execution and M3 production collaboration/admission/leases, durable saves and chat are not implemented. M1 includes working account/workspace/project APIs and UI, read-only starter source and metadata controls; no Run or Saved claim is made.
 - The `checkpoint_proof` schema is disposable fixture DDL, not Django production mapping/history/retention. The one-instance proof is not multi-writer sharding, capacity testing, backup/restore or zero loss of unacknowledged edits. Yjs pending-fragment checks use pinned internals; upgrades need compatibility tests.
@@ -224,7 +227,7 @@ After an approved commit, replace the pending entry with its actual hash. A comm
 
 ## Historical unit record: M1.1 backend foundation
 
-Status: **Completed**, committed and pushed as `0a9824c` under the owner’s M1 authorization. M1 remains In Progress.
+Status at delivery: **Completed**, committed and pushed as `0a9824c` under the owner’s M1 authorization. At that checkpoint the rest of M1 remained in progress.
 
 1. **Completed** — API workspace/pins and validated development/production settings; configuration failure cases pass.
 2. **Completed** — UUID user model, canonical email/display name/framework passwords and first migration; user and database invariants pass.
@@ -293,7 +296,7 @@ M1.7b verification: 66 backend project/sharing/workspace/invitation/migration ca
 
 ## M1.8 API contracts and final gates
 
-Status: In Progress. M1.7b committed/pushed as `d82d2a1`. M1.8a generates product/allauth OpenAPI plus typed clients/DTOs and drift checks; M1.8b adds CI and completes final regression, Compose and delivery documentation. Code generation uses its own TypeScript 5.9.3 peer because openapi-typescript 7.13 declares TypeScript 5; application/source checks remain on the approved TypeScript 6.0.3. No runtime stack change.
+Status: Completed. M1.7b committed/pushed as `d82d2a1`. M1.8a generates product/allauth OpenAPI plus typed clients/DTOs and drift checks; M1.8b adds CI and completes final regression, Compose and delivery documentation. Code generation uses its own TypeScript 5.9.3 peer because openapi-typescript 7.13 declares TypeScript 5; application/source checks remain on the approved TypeScript 6.0.3. No runtime stack change.
 
 M1.8a implementation: warning-free product (21 paths/32 operations) and configured browser-auth schemas, generated typed clients/DTOs, offline snapshot checks, actual response-contract tests, DELETE version query, shared CSRF transport/error handling and shared per-identity HTTP rate policy. App/compiler remains TypeScript 6; TS5 is isolated to codegen. All eight product browser cases pass with generated-client reads/creation; 162 JS tests, 37 focused project/contract tests, 17 auth cases and 14 schema/HTTP cases pass. Full CI/regression remains M1.8b.
 
@@ -302,3 +305,17 @@ M1.8a status: Completed. Proposed commit `feat: generate typed API contracts`. G
 M1.8b CI unit: M1.8a committed/pushed as `873676d`. Added checksum-pinned CI-owned PostgreSQL/Redis tools, exact dependency advisory checks, immutable GitHub Action pins, quality/contract/backend/transport/browser gates and a separate disposable Compose build/smoke job. Cache/upload paths exclude credentials, certificates, database and mail volumes. Local actionlint, shell syntax/CI-only guard, Ruff, strict mypy and workflow formatting pass. Final local regression: 203 Python, 162 regular JS, 20 storage, 13 transport, 26 runner browser, four UI foundation and eight product browser cases pass; both dependency audits report no known advisories. The first Linux CI run and final rebuilt local Compose smoke remain pending. Proposed commit: `ci: add foundation checks`.
 
 M1.8b CI correction: the first Linux run at `d1b405d` passed quality/types/contracts/audits, 203 Python, 162 JS, 20 storage, 13 transport, 26 runner and four UI cases; its independent Compose job also passed. Product browsers did not start because this clean job lacked the local TLS prerequisite (the separate Compose job cannot share its files). A private minimal fixture reproduced the missing-file failure and proved HTTPS startup after initialization. Add explicit private development initialization before the product gate; no test/isolation policy is weakened. Proposed commit: `fix: prepare CI browser TLS`. Full Linux revalidation remains pending.
+
+## Current delivery: M1 completed
+
+All M1.1–M1.8 tasks are **Completed**. The owner’s milestone authorization covered verified granular commits/pushes, including the final documentation handoff. No architecture change, merge, deployment or M2 implementation was performed.
+
+- Implemented: Django/React foundation, persistent local Compose, account verification/sessions/reset, workspaces/membership/ownership, recipient-bound workspace/project invitations, private projects, file metadata/starter previews, explicit editor/viewer grants and generated API contracts/clients.
+- Final local regression: **203 Python**, **162 regular JS**, **20 storage**, **13 transport**, **26 runner browser**, **4 UI browser** and **8 product browser** cases passed. Strict mypy on 64 files, lint/format/types/builds/locks/schema drift passed. npm and 58-entry public PyPI advisory checks reported no known advisories.
+- CI: [complete corrected run 43342883858](https://github.com/Dibya-z/Code-Along/actions/runs/43342883858) at `980130b4eb3746310722f8cdb146e884e094f285`: **foundation passed; compose passed**. This repeats the complete suite on Linux, including the two-user product browser flows. The earlier missing-TLS failure and correction remain visible in history; no gate was skipped or weakened.
+- Final local images built and migrated successfully; app/DB/Redis healthy. Host-side HTTPS smoke passed app assets, cookie/cache scope, runner API denial, unknown hosts, Worker CSP and WASM hash/MIME. Login/signup also rendered without page errors at desktop/mobile sizes; screenshots inspected.
+- Local app: **https://127.0.0.1:8443**, runner **https://localhost:8443**. The owned Lima stack remains running with development database/mail volumes preserved. Setup/start/stop/private email instructions are in README and operations guides.
+- Preservation: all **319** recorded reference source/design hashes match baseline; approved architecture HTML unchanged. Credentials, mail, certificates, dependencies, VM data, caches, builds and test evidence remain ignored.
+- Final handoff updates README, repository guidance, API/feature/setup guides and the M1 validation report; proposed commit: `docs: complete M1 foundation`. Its own hash is recorded in the next meaningful tracker update; final push/CI/clean-tree checks are reported at handoff.
+- Remaining limitations: Firefox launcher unverified, production TLS/SMTP/HSTS/deployment and operational certification deferred; scoped upstream compatibility overrides remain. See known issues and the validation report for practical limits.
+- Next: **M2.1**, after the owner's next instruction and ordinary review/commit/push approvals. Editor/run UI is M2; production collaboration, durable saves and chat are M3. No M2 task has started.

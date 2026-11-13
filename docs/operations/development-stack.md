@@ -29,6 +29,32 @@ docker compose --env-file .env -f infra/compose.yaml up --build -d
 
 Images are pinned by digest in Compose/Dockerfiles: PostgreSQL 18.7, Redis 8.4.5, Python 3.13.12, Node 24.22.3 and Nginx 1.30.6. PostgreSQL 18 mounts `/var/lib/postgresql`, matching its versioned data layout. API image runs as UID 10001. Migrations complete before API startup; proxy waits for API readiness. Runner packaging verifies the pinned runtime inventory before copying assets. Dependency versions remain in uv/pnpm locks.
 
+## This workstation: owned Lima engine
+
+The host has no working Docker engine/CLI. The already provisioned `code-along` Lima VM supplies it. From `/Users/dibyajyoti/Desktop/Projects/Code-Along`:
+
+```sh
+# Start the existing owned VM if it is stopped.
+LIMA_HOME="$PWD/.runtime/lima" .runtime/tools/lima/bin/limactl start code-along
+# Build/start only Code Along, preserving its database and private mail volumes.
+LIMA_HOME="$PWD/.runtime/lima" .runtime/tools/lima/bin/limactl shell code-along sh -c \
+  'cd /Users/dibyajyoti/Desktop/Projects/Code-Along && docker compose --env-file .env -f infra/compose.yaml up --build -d'
+LIMA_HOME="$PWD/.runtime/lima" .runtime/tools/lima/bin/limactl shell code-along sh -c \
+  'cd /Users/dibyajyoti/Desktop/Projects/Code-Along && docker compose --env-file .env -f infra/compose.yaml ps'
+uv run --locked --offline python tools/ci/compose_smoke.py
+```
+
+The final M1 build and host-side smoke check passed at **https://127.0.0.1:8443**. The VM has only this repository mounted read-only; its containers own the persistent named volumes. It does not mount the user's home or reference repository. It uses loopback SSH because initial vsock forwarding failed. The attempted empty Multipass fallback VM was removed after its private SSH route proved unreachable; no existing VM, global firewall or trust settings were changed.
+
+To stop the application while keeping data:
+
+```sh
+LIMA_HOME="$PWD/.runtime/lima" .runtime/tools/lima/bin/limactl shell code-along sh -c \
+  'cd /Users/dibyajyoti/Desktop/Projects/Code-Along && docker compose --env-file .env -f infra/compose.yaml stop'
+```
+
+Do not use `down --volumes` on this development stack if you want to retain accounts/projects. For email, run the commands in the [account guide](authentication.md) inside this VM; they are not host Docker commands. The VM/tool downloads live under ignored `.runtime/` and are machine-local setup, not requirements for another developer with a trusted Docker engine.
+
 ## Native fallback
 
 An owned disposable native stack is available when a container engine is unavailable. It needs trusted PostgreSQL 18 tools, Redis 8, OpenSSL, installed JavaScript/Python workspaces and the built runner. Its database is **deleted on exit**; use Compose when you need persistent development data.
@@ -39,6 +65,7 @@ export UV_CACHE_DIR="$PWD/.uv-cache"
 export CODE_ALONG_POSTGRES_BIN=/absolute/path/to/postgresql-18/bin
 export CODE_ALONG_REDIS_BIN=/absolute/path/to/redis-server
 corepack pnpm install --frozen-lockfile
+corepack pnpm --filter @code-along/web build
 corepack pnpm --filter @code-along/runner-web build
 uv run --locked --offline python tools/dev/init_development.py
 uv run --locked --offline python tools/dev/run_native.py
@@ -50,7 +77,7 @@ Foreground Ctrl-C stops only owned API/proxy/Redis/PostgreSQL processes. It bind
 
 On 13 November 2026 the digest-pinned Compose stack built and ran in a project-owned Lima Linux VM with only this repository mounted read-only. DB/Redis/API became healthy, migration completed and proxy readiness returned 200. A probe row survived PostgreSQL restart; the probe table was removed. Stopping Redis changed readiness to 503; restarting it restored 200. The runner rejected `/api/` and unknown hosts received 421. The native fallback also returned readiness 200 and rejected product API access on its runner site. No shared database or existing VM was changed.
 
-The VM is an optional local tool, not a repository prerequisite. On this workstation it lives under ignored `.runtime/lima/`, with SSH over loopback because vsock forwarding failed. An attempted project-owned Multipass VM was stopped after its private SSH route was unreachable. Neither workaround changes global firewall or trust settings. Production TLS/domain/mail/HSTS and operational hardening remain separate release/deployment work.
+The final M1 rebuild also passed migrations, app/DB/Redis health, React assets, host-only CSRF cookie/no-store, runner API rejection, unknown-host rejection, Worker CSP and the shipped WASM hash/MIME check. Production TLS/domain/mail/HSTS and operational hardening remain separate release/deployment work. CI builds a separate `code-along-ci` stack and removes only its disposable volumes; the local `code-along-dev` data is preserved.
 
 ## Frontend and component library
 

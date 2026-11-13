@@ -19,7 +19,7 @@ A workspace member cannot leave/be removed while owning any project, including a
 - `/api/v1/workspaces/{id}/projects/`: paginated scoped list; POST name/optional curated runtime profile.
 - `/api/v1/projects/{id}/`: GET metadata; PATCH name/archive/entrypoint with `expected_version` and role checks.
 - `.../files/`: GET bounded file metadata; POST path/optional starter text plus expected version.
-- `.../files/{file_id}/`: GET starter source; PATCH rename; DELETE soft-delete, both with expected version. Parent IDs must match.
+- `.../files/{file_id}/`: GET starter source; PATCH rename with JSON `expected_version`; DELETE soft-delete with required query `?expected_version=…`. Parent IDs must match.
 - `.../grants/`: owner-only paginated explicit access list.
 - `.../grants/{user_id}/`: owner-only PUT editor/viewer or DELETE revocation; active same-workspace targets only.
 - `.../ownership/`: owner-only POST new owner and expected metadata version.

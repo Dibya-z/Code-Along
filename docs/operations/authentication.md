@@ -27,6 +27,16 @@ docker compose --env-file .env -f infra/compose.yaml exec api cat /app/dev-mail/
 
 Open its verification/reset link in the same development application. Native fallback writes to ignored `.runtime/mail/`; read the chosen `.log` file locally. These messages contain account-access links: keep them private and never paste them into shared logs or Git. The test suite uses unique fake `example.test` recipients and reads only its private mail store. File delivery is development-only.
 
+On this workstation Docker runs inside the owned Lima VM. List the mail filenames with this command from the repository root:
+
+```sh
+LIMA_HOME="$PWD/.runtime/lima" .runtime/tools/lima/bin/limactl shell code-along sh -c \
+  'cd /Users/dibyajyoti/Desktop/Projects/Code-Along && docker compose --env-file .env -f infra/compose.yaml exec -T api ls /app/dev-mail'
+# Read the selected message privately; replace MESSAGE with its filename.
+LIMA_HOME="$PWD/.runtime/lima" .runtime/tools/lima/bin/limactl shell code-along sh -c \
+  'cd /Users/dibyajyoti/Desktop/Projects/Code-Along && docker compose --env-file .env -f infra/compose.yaml exec -T api cat /app/dev-mail/MESSAGE'
+```
+
 ## Production configuration
 
 Before enabling real accounts, explicitly configure `CODE_ALONG_APP_ORIGIN` (exact HTTPS origin), `CODE_ALONG_SMTP_HOST`, `CODE_ALONG_SMTP_PORT`, `CODE_ALONG_SMTP_USER`, `CODE_ALONG_SMTP_PASSWORD` and `CODE_ALONG_FROM_EMAIL`. SMTP uses STARTTLS and a 10-second timeout. Mail sending fails if origin/host/sender are missing; no credentials or external sender are supplied by this repository. Production mail delivery, domain/TLS/HSTS policy and deployment require separate operational review and approval.
@@ -36,6 +46,7 @@ The standard backend suite tests account/profile validation, verification, dupli
 ```sh
 # Set CODE_ALONG_POSTGRES_BIN and CODE_ALONG_REDIS_BIN first; install/build prerequisites.
 corepack pnpm --filter @code-along/web build
+uv run --locked --offline python tools/dev/init_development.py
 corepack pnpm --filter @code-along/browser-proofs test:product
 ```
 
