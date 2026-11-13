@@ -5,9 +5,12 @@ import { api, ApiError, clearCsrf } from '../../api/client.ts';
 import { queryClient } from '../../app/providers.tsx';
 import { announceSessionChange } from '../recovery/session-events.ts';
 export type Identity = components['schemas']['CurrentUserOutput'];
-export async function getIdentity(): Promise<Identity | null> {
+let changingSession = false;
+export async function getIdentity(
+  signal?: AbortSignal,
+): Promise<Identity | null> {
   try {
-    return await productApi.me();
+    return await productApi.me(signal);
   } catch (error) {
     if (
       error instanceof ApiError &&
@@ -18,7 +21,11 @@ export async function getIdentity(): Promise<Identity | null> {
   }
 }
 export function useIdentity() {
-  return useQuery({ queryKey: ['me'], queryFn: getIdentity });
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: ({ signal }) => getIdentity(signal),
+    enabled: !changingSession,
+  });
 }
 export interface AuthResult {
   meta?: { is_authenticated?: boolean };
@@ -87,6 +94,7 @@ export async function replaceSession(
   destination = '/workspaces',
   broadcast = true,
 ): Promise<void> {
+  changingSession = true;
   if (broadcast) announceSessionChange();
   await queryClient.cancelQueries();
   queryClient.clear();

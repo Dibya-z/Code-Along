@@ -35,7 +35,8 @@ async function result<T>(
 }
 export const productApi = {
   runtimeProfiles: () => result(client().GET('/api/v1/runtime-profiles/')),
-  me: () => result(client().GET('/api/v1/me/')),
+  me: (signal?: AbortSignal) =>
+    result(client().GET('/api/v1/me/', signal ? { signal } : {})),
   workspaces: (offset = 0) =>
     result(
       client().GET('/api/v1/workspaces/', {
