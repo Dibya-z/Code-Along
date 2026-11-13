@@ -55,12 +55,12 @@ describe('canonical editor workspace', () => {
   it('loads each immutable starter exactly once even when responses race', async () => {
     const { workspace, files } = await fixture();
     const source = files[0]!;
-    expect(
-      await Promise.all([
-        workspace.loadSource(source),
-        workspace.loadSource(source),
-      ]),
-    ).toEqual([true, false]);
+    const loaded = await Promise.all([
+      workspace.loadSource(source),
+      workspace.loadSource(source),
+    ]);
+    // Digest completion order is unspecified; exactly one response may seed.
+    expect(loaded.sort()).toEqual([false, true]);
     expect(workspace.file(source.id)?.text.toString()).toBe(
       source.initial_source,
     );
