@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../api/client.ts';
 import { LearningObserver, type LearningObserverIO } from './observer.ts';
+import { VisibleLearningViews } from './registry.ts';
 import { LEARNING_PROTOCOL } from '@code-along/contracts/learning-events';
 const assignmentId = '11111111-1111-4111-8111-111111111111';
 const scope = {
@@ -145,6 +146,116 @@ describe('head-anchored visible learning refresh', () => {
       anchor: '7',
     });
   });
+  it.each(['authorization', 'before head'] as const)(
+    'coalesces registrations and focus during %s into the upcoming fresh read',
+    async (stage) => {
+      const gate = deferred<void>();
+      const first = vi.fn(async () => {}),
+        second = vi.fn(async () => {});
+      const f = fixture();
+      f.head('7');
+      const registry = new VisibleLearningViews(
+        () => f.observer.viewsChanged(),
+        () => f.observer.focus(),
+      );
+      f.io.refresh.mockImplementation((signal) => registry.refresh(signal));
+      if (stage === 'authorization')
+        f.io.authorize.mockImplementationOnce(() => gate.promise);
+      else
+        f.io.head.mockImplementationOnce(async () => {
+          await gate.promise;
+          return '7';
+        });
+      registry.register('first', first);
+      try {
+        f.observer.start(true);
+        await flush();
+        expect(first).not.toHaveBeenCalled();
+        registry.register('second', second);
+        f.observer.focus();
+        gate.resolve();
+        await flush();
+        await flush();
+        expect(first).toHaveBeenCalledOnce();
+        expect(second).toHaveBeenCalledOnce();
+        expect(f.io.authorize).toHaveBeenCalledOnce();
+        expect(f.io.head).toHaveBeenCalledTimes(2);
+        expect(f.observer.getSnapshot()).toMatchObject({
+          phase: 'current',
+          anchor: '7',
+        });
+      } finally {
+        registry.destroy();
+      }
+    },
+  );
+  it('focus during an unchanged before head requires reads in that cycle without another authorization', async () => {
+    const f = fixture();
+    f.head('7');
+    f.observer.start(true);
+    await flush();
+    const gate = deferred<string>();
+    f.io.head.mockImplementationOnce(() => gate.promise);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(f.io.refresh).toHaveBeenCalledOnce();
+    f.observer.focus();
+    gate.resolve('7');
+    await flush();
+    expect(f.io.refresh).toHaveBeenCalledTimes(2);
+    expect(f.io.authorize).toHaveBeenCalledTimes(2);
+    expect(f.io.head).toHaveBeenCalledTimes(4);
+    expect(f.observer.getSnapshot()).toMatchObject({
+      phase: 'current',
+      anchor: '7',
+    });
+  });
+  it.each(['registration', 'focus'] as const)(
+    '%s during model reads still requires a second authorized anchored read',
+    async (invalidation) => {
+      const firstRead = deferred<void>(),
+        secondRead = deferred<void>();
+      const first = vi
+          .fn(async () => {})
+          .mockImplementationOnce(() => firstRead.promise)
+          .mockImplementationOnce(() => secondRead.promise),
+        second = vi.fn(async () => {});
+      const f = fixture();
+      f.head('7');
+      const registry = new VisibleLearningViews(
+        () => f.observer.viewsChanged(),
+        () => f.observer.focus(),
+      );
+      f.io.refresh.mockImplementation((signal) => registry.refresh(signal));
+      registry.register('first', first);
+      try {
+        f.observer.start(true);
+        await flush();
+        expect(first).toHaveBeenCalledOnce();
+        if (invalidation === 'registration')
+          registry.register('second', second);
+        else f.observer.focus();
+        expect(second).not.toHaveBeenCalled();
+        firstRead.resolve();
+        await flush();
+        expect(first).toHaveBeenCalledTimes(2);
+        expect(second).toHaveBeenCalledTimes(
+          invalidation === 'registration' ? 1 : 0,
+        );
+        expect(f.io.authorize).toHaveBeenCalledTimes(2);
+        expect(f.io.head).toHaveBeenCalledTimes(3);
+        expect(f.observer.getSnapshot().phase).toBe('refreshing');
+        secondRead.resolve();
+        await flush();
+        expect(f.io.head).toHaveBeenCalledTimes(4);
+        expect(f.observer.getSnapshot()).toMatchObject({
+          phase: 'current',
+          anchor: '7',
+        });
+      } finally {
+        registry.destroy();
+      }
+    },
+  );
   it('repeats anchored reads when a marker/head races bootstrap instead of assigning the newer head to old data', async () => {
     const read = deferred<void>();
     const f = fixture();

@@ -89,6 +89,7 @@ export class DiscussionController {
   private read = new AbortController();
   private writes = new Set<AbortController>();
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
+  private retryNotBefore = 0;
   private heartbeat: ReturnType<typeof setInterval> | undefined;
   private attempt = 0;
   private lastFrame = 0;
@@ -138,6 +139,7 @@ export class DiscussionController {
     this.heartbeat = setInterval(() => {
       if (
         !this.blocked &&
+        this.retryTimer === undefined &&
         this.env.online() &&
         Date.now() - this.lastFrame > 30000
       )
@@ -151,7 +153,13 @@ export class DiscussionController {
   private connect() {
     if (this.closed || this.blocked || this.socket || !this.env.online())
       return;
+    if (Date.now() < this.retryNotBefore) {
+      this.publish({ phase: 'reconnecting', error: this.cooldownMessage });
+      this.scheduleRetry(this.retryNotBefore - Date.now());
+      return;
+    }
     clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
     this.read.abort();
     this.read = new AbortController();
     const epoch = ++this.epoch;
@@ -224,8 +232,22 @@ export class DiscussionController {
       socket.close();
     }
   }
+  private readonly cooldownMessage =
+    'The server asked discussion to wait before reconnecting. Confirmed messages remain here.';
+  private scheduleRetry(delay: number) {
+    clearTimeout(this.retryTimer);
+    this.retryTimer = setTimeout(
+      () => {
+        this.retryTimer = undefined;
+        this.connect();
+      },
+      Math.max(delay, this.retryNotBefore - Date.now()),
+    );
+  }
   private disconnected(phase: 'offline' | 'reconnecting') {
     if (this.closed || this.blocked) return;
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
     this.read.abort();
     this.epoch++;
     this.working = false;
@@ -236,17 +258,21 @@ export class DiscussionController {
       error:
         phase === 'offline'
           ? 'Offline. Messages are not queued. Reconnect before sending or retrying.'
-          : 'Live discussion updates are reconnecting. Confirmed messages remain here.',
+          : Date.now() < this.retryNotBefore
+            ? this.cooldownMessage
+            : 'Live discussion updates are reconnecting. Confirmed messages remain here.',
     });
     if (this.env.online())
-      this.retryTimer = setTimeout(
-        () => this.connect(),
-        Math.min(15000, 1000 * 2 ** Math.min(this.attempt++, 4)),
+      this.scheduleRetry(
+        Date.now() < this.retryNotBefore
+          ? this.retryNotBefore - Date.now()
+          : Math.min(15000, 1000 * 2 ** Math.min(this.attempt++, 4)),
       );
   }
   private block(error: string) {
     this.blocked = true;
     clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
     this.read.abort();
     this.epoch++;
     this.releaseSocket();
@@ -264,7 +290,23 @@ export class DiscussionController {
         'Discussion access is unavailable. Recheck project access before continuing.',
       );
       void this.refresh('access').catch(() => {});
-    } else this.disconnected(this.env.online() ? 'reconnecting' : 'offline');
+    } else {
+      const seconds =
+        error instanceof ApiError && error.status === 429
+          ? error.retryAfterSeconds
+          : undefined;
+      if (
+        typeof seconds === 'number' &&
+        Number.isInteger(seconds) &&
+        seconds >= 1 &&
+        seconds <= 86400
+      )
+        this.retryNotBefore = Math.max(
+          this.retryNotBefore,
+          Date.now() + seconds * 1000,
+        );
+      this.disconnected(this.env.online() ? 'reconnecting' : 'offline');
+    }
   }
   private queue(event: ProjectEvent) {
     const bytes = new TextEncoder().encode(JSON.stringify(event)).length;
@@ -428,7 +470,7 @@ export class DiscussionController {
     if (this.state.canPost !== canPost) this.publish({ canPost });
   }
   recheck() {
-    if (this.closed) return;
+    if (this.closed || Date.now() < this.retryNotBefore) return;
     this.blocked = false;
     this.releaseSocket();
     this.connect();
@@ -439,6 +481,7 @@ export class DiscussionController {
       this.state.loadingOlder ||
       this.closed ||
       this.blocked ||
+      Date.now() < this.retryNotBefore ||
       !this.env.online() ||
       this.read.signal.aborted ||
       !this.receivedHello ||
@@ -454,11 +497,15 @@ export class DiscussionController {
         this.before = page.next_before;
         this.publish({ hasOlder: page.has_more, error: '' });
       }
-    } catch {
-      if (this.current(epoch))
-        this.publish({
-          error: 'Older messages could not be loaded. Retry when connected.',
-        });
+    } catch (error) {
+      if (this.current(epoch)) {
+        if (error instanceof ApiError && error.status === 429)
+          this.failed(error);
+        else
+          this.publish({
+            error: 'Older messages could not be loaded. Retry when connected.',
+          });
+      }
     } finally {
       if (this.current(epoch)) this.publish({ loadingOlder: false });
     }
@@ -469,6 +516,7 @@ export class DiscussionController {
       !this.state.ready ||
       !this.state.canPost ||
       this.blocked ||
+      Date.now() < this.retryNotBefore ||
       !this.env.online() ||
       this.pending.size >= 20 ||
       !validChatBody(body)
@@ -494,6 +542,7 @@ export class DiscussionController {
       pending.phase === 'sending' ||
       this.closed ||
       this.blocked ||
+      Date.now() < this.retryNotBefore ||
       !this.env.online()
     )
       return;
@@ -518,6 +567,7 @@ export class DiscussionController {
         abort.signal.aborted ||
         grant.accountId !== this.accountId ||
         !grant.canPost ||
+        Date.now() < this.retryNotBefore ||
         !this.env.online()
       )
         throw new Error('Current account/project permission is required.');
@@ -536,7 +586,7 @@ export class DiscussionController {
       if (
         !this.closed &&
         error instanceof ApiError &&
-        [401, 403, 404].includes(error.status)
+        [401, 403, 404, 429].includes(error.status)
       )
         this.failed(error);
       if (

@@ -19,7 +19,7 @@ analytics are deferred.
   security review changed only backup host/TLS validation and its tests; all
   **46 backup tests plus the real restore exercise** then passed on that final
   patch. Full Ruff/format, strict typing across 208 files, lock and Django checks
-  pass. Frontend lint/format/types, **692 JavaScript tests across 64 files**, the
+  pass. Frontend lint/format/types, **711 JavaScript tests across 64 files**, the
   production web build and byte-identical API-contract generation also pass.
 - The final startup repair passes 39 lifecycle/initialization tests, including a
   reproduced repeated-SIGINT interruption during cleanup. Sequential build groups
@@ -56,14 +56,20 @@ analytics are deferred.
 
 ## Open gates
 
-| Gate                                                              | Status                                                          |
-| ----------------------------------------------------------------- | --------------------------------------------------------------- |
-| Focused browser acceptance of the latest reliability changes      | Passed: learning eight plus core collaboration eight            |
-| Normal `npm run dev`, live mounts and existing-data preservation  | Passed, including all 19 live preservation checks               |
-| Actual production Compose/Nginx configuration and runtime checks  | Passed isolated proxy/TLS checks; external prerequisites remain |
-| Real migrated project/submission/feedback backup/restore exercise | Passed, including final host/TLS validation recheck             |
-| Combined source checks, reviewed commit and remote CI             | Local checks passed; commit/push approval and remote CI pending |
-| Target DNS, real TLS/database/mail checks and deployment          | Operator inputs and separate deployment approval required       |
+| Gate                                                              | Status                                                                   |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Focused browser acceptance of the latest reliability changes      | Passed: final read-pressure eight cases; prior 16 retained as history    |
+| Normal `npm run dev`, live mounts and existing-data preservation  | Passed, including all 19 live preservation checks                        |
+| Actual production Compose/Nginx configuration and runtime checks  | Passed isolated proxy/TLS checks; external prerequisites remain          |
+| Real migrated project/submission/feedback backup/restore exercise | Passed, including final host/TLS validation recheck                      |
+| Combined source checks, reviewed commit and remote CI             | `8c1299a`: source/Compose pass; verified correction awaits full Linux CI |
+| Target DNS, real TLS/database/mail checks and deployment          | Operator inputs and separate deployment approval required                |
+
+The owner approved this release bundle and subsequent verified project
+commits/pushes without repeated confirmation. The application bundle is
+`8c1299a8dc8d41d0d3c596ab945483df71c66d52`; its
+[full Linux run](https://github.com/Dibya-z/Code-Along/actions/runs/43644433149)
+finished with source/Compose green and 133/134 product cases passed: WebKit 67/67, Chromium 66/67. The remaining Chromium fixture exhausts a rolling read quota after its first cooldown. Pacing alone was insufficient: bounded measurements recorded 211 actor-page API requests in about 70 seconds. Discussion cooldown and learning pre-read coalescing fixes now pass their focused regressions and full frontend checks; the final targeted runtime gate passes eight cases across both engines. All assertions, quotas and deadlines are retained. The corrected bundle passes all eight targeted cases with zero retries/skips/flaky cases. Its WebKit B/A counter records 203 page API requests versus the earlier 211, with no recorded page-level 429 in either new B/A case; these are limited local samples, not load certification. The separate H2 case still honors its actual read cooldown. A new full Linux run is required after this correction is pushed. No deployment or merge has been performed.
 
 Earlier normal builds crossed the unchanged 3.5GiB monitoring floor and stopped
 cleanly. The owner-approved cleanup removed 13 exact obsolete cache records;
@@ -111,3 +117,5 @@ was not installed. Detailed setup is in [local development](development-stack.md
 This is a manual demo checklist, not evidence that an unexecuted check passed.
 Screen-reader/retail-device certification, cold offline installation, classroom
 load targets, high availability and trusted automatic grading are not claimed.
+Broader metrics/alerts, administrative audit logging and retention policies
+remain M5 follow-up work; the delivery outbox is not a general audit log.

@@ -7,6 +7,7 @@ import type {
 } from '@code-along/contracts/events';
 import type { DiscussionApi } from './api.ts';
 import { DiscussionController } from './controller.ts';
+import { ApiError } from '../../api/client.ts';
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const time = '2026-11-14T01:02:03Z';
@@ -150,6 +151,181 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe('ordinary project discussion observation', () => {
+  it('honors a long read cooldown across heartbeat, manual rechecks and online events without losing messages, cursor or pending nonces', async () => {
+    const f = fixture();
+    f.api.latest.mockResolvedValueOnce(page('5', [message(5)]));
+    await f.ready('5');
+    f.api.post.mockRejectedValueOnce(new Error('Response uncertain'));
+    expect(f.model.send('Keep this exact pending message')).toBe(true);
+    await flush();
+    const pending = f.model.getSnapshot().pending[0]!;
+    const originalMessages = f.model.getSnapshot().messages;
+    f.api.authorize.mockRejectedValueOnce(new ApiError(429, null, 50));
+    f.model.recheck();
+    await flush();
+    const calls = f.api.authorize.mock.calls.length;
+    f.model.recheck();
+    f.online(false);
+    f.online(true);
+    await vi.advanceTimersByTimeAsync(49999);
+    expect(f.api.authorize).toHaveBeenCalledTimes(calls);
+    expect(f.model.getSnapshot().error).toContain('wait');
+    expect(f.sockets).toHaveLength(1);
+    expect(vi.getTimerCount()).toBe(2);
+    expect(f.model.getSnapshot().messages).toEqual(originalMessages);
+    expect(f.model.getSnapshot().pending).toEqual([pending]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.api.authorize).toHaveBeenCalledTimes(calls + 1);
+    expect(f.sockets).toHaveLength(2);
+    const socket = f.sockets[1]!;
+    socket.open();
+    expect(JSON.parse(socket.send.mock.calls[0]![0] as string)).toMatchObject({
+      project_id: id(2),
+      after_sequence: '5',
+    });
+    socket.frame({
+      protocol: 'code-along.events',
+      version: 1,
+      type: 'subscribed',
+      project_id: id(2),
+      head_sequence: '5',
+      refresh_required: false,
+      events: [],
+    });
+    await flush();
+    expect(f.model.getSnapshot().phase).toBe('connected');
+    expect(f.api.post).toHaveBeenCalledTimes(1);
+    expect(f.model.getSnapshot().messages).toEqual(originalMessages);
+    expect(f.model.getSnapshot().pending[0]!.request).toBe(pending.request);
+    f.model.retry(pending.request.client_message_id);
+    await flush();
+    expect(f.api.post).toHaveBeenCalledTimes(2);
+    expect(f.api.post.mock.calls[1]![0]).toBe(pending.request);
+    f.model.destroy();
+  });
+  it('applies an older-page cooldown to sends, retries and a write already awaiting authorization', async () => {
+    const f = fixture();
+    f.api.latest.mockResolvedValueOnce({
+      ...page('5', [message(5)]),
+      next_before: '5',
+      has_more: true,
+    });
+    await f.ready('5');
+    f.api.post.mockRejectedValueOnce(new Error('Response uncertain'));
+    f.model.send('Existing pending message');
+    await flush();
+    const request = f.model.getSnapshot().pending[0]!.request;
+    const authorization = deferred<{ accountId: string; canPost: boolean }>();
+    f.api.authorize.mockReturnValueOnce(authorization.promise);
+    f.model.send('Already checking authorization');
+    f.api.older.mockRejectedValueOnce(new ApiError(429, null, 40));
+    await f.model.older();
+    const calls = f.api.authorize.mock.calls.length;
+    expect(f.model.send('Must not create another nonce')).toBe(false);
+    f.model.retry(request.client_message_id);
+    await f.model.older();
+    authorization.resolve({ accountId: id(1), canPost: true });
+    await flush();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(f.api.authorize).toHaveBeenCalledTimes(calls);
+    expect(f.api.post).toHaveBeenCalledTimes(1);
+    expect(f.api.older).toHaveBeenCalledTimes(1);
+    expect(f.model.getSnapshot().pending).toHaveLength(2);
+    expect(
+      f.model.getSnapshot().pending.every((p) => p.phase === 'unconfirmed'),
+    ).toBe(true);
+    expect(f.model.getSnapshot().pending[0]!.request).toBe(request);
+    expect(f.model.getSnapshot().messages).toEqual([message(5)]);
+    f.model.destroy();
+  });
+  it('does not replay a throttled POST and keeps its exact request available for a later manual retry', async () => {
+    const f = fixture();
+    await f.ready();
+    f.api.post.mockRejectedValueOnce(new ApiError(429, null, 10));
+    f.model.send('Retry this same message later');
+    await flush();
+    const pending = f.model.getSnapshot().pending[0]!;
+    expect(pending.phase).toBe('unconfirmed');
+    expect(f.model.send('No new attempt during cooldown')).toBe(false);
+    f.model.retry(pending.request.client_message_id);
+    f.model.recheck();
+    f.online(true);
+    await vi.advanceTimersByTimeAsync(9999);
+    expect(f.api.authorize).toHaveBeenCalledTimes(2);
+    expect(f.api.post).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.api.authorize).toHaveBeenCalledTimes(3);
+    expect(f.api.post).toHaveBeenCalledTimes(1);
+    expect(f.model.getSnapshot().pending[0]!.request).toBe(pending.request);
+    f.model.retry(pending.request.client_message_id);
+    await flush();
+    expect(f.api.post).toHaveBeenCalledTimes(2);
+    expect(f.api.post.mock.calls[1]![0]).toBe(pending.request);
+    f.model.destroy();
+  });
+  it.each([401, 403, 404])(
+    'keeps denial %s authoritative when another in-flight request reports a cooldown',
+    async (status) => {
+      const f = fixture();
+      await f.ready();
+      const first = deferred<ChatMessage>(),
+        second = deferred<ChatMessage>();
+      f.api.post
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(second.promise);
+      f.model.send('First pending');
+      f.model.send('Second pending');
+      await flush();
+      first.reject(new ApiError(429, null, 45));
+      await flush();
+      second.reject(new ApiError(status, null, 60));
+      await flush();
+      expect(f.model.getSnapshot().phase).toBe('blocked');
+      expect(f.model.getSnapshot().canPost).toBe(false);
+      const calls = f.api.authorize.mock.calls.length;
+      f.online(true);
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(f.api.authorize).toHaveBeenCalledTimes(calls);
+      expect(f.api.post).toHaveBeenCalledTimes(2);
+      expect(f.model.getSnapshot().phase).toBe('blocked');
+      expect(f.refresh).toHaveBeenCalledWith('access');
+      f.model.destroy();
+    },
+  );
+  it('keeps the ordinary exponential read reconnect delays for errors without server timing', async () => {
+    const f = fixture();
+    f.api.authorize
+      .mockRejectedValueOnce(new Error('Network unavailable'))
+      .mockRejectedValueOnce(new Error('Network unavailable'))
+      .mockRejectedValueOnce(new Error('Network unavailable'));
+    f.model.start();
+    await flush();
+    for (const [delay, calls] of [
+      [1000, 1],
+      [2000, 2],
+      [4000, 3],
+    ] as const) {
+      await vi.advanceTimersByTimeAsync(delay - 1);
+      expect(f.api.authorize).toHaveBeenCalledTimes(calls);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(f.api.authorize).toHaveBeenCalledTimes(calls + 1);
+    }
+    f.model.destroy();
+  });
+  it.each([undefined, 0, -1, 1.5, Infinity, NaN, 86401])(
+    'does not use an invalid Retry-After %s as a cooldown',
+    async (seconds) => {
+      const f = fixture();
+      f.api.authorize.mockRejectedValueOnce(new ApiError(429, null, seconds));
+      f.model.start();
+      await flush();
+      await vi.advanceTimersByTimeAsync(999);
+      expect(f.api.authorize).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(f.api.authorize).toHaveBeenCalledTimes(2);
+      f.model.destroy();
+    },
+  );
   it('keeps existing manual retries available at the20-pending new-message capacity', async () => {
     const f = fixture();
     await f.ready();

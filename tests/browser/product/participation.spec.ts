@@ -1599,6 +1599,91 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
   let phase = 'work-A',
     primary: unknown;
   const began = Date.now();
+  const phaseWindows = [{ phase, atMs: 0 }];
+  function setPhase(next: string) {
+    phase = next;
+    phaseWindows.push({ phase, atMs: Date.now() - began });
+  }
+  type HttpCount = {
+    requests: number;
+    responses: number;
+    failed: number;
+    statuses: Record<string, number>;
+  };
+  const http = new Map<string, HttpCount>();
+  const starts = new WeakMap<
+    import('@playwright/test').Request,
+    { phase: string; route: string }
+  >();
+  const manualContextReads: { phase: string; route: string }[] = [];
+  let overflow = 0;
+  const category = (url: string) => {
+    const path = new URL(url).pathname;
+    if (!path.startsWith('/api/')) return null;
+    if (path === '/api/v1/me/') return 'me';
+    if (/\/learning-head\/$/.test(path)) return 'learning-head';
+    if (/^\/api\/v1\/assignments\/[^/]+\/$/.test(path))
+      return 'assignment-summary';
+    if (/\/participations?\//.test(path)) return 'participation';
+    if (/\/works\//.test(path)) return 'work';
+    if (/\/versions\//.test(path)) return 'version';
+    if (/\/progress\//.test(path)) return 'progress';
+    if (/\/submissions\//.test(path)) return 'submissions';
+    if (/^\/api\/v1\/projects\/[^/]+\/$/.test(path)) return 'source-metadata';
+    if (/^\/api\/v1\/projects\/[^/]+\/files\/$/.test(path))
+      return 'source-list';
+    if (/^\/api\/v1\/projects\/[^/]+\/files\/[^/]+\/$/.test(path))
+      return 'source-file';
+    if (/^\/api\/v1\/projects\/[^/]+\/documents\/[^/]+\/ticket\/$/.test(path))
+      return 'source-ticket';
+    if (/^\/api\/v1\/projects\/[^/]+\/events\/head\/$/.test(path))
+      return 'project-head';
+    if (/^\/api\/v1\/projects\/[^/]+\/events\/$/.test(path))
+      return 'project-replay';
+    if (path.startsWith('/api/v1/projects/')) return 'project-other';
+    return 'other-api';
+  };
+  function counted(scope: { phase: string; route: string }) {
+    const key = `${scope.phase}:${scope.route}`;
+    if (!http.has(key)) {
+      if (http.size >= 128) {
+        overflow++;
+        return null;
+      }
+      http.set(key, { requests: 0, responses: 0, failed: 0, statuses: {} });
+    }
+    return http.get(key)!;
+  }
+  function httpSnapshot() {
+    const totals: Record<
+      string,
+      { requests: number; responses: number; failed: number; quota: number }
+    > = {};
+    const routes = [...http].map(([key, value]) => {
+      const [p, route] = key.split(':');
+      const total = (totals[p!] ??= {
+        requests: 0,
+        responses: 0,
+        failed: 0,
+        quota: 0,
+      });
+      total.requests += value.requests;
+      total.responses += value.responses;
+      total.failed += value.failed;
+      total.quota += value.statuses['429'] ?? 0;
+      return { phase: p, route, ...value };
+    });
+    return {
+      totals,
+      routes,
+      phaseWindows,
+      elapsedMs: Date.now() - began,
+      overflow,
+      knownManualContextReads: manualContextReads,
+      scope:
+        'Actor page HTTP only after fixture; API-context calls are separate known reads. No owner or earlier fixture traffic.',
+    };
+  }
   const reads: {
     ms: number;
     phase: string;
@@ -1626,6 +1711,13 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
     if (reads.length > 32) reads.shift();
   };
   const request = (value: import('@playwright/test').Request) => {
+    const allRoute = category(value.url());
+    if (allRoute) {
+      const scope = { phase, route: allRoute };
+      starts.set(value, scope);
+      const count = counted(scope);
+      if (count) count.requests++;
+    }
     const kind = route(value.url());
     if (kind) append({ event: 'request', route: kind });
   };
@@ -1636,6 +1728,25 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
     pathname: string;
   } | null = null;
   const response = (value: import('@playwright/test').Response) => {
+    const allRoute = category(value.url());
+    if (allRoute) {
+      const count = counted(
+        starts.get(value.request()) ?? {
+          phase: 'fixture-inflight',
+          route: allRoute,
+        },
+      );
+      if (count) {
+        count.responses++;
+        const status = [
+          200, 201, 202, 204, 304, 400, 401, 403, 404, 409, 413, 422, 429, 500,
+          502, 503, 504,
+        ].includes(value.status())
+          ? String(value.status())
+          : 'other';
+        count.statuses[status] = (count.statuses[status] ?? 0) + 1;
+      }
+    }
     const kind = route(value.url());
     if (!kind) return;
     const seconds = Number(value.headers()['retry-after']);
@@ -1661,8 +1772,15 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
           : null,
     });
   };
+  const failedRequest = (value: import('@playwright/test').Request) => {
+    const scope = starts.get(value);
+    if (!scope) return;
+    const count = counted(scope);
+    if (count) count.failed++;
+  };
   actor.page.on('request', request);
   actor.page.on('response', response);
+  actor.page.on('requestfailed', failedRequest);
   async function enteredSource(work: Work, expected: string, since: number) {
     const throttled = actor.page
       .getByRole('alert')
@@ -1755,15 +1873,18 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
   try {
     await offer(page, f.assignmentId, actor);
     await accept(actor, f.assignmentId);
+    manualContextReads.push({ phase, route: 'participation' });
     const a = await createWork(actor, f.assignmentId, 'My work on A', false);
     await sourceIs(actor.page, f.original);
     const changed = '# My retained A source\nprint("A stays pinned")\n';
     await replace(actor.page, changed);
+    manualContextReads.push({ phase, route: 'source-list' });
     const oldFiles = await get<PageOf<FileIdentity>>(
       actor.page,
       `/api/v1/projects/${a.project!.id}/files/`,
     );
-    phase = 'publish-B';
+    const verifiedASetupAt = Date.now();
+    setPhase('publish-B');
     const draft = await get<{ revision: number }>(
       page,
       `/api/v1/assignments/${f.assignmentId}/draft/`,
@@ -1789,7 +1910,7 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
       f.ownerSecurity,
     );
     expect(bVersion.id).not.toBe(f.version.id);
-    phase = 'retained-A';
+    setPhase('retained-A');
     await actor.page
       .getByRole('button', { name: 'Refresh work access', exact: true })
       .click();
@@ -1806,6 +1927,7 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
       ),
     ).toHaveCount(0);
     await sourceIs(actor.page, changed);
+    manualContextReads.push({ phase, route: 'work' });
     const continued = await get<Work>(
       actor.page,
       `/api/v1/assignments/${f.assignmentId}/works/${a.id}/`,
@@ -1813,7 +1935,20 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
     expect(continued.assignment_version_id).toBe(f.version.id);
     expect(continued.state).toBe('active');
     expect(continued.can_continue).toBe(true);
-    phase = 'create-B';
+    // This checks version identity and retained source, not burst capacity.
+    // Keep A mounted while the compressed setup reads age out of the real quota.
+    setPhase('aged-A');
+    const remainingSetupWindow = Math.max(
+      0,
+      verifiedASetupAt + 60000 - Date.now(),
+    );
+    info.annotations.push({
+      type: 'functional-fixture-pacing',
+      description: `Kept the normal 120/minute quota; waited ${Math.ceil(remainingSetupWindow / 1000)}s of the verified A setup window before creating B.`,
+    });
+    if (remainingSetupWindow > 0)
+      await actor.page.waitForTimeout(remainingSetupWindow);
+    setPhase('create-B');
     const bEntryStarted = Date.now();
     const b = await createWork(
       actor,
@@ -1823,6 +1958,7 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
     );
     expect(b.assignment_version_id).toBe(bVersion.id);
     expect(b.project!.id).not.toBe(a.project!.id);
+    manualContextReads.push({ phase, route: 'source-list' });
     const newFiles = await get<PageOf<FileIdentity>>(
       actor.page,
       `/api/v1/projects/${b.project!.id}/files/`,
@@ -1834,12 +1970,13 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
       ).toBe(false);
       expect(file.generation).toBe(1);
     }
-    phase = 'fresh-B-source';
+    setPhase('fresh-B-source');
     await enteredSource(b, f.original, bEntryStarted);
-    phase = 'reopen-A-source';
+    setPhase('reopen-A-source');
     const aEntryStarted = Date.now();
     await actor.page.goto(`/assignments/${f.assignmentId}/works/${a.id}`);
     await enteredSource(a, changed, aEntryStarted);
+    manualContextReads.push({ phase, route: 'work' });
     expect(
       (
         await get<PageOf<Work>>(
@@ -1879,7 +2016,8 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
         ),
       }))
       .catch(() => ({ closed: true }));
-    const detail = { phase, state, reads };
+    const httpCounts = httpSnapshot();
+    const detail = { phase, httpCounts, state, reads };
     await info
       .attach('published-B-original-failure', {
         body: JSON.stringify(detail),
@@ -1888,11 +2026,22 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
       .catch(() => undefined);
     // Keep bounded source-free evidence in public assertion annotations too.
     if (error instanceof Error)
-      error.message += `\nWork phase evidence: ${JSON.stringify(detail).slice(0, 1800)}`;
+      error.message += `\nWork phase evidence: ${JSON.stringify({ phase, httpPhases: httpCounts.totals, state, tail: reads.slice(-8) }).slice(0, 1800)}`;
     throw error;
   } finally {
     actor.page.off('request', request);
     actor.page.off('response', response);
+    actor.page.off('requestfailed', failedRequest);
+    const counter = JSON.stringify(httpSnapshot(), null, 2);
+    await writeFile(info.outputPath('actor-http-counter.json'), counter).catch(
+      () => undefined,
+    );
+    await info
+      .attach('actor-http-counter', {
+        body: counter,
+        contentType: 'application/json',
+      })
+      .catch(() => undefined);
     await f.close().catch((error: unknown) => {
       if (primary === undefined) throw error;
     });

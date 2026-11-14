@@ -268,6 +268,7 @@ export class LearningObserver {
         this.seen = maximum(this.seen, before);
         if (
           !force &&
+          !this.force &&
           this.state.anchor !== null &&
           BigInt(before) <= BigInt(this.state.anchor) &&
           BigInt(this.seen) <= BigInt(this.state.anchor) &&
@@ -276,6 +277,7 @@ export class LearningObserver {
           this.update({ phase: 'current', error: null });
           continue;
         }
+        this.force = false;
         const views = this.viewRevision;
         await this.io.refresh(abort.signal);
         if (!current()) return;
