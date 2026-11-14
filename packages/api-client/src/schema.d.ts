@@ -36,6 +36,198 @@ export interface paths {
     patch: operations['update_assignment_draft'];
     trace?: never;
   };
+  '/api/v1/assignments/{assignment_id}/participation/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_own_assignment_participation'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/participation/accept/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['accept_assignment_participation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/participation/decline/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['decline_assignment_participation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/participation/team-consent/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['consent_assignment_team'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/participation/withdraw/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['withdraw_assignment_participation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/participations/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_assignment_participations'];
+    put?: never;
+    post: operations['offer_assignment_participation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/participations/{participation_id}/revoke/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['revoke_assignment_participation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/teams/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_assignment_teams'];
+    put?: never;
+    post: operations['create_assignment_team'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/teams/{team_id}/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_assignment_team'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations['update_assignment_team'];
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/teams/{team_id}/approval/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['approve_assignment_team'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/teams/{team_id}/members/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['offer_assignment_team_member'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/teams/{team_id}/members/{participation_id}/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: operations['remove_assignment_team_member'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/assignments/{assignment_id}/versions/': {
     parameters: {
       query?: never;
@@ -76,6 +268,38 @@ export interface paths {
       cookie?: never;
     };
     get: operations['get_assignment_starter'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/works/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_assignment_work'];
+    put?: never;
+    post: operations['create_assignment_work'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/works/{work_id}/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_assignment_work'];
     put?: never;
     post?: never;
     delete?: never;
@@ -676,6 +900,10 @@ export interface components {
       /** Format: int64 */
       expected_revision: number;
     };
+    AssignmentRevisionRequest: {
+      /** Format: int64 */
+      expected_revision: number;
+    };
     AssignmentStarter: {
       /** Format: uuid */
       assignment_id: string;
@@ -835,6 +1063,17 @@ export interface components {
       id: string;
     };
     /**
+     * @description * `invited` - invited
+     *     * `expired` - expired
+     *     * `accepted` - accepted
+     *     * `declined` - declined
+     *     * `withdrawn` - withdrawn
+     *     * `revoked` - revoked
+     * @enum {string}
+     */
+    EffectiveStateEnum:
+      'invited' | 'expired' | 'accepted' | 'declined' | 'withdrawn' | 'revoked';
+    /**
      * @description * `pyodide` - pyodide
      * @enum {string}
      */
@@ -962,6 +1201,11 @@ export interface components {
      * @enum {string}
      */
     LatePolicyEnum: 'reject';
+    LearningUser: {
+      display_name: string;
+      /** Format: uuid */
+      id: string;
+    };
     LiveShareAccess: {
       kind: components['schemas']['LiveShareAccessKindEnum'];
       scope: components['schemas']['SourceShareScope'];
@@ -1035,6 +1279,48 @@ export interface components {
      * @enum {string}
      */
     MetadataEventEventTypeEnum: 'project.changed';
+    NullEnum: null;
+    Participation: {
+      /** Format: date-time */
+      accepted_at: string | null;
+      /** Format: uuid */
+      assignment_id: string;
+      can_accept: boolean;
+      can_withdraw: boolean;
+      effective_state: components['schemas']['EffectiveStateEnum'];
+      /** Format: date-time */
+      ended_at: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      invite_expires_at: string;
+      /** Format: date-time */
+      invited_at: string;
+      revision: number;
+      state: components['schemas']['ParticipationStateEnum'];
+      team_offer: components['schemas']['TeamOffer'] | null;
+      user: components['schemas']['LearningUser'];
+    };
+    ParticipationOfferRequest: {
+      /** Format: int64 */
+      expected_revision?: number;
+      /** Format: uuid */
+      recipient_id: string;
+    };
+    ParticipationPage: {
+      count: number;
+      items: components['schemas']['Participation'][];
+    };
+    /**
+     * @description * `invited` - invited
+     *     * `accepted` - accepted
+     *     * `declined` - declined
+     *     * `withdrawn` - withdrawn
+     *     * `revoked` - revoked
+     * @enum {string}
+     */
+    ParticipationStateEnum:
+      'invited' | 'accepted' | 'declined' | 'withdrawn' | 'revoked';
     ProjectBodyRequest: {
       archived?: boolean;
       /** Format: uuid */
@@ -1119,6 +1405,12 @@ export interface components {
      */
     PublishedChecksProtocolEnum: 'code-along.public-checks';
     /**
+     * @description * `mode_mismatch` - mode_mismatch
+     *     * `team_size` - team_size
+     * @enum {string}
+     */
+    ReasonEnum: 'mode_mismatch' | 'team_size';
+    /**
      * @description * `code-along-python-helpers-v1` - code-along-python-helpers-v1
      * @enum {string}
      */
@@ -1134,6 +1426,18 @@ export interface components {
     ResolvedShare:
       | components['schemas']['LiveShareResolved']
       | components['schemas']['SnapshotShareResolved'];
+    /**
+     * @description * `participation_ended` - participation_ended
+     *     * `roster_changed` - roster_changed
+     *     * `team_archived` - team_archived
+     *     * `project_unavailable` - project_unavailable
+     * @enum {string}
+     */
+    RetiredReasonEnum:
+      | 'participation_ended'
+      | 'roster_changed'
+      | 'team_archived'
+      | 'project_unavailable';
     RevisionAuthor: {
       display_name: string;
       /** Format: uuid */
@@ -1290,6 +1594,12 @@ export interface components {
       runtime_id: string;
       workspace_archived: boolean;
     };
+    /**
+     * @description * `private` - private
+     *     * `approved_team_editors` - approved_team_editors
+     * @enum {string}
+     */
+    SharingEnum: 'private' | 'approved_team_editors';
     SnapshotRevision: {
       /** Format: date-time */
       created_at: string;
@@ -1341,6 +1651,76 @@ export interface components {
       max_team_size: number;
       mode: components['schemas']['AssignmentSubmissionMode'];
     };
+    Team: {
+      approved_roster_revision: number | null;
+      archived: boolean;
+      /** Format: uuid */
+      assignment_id: string;
+      consent_ready: boolean;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      members: components['schemas']['TeamMember'][];
+      name: string;
+      revision: number;
+      roster_revision: number;
+      /** Format: date-time */
+      updated_at: string;
+      version_eligibility: components['schemas']['VersionEligibility'] | null;
+    };
+    TeamApprovalRequest: {
+      /** Format: int64 */
+      expected_revision: number;
+      /** Format: int64 */
+      roster_revision: number;
+    };
+    TeamConsentRequest: {
+      /** Format: int64 */
+      expected_revision: number;
+      /** Format: int64 */
+      roster_revision: number;
+      /** Format: uuid */
+      team_id: string;
+    };
+    TeamCreateRequest: {
+      name: string;
+    };
+    TeamMember: {
+      consented: boolean;
+      /** Format: uuid */
+      participation_id: string;
+      user: components['schemas']['LearningUser'];
+    };
+    TeamMemberOfferRequest: {
+      /** Format: int64 */
+      expected_participation_revision: number;
+      /** Format: int64 */
+      expected_team_revision: number;
+      /** Format: uuid */
+      participation_id: string;
+    };
+    TeamOffer: {
+      /** Format: date-time */
+      consented_at: string | null;
+      consented_revision: number | null;
+      /** Format: date-time */
+      expires_at: string;
+      name: string;
+      roster_revision: number;
+      /** Format: uuid */
+      team_id: string;
+    };
+    TeamPage: {
+      count: number;
+      items: components['schemas']['Team'][];
+    };
+    TeamPatchRequest: {
+      archived?: boolean;
+      /** Format: int64 */
+      expected_revision: number;
+      name?: string;
+    };
     TicketBodyRequest: {
       /** Format: int64 */
       awareness_client_id: number;
@@ -1364,6 +1744,64 @@ export interface components {
      * @enum {string}
      */
     TypeEnum: 'event';
+    VersionEligibility: {
+      /** Format: uuid */
+      assignment_version_id: string;
+      eligible: boolean;
+      max_team_size: number;
+      member_count: number;
+      reason:
+        components['schemas']['ReasonEnum'] | components['schemas']['NullEnum'];
+      submission_mode: components['schemas']['AssignmentSubmissionMode'];
+    };
+    Work: {
+      /** Format: uuid */
+      assignment_id: string;
+      /** Format: uuid */
+      assignment_version_id: string;
+      can_continue: boolean;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      project: components['schemas']['WorkProject'] | null;
+      retired_reason:
+        | components['schemas']['RetiredReasonEnum']
+        | components['schemas']['NullEnum'];
+      state: components['schemas']['WorkStateEnum'];
+      subject_kind: components['schemas']['AssignmentSubmissionMode'];
+      /** Format: uuid */
+      team_id: string | null;
+      team_roster_revision: number | null;
+    };
+    WorkCreateRequest: {
+      /** Format: uuid */
+      assignment_version_id: string;
+      /** Format: uuid */
+      client_request_id: string;
+      /** Format: int64 */
+      expected_participation_revision: number;
+      /** Format: int64 */
+      expected_team_roster_revision: number | null;
+      project_name: string;
+      sharing: components['schemas']['SharingEnum'];
+    };
+    WorkPage: {
+      count: number;
+      items: components['schemas']['Work'][];
+    };
+    WorkProject: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      role: components['schemas']['ProjectRole'];
+    };
+    /**
+     * @description * `active` - active
+     *     * `retired` - retired
+     * @enum {string}
+     */
+    WorkStateEnum: 'active' | 'retired';
     /**
      * @description * `instructor` - instructor
      *     * `learner` - learner
@@ -1669,6 +2107,842 @@ export interface operations {
       };
     };
   };
+  get_own_assignment_participation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Participation'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  accept_assignment_participation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssignmentRevisionRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Participation'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  decline_assignment_participation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssignmentRevisionRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Participation'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  consent_assignment_team: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TeamConsentRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Participation'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  withdraw_assignment_participation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssignmentRevisionRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Participation'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  list_assignment_participations: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ParticipationPage'];
+        };
+      };
+    };
+  };
+  offer_assignment_participation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ParticipationOfferRequest'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Participation'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  revoke_assignment_participation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        participation_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssignmentRevisionRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Participation'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  list_assignment_teams: {
+    parameters: {
+      query?: {
+        assignment_version_id?: string;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TeamPage'];
+        };
+      };
+    };
+  };
+  create_assignment_team: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TeamCreateRequest'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Team'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  get_assignment_team: {
+    parameters: {
+      query?: {
+        assignment_version_id?: string;
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+        team_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Team'];
+        };
+      };
+    };
+  };
+  update_assignment_team: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        team_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TeamPatchRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Team'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  approve_assignment_team: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        team_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TeamApprovalRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Team'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  offer_assignment_team_member: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        team_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TeamMemberOfferRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Team'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  remove_assignment_team_member: {
+    parameters: {
+      query: {
+        expected_participation_revision: number;
+        expected_team_revision: number;
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+        participation_id: string;
+        team_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Team'];
+        };
+      };
+    };
+  };
   list_assignment_versions: {
     parameters: {
       query?: {
@@ -1885,6 +3159,171 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['AssignmentStarter'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  list_assignment_work: {
+    parameters: {
+      query?: {
+        /**
+         * @description * `true` - true
+         *     * `false` - false
+         */
+        include_retired?: 'true' | 'false';
+        limit?: number;
+        /**
+         * @description * `true` - true
+         *     * `false` - false
+         */
+        mine?: 'true' | 'false';
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkPage'];
+        };
+      };
+    };
+  };
+  create_assignment_work: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WorkCreateRequest'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Work'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  get_assignment_work: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Work'];
         };
       };
       400: {

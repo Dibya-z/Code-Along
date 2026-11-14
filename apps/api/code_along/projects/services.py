@@ -336,6 +336,10 @@ def guard_member_removal(workspace: Workspace, user_id: uuid.UUID) -> None:
                 "detail": "Transfer all projects owned by this member before removing workspace access."
             }
         )
+
+
+def remove_member_grants(workspace: Workspace, user_id: uuid.UUID) -> None:
+    """Existing removal cleanup; run after all learning-domain locks are held."""
     ids = ProjectAccess.objects.filter(
         project__workspace=workspace, user_id=user_id
     ).values_list("project_id", flat=True)

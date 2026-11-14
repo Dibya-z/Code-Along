@@ -26,6 +26,11 @@ const AssignmentPage = lazy(() =>
     default: module.AssignmentPage,
   })),
 );
+const AssignmentWorkPage = lazy(() =>
+  import('../features/learning/work-page.tsx').then((module) => ({
+    default: module.AssignmentWorkPage,
+  })),
+);
 const SharedPage = lazy(() =>
   import('../features/shares/page.tsx').then((module) => ({
     default: module.SharedPage,
@@ -227,6 +232,20 @@ const router = createBrowserRouter([
             }
           >
             <AssignmentPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'assignments/:assignmentId/works/:workId',
+        element: (
+          <Suspense
+            fallback={
+              <div className="page" role="status">
+                Opening assignment work…
+              </div>
+            }
+          >
+            <AssignmentWorkPage />
           </Suspense>
         ),
       },

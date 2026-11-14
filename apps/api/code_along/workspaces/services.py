@@ -98,9 +98,18 @@ def update_member(
             }
         )
     if remove:
-        from code_along.projects.services import guard_member_removal
+        from code_along.projects.services import (
+            guard_member_removal,
+            remove_member_grants,
+        )
 
         guard_member_removal(workspace, user_id)
+        from code_along.learning.participation_services import (
+            invalidate_workspace_membership,
+        )
+
+        invalidate_workspace_membership(workspace, user_id)
+        remove_member_grants(workspace, user_id)
         member.active = False
         WorkspaceInvitation.objects.filter(
             workspace=workspace,

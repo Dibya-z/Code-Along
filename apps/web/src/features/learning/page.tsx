@@ -12,6 +12,9 @@ import { AssignmentAuthor } from './author.tsx';
 import { TaskNavigation } from './navigation.tsx';
 import { PublishedVersion } from './published.tsx';
 import { formatPublicationTime } from './presentation.ts';
+import { MyAssignmentWork } from './my-work.tsx';
+import { TeachingRoster } from './teaching-roster.tsx';
+import { TeachingTeams } from './teaching-teams.tsx';
 import './styles.css';
 
 export function AssignmentPage() {
@@ -50,8 +53,15 @@ function AssignmentDetail({
     [401, 403, 404].includes(query.error.status);
   const sections = [
     { id: 'overview', label: 'Overview' },
+    { id: 'my-work', label: 'My work' },
     ...(assignment?.can_author ? [{ id: 'draft', label: 'Edit draft' }] : []),
     { id: 'versions', label: 'Published versions' },
+    ...(assignment?.can_author
+      ? [
+          { id: 'teaching-roster', label: 'Teaching roster' },
+          { id: 'teaching-teams', label: 'Teams' },
+        ]
+      : []),
   ];
   const active = sections.some((section) => `#${section.id}` === location.hash)
     ? location.hash.slice(1)
@@ -148,6 +158,21 @@ function AssignmentDetail({
           </>
         )}
       </section>
+      <section
+        className="content-section learning-view"
+        id="my-work"
+        tabIndex={-1}
+        hidden={active !== 'my-work'}
+        aria-label="My assignment work"
+      >
+        <MyAssignmentWork
+          assignment={assignment}
+          accountId={accountId}
+          active={active === 'my-work'}
+          paused={Boolean(query.error)}
+          onRefreshAssignment={() => query.refetch({ throwOnError: true })}
+        />
+      </section>
       {assignment.can_author && (
         <section
           className="content-section learning-view"
@@ -177,6 +202,39 @@ function AssignmentDetail({
           active={active === 'versions'}
         />
       </section>
+      {assignment.can_author && (
+        <>
+          <section
+            className="content-section learning-view"
+            id="teaching-roster"
+            tabIndex={-1}
+            hidden={active !== 'teaching-roster'}
+            aria-label="Assignment teaching roster"
+          >
+            <TeachingRoster
+              assignment={assignment}
+              accountId={accountId}
+              active={active === 'teaching-roster'}
+              paused={Boolean(query.error)}
+              onRefreshAssignment={() => query.refetch({ throwOnError: true })}
+            />
+          </section>
+          <section
+            className="content-section learning-view"
+            id="teaching-teams"
+            tabIndex={-1}
+            hidden={active !== 'teaching-teams'}
+            aria-label="Assignment teams"
+          >
+            <TeachingTeams
+              assignment={assignment}
+              accountId={accountId}
+              active={active === 'teaching-teams'}
+              paused={Boolean(query.error)}
+            />
+          </section>
+        </>
+      )}
     </div>
   );
 }

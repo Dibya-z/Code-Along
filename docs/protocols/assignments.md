@@ -42,7 +42,7 @@ Draft patches accept one or more of `title`, `instructions`, `hints`, `public_ch
 The server derives the starter project and origin; clients cannot submit project/workspace/authority fields independently.
 Null starter revision clears both starter references. Null checks means no visible checks; null due date means no deadline.
 Submission policy stores individual/team mode, 1–100 attempts, size 1 for individual or 2–6 for team, and fixed late policy `reject`.
-These policy values are published metadata in M4.1; no participation or submission operation is implemented by them.
+Work and later submission actions use these frozen policy values; publication itself creates no participation or submission.
 
 ## Draft CAS and publication retry
 
@@ -141,5 +141,5 @@ corepack pnpm api:generate
 The [tests](../../apps/api/code_along/learning/tests/) cover immutable exact bytes, scoped reads, co-teacher H/H2 separation, actual session races,
 CSRF/Origin, bounded JSON, parent constraints, migration reversal/restoration, concurrent CAS/capacity and transactional rollback.
 Conservative metadata limits can be dominated by field limits; valid-row lower-limit tests exercise capacity logic without claiming unreachable boundary fixtures.
-M4.2+ participation/consent/teams/work creation, browser practice execution, private submissions, manual feedback, progress and learning notifications remain later units.
+The M4.2 [participation/team/fresh-work contract](participation-and-work.md) uses these publications. Browser practice execution, private submissions, manual feedback, progress and learning notifications remain later units.
 Reading/publication creates no enrollment, source grant, learning project or private learning event in project notification groups.

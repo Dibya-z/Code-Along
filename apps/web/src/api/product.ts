@@ -77,16 +77,18 @@ export const productApi = {
         },
       }),
     ),
-  project: (project_id: string) =>
+  project: (project_id: string, signal?: AbortSignal) =>
     result(
       client().GET('/api/v1/projects/{project_id}/', {
         params: { path: { project_id } },
+        ...(signal ? { signal } : {}),
       }),
     ),
-  files: (project_id: string) =>
+  files: (project_id: string, signal?: AbortSignal) =>
     result(
       client().GET('/api/v1/projects/{project_id}/files/', {
         params: { path: { project_id } },
+        ...(signal ? { signal } : {}),
       }),
     ),
   file: (project_id: string, file_id: string) =>

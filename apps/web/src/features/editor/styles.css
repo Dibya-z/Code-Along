@@ -354,3 +354,82 @@
     min-height: 18rem;
   }
 }
+
+.editor-workbench[data-guide='true'] .workbench-context-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  padding-block-end: var(--space-3);
+  border-bottom: 1px solid var(--color-separator);
+  margin-block-end: var(--space-3);
+}
+.editor-workbench[data-guide='true'] .workbench-context-switch .button {
+  min-width: 0;
+  min-height: var(--target-min);
+  white-space: normal;
+}
+.editor-workbench[data-guide='true'] .workbench-guide-content {
+  min-width: 0;
+  max-height: max(
+    16rem,
+    calc(100dvh - var(--project-command-height, 8rem) - 8rem)
+  );
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.editor-workbench[data-guide='true'] .workbench-guide-content > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.editor-workbench[data-guide='true'] > .editor-explorer:focus-visible,
+.editor-workbench[data-guide='true'] > .editor-pane:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+@media (min-width: 80rem) {
+  .editor-workbench[data-guide='true'] {
+    grid-template-columns: minmax(13rem, 18rem) minmax(0, 1fr) minmax(
+        18rem,
+        var(--console-width, 34%)
+      );
+  }
+}
+@media (max-width: 79.99rem) {
+  .editor-workbench[data-guide='true'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .editor-workbench[data-guide='true'] > .workbench-controls > div {
+    flex-basis: 100%;
+  }
+  .editor-workbench[data-guide='true'] .pane-switch {
+    display: flex;
+    width: 100%;
+    gap: var(--space-2);
+    padding: var(--space-2);
+  }
+  .editor-workbench[data-guide='true'] .pane-switch .button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: var(--target-min);
+  }
+  .editor-workbench[data-guide='true'] .guide-files-toggle {
+    min-height: var(--target-min);
+    margin-inline-end: auto;
+  }
+  .editor-workbench[data-guide='true'] > .editor-explorer {
+    grid-column: 1;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-separator);
+  }
+  .editor-workbench[data-guide='true'] > .execution-panel {
+    grid-column: 1;
+  }
+  .editor-workbench[data-guide='true'][data-pane='guide'] > .execution-panel,
+  .editor-workbench[data-guide='true'][data-pane='editor'] > .execution-panel {
+    display: none;
+  }
+}

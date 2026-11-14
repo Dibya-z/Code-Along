@@ -34,6 +34,16 @@ import { createPortal } from 'react-dom';
 
 const noSubscription = () => () => {};
 const noCollaboration = () => null;
+const noCompactGuide = () => false;
+const compactGuideQuery = '(max-width: 79.99rem)';
+const compactGuideSnapshot = () => window.matchMedia(compactGuideQuery).matches;
+function subscribeGuideViewport(changed: () => void) {
+  const media = window.matchMedia(compactGuideQuery);
+  media.addEventListener('change', changed);
+  return () => media.removeEventListener('change', changed);
+}
+
+export type WorkbenchPane = 'guide' | 'editor' | 'console';
 
 interface WorkbenchProps {
   accountId: string;
@@ -42,6 +52,12 @@ interface WorkbenchProps {
   selectedId: string;
   onSelect: (id: string) => void;
   paused: boolean;
+  guide?: {
+    label: string;
+    render: (visible: boolean) => ReactNode;
+    pane: WorkbenchPane;
+    onPaneChange: (pane: WorkbenchPane) => void;
+  };
   targets?: {
     readonly runToolbar: HTMLElement | null;
     readonly collaboration: HTMLElement | null;
@@ -96,6 +112,7 @@ function ScopedWorkbench({
   capability,
   targets,
   onRun,
+  guide,
 }: Props) {
   const name = useRef(project.name);
   name.current = project.name;
@@ -140,11 +157,86 @@ function ScopedWorkbench({
   const [notice, setNotice] = useState('');
   const [following, setFollowing] = useState<number | null>(null);
   const [fontSize, setFontSize] = useState('1rem');
-  const [pane, setPane] = useState<'editor' | 'console'>('editor');
+  const [localPane, setLocalPane] = useState<'editor' | 'console'>('editor');
+  const [context, setContext] = useState<'guide' | 'files'>('guide');
+  const compactGuide = useSyncExternalStore(
+    guide ? subscribeGuideViewport : noSubscription,
+    guide ? compactGuideSnapshot : noCompactGuide,
+    noCompactGuide,
+  );
+  const pane = guide?.pane ?? localPane;
+  const hasGuide = Boolean(guide);
+  const root = useRef<HTMLDivElement>(null);
+  const contextPanel = useRef<HTMLElement>(null);
+  const editorPanel = useRef<HTMLElement>(null);
+  const lastFocus = useRef<HTMLElement | null>(null);
+  const selectedFocus = useRef<string | null>(null);
+  const guideId = `workbench-guide-${project.id}`;
+  const guideVisible = Boolean(
+    guide && (compactGuide ? pane === 'guide' : context === 'guide'),
+  );
   const [consoleWidth, setConsoleWidth] = useState('34');
   const [toolbar, setToolbar] = useState<HTMLDivElement | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [filesOpen, setFilesOpen] = useState(false);
+  useEffect(() => {
+    if (guide?.pane === 'guide') {
+      setContext('guide');
+      if (compactGuide) setFilesOpen(false);
+    }
+  }, [guide?.pane, compactGuide]);
+  useLayoutEffect(() => {
+    if (!hasGuide) return;
+    if (
+      selectedFocus.current !== null &&
+      pane === 'editor' &&
+      selectedFocus.current === selectedId
+    ) {
+      const tab = document.getElementById(`editor-tab-${selectedId}`);
+      (tab ?? editorPanel.current)?.focus();
+      selectedFocus.current = null;
+      return;
+    }
+    const previous = lastFocus.current;
+    if (
+      previous &&
+      (document.activeElement === document.body ||
+        document.activeElement === previous) &&
+      !previous.getClientRects().length
+    ) {
+      const destination = compactGuide
+        ? root.current?.querySelector<HTMLElement>(
+            `[data-workbench-pane="${pane}"]`,
+          )
+        : pane === 'guide'
+          ? contextPanel.current
+          : pane === 'console'
+            ? root.current?.querySelector<HTMLElement>(
+                '.execution-panel summary',
+              )
+            : editorPanel.current;
+      destination?.focus();
+    }
+  }, [hasGuide, pane, compactGuide, context, selectedId, filesOpen]);
+  function selectPane(next: WorkbenchPane) {
+    if (guide) {
+      if (next === 'guide') {
+        setContext('guide');
+        if (compactGuide) setFilesOpen(false);
+      }
+      if (guide.pane !== next) guide.onPaneChange(next);
+    } else if (next !== 'guide') setLocalPane(next);
+  }
+  function selectFile(id: string) {
+    if (guide && compactGuide) {
+      if (filesOpen || guide.pane !== 'editor') selectedFocus.current = id;
+      setFilesOpen(false);
+    }
+    if (guide && guide.pane !== 'editor') {
+      guide.onPaneChange('editor');
+    }
+    onSelect(id);
+  }
   useEffect(() => {
     resource.leases++;
     resource.collaboration?.start();
@@ -262,8 +354,19 @@ function ScopedWorkbench({
   }
   return (
     <div
+      ref={root}
       className="editor-workbench content-section"
       data-pane={pane}
+      data-guide={guide ? 'true' : undefined}
+      data-guide-compact={guide ? String(compactGuide) : undefined}
+      onFocusCapture={
+        guide
+          ? (event) => {
+              if (root.current?.contains(event.target))
+                lastFocus.current = event.target;
+            }
+          : undefined
+      }
       data-collaboration={Boolean(
         resource.collaboration && !targets?.collaboration,
       )}
@@ -277,30 +380,64 @@ function ScopedWorkbench({
       <div className="workbench-controls">
         <div ref={setToolbar} hidden={Boolean(targets?.runToolbar)} />
         <nav className="pane-switch" aria-label="Workbench panes">
-          <Button
-            variant="secondary"
-            aria-pressed={pane === 'editor'}
-            onClick={() => setPane('editor')}
-          >
-            Editor
-          </Button>
-          <Button
-            variant="secondary"
-            aria-pressed={pane === 'console'}
-            onClick={() => setPane('console')}
-          >
-            Console
-          </Button>
-          <Button
-            className="files-toggle"
-            variant="secondary"
-            aria-expanded={filesOpen}
-            aria-label={filesOpen ? 'Hide files' : 'Show files'}
-            aria-controls="project-file-list"
-            onClick={() => setFilesOpen(!filesOpen)}
-          >
-            Files <span aria-hidden="true">{filesOpen ? '▴' : '▾'}</span>
-          </Button>
+          {guide ? (
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                data-workbench-pane="guide"
+                aria-pressed={pane === 'guide'}
+                onClick={() => selectPane('guide')}
+              >
+                {guide.label}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                data-workbench-pane="editor"
+                aria-pressed={pane === 'editor'}
+                onClick={() => selectPane('editor')}
+              >
+                Code
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                data-workbench-pane="console"
+                aria-pressed={pane === 'console'}
+                onClick={() => selectPane('console')}
+              >
+                Output
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                aria-pressed={pane === 'editor'}
+                onClick={() => setLocalPane('editor')}
+              >
+                Editor
+              </Button>
+              <Button
+                variant="secondary"
+                aria-pressed={pane === 'console'}
+                onClick={() => setLocalPane('console')}
+              >
+                Console
+              </Button>
+              <Button
+                className="files-toggle"
+                variant="secondary"
+                aria-expanded={filesOpen}
+                aria-label={filesOpen ? 'Hide files' : 'Show files'}
+                aria-controls="project-file-list"
+                onClick={() => setFilesOpen(!filesOpen)}
+              >
+                Files <span aria-hidden="true">{filesOpen ? '▴' : '▾'}</span>
+              </Button>
+            </>
+          )}
         </nav>
         <label className="console-width">
           Console width{' '}
@@ -331,11 +468,63 @@ function ScopedWorkbench({
             : panel;
         })()}
       <aside
+        ref={contextPanel}
         className="editor-explorer"
-        aria-label="Project files"
-        data-open={filesOpen}
+        aria-label={guide ? `${guide.label} and files` : 'Project files'}
+        data-open={guide ? true : filesOpen}
+        hidden={Boolean(
+          guide &&
+          compactGuide &&
+          pane !== 'guide' &&
+          (pane !== 'editor' || !filesOpen),
+        )}
+        tabIndex={guide ? -1 : undefined}
       >
-        <div id="project-file-list" className="editor-files-content">
+        {guide && (
+          <>
+            <nav
+              className="workbench-context-switch"
+              aria-label="Task and files"
+              hidden={compactGuide}
+            >
+              <Button
+                type="button"
+                variant="secondary"
+                aria-pressed={context === 'guide'}
+                aria-controls={guideId}
+                onClick={() => selectPane('guide')}
+              >
+                {guide.label}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                aria-pressed={context === 'files'}
+                aria-controls="project-file-list"
+                onClick={() => setContext('files')}
+              >
+                Files
+              </Button>
+            </nav>
+            <div
+              id={guideId}
+              className="workbench-guide-content"
+              hidden={compactGuide ? pane !== 'guide' : context !== 'guide'}
+            >
+              {guide.render(guideVisible)}
+            </div>
+          </>
+        )}
+        <div
+          id="project-file-list"
+          className="editor-files-content"
+          hidden={Boolean(
+            guide &&
+            (compactGuide
+              ? pane !== 'editor' || !filesOpen
+              : context !== 'files'),
+          )}
+        >
           <div className="section-head">
             <h2>Files</h2>
             {addControl}
@@ -344,7 +533,7 @@ function ScopedWorkbench({
             files={summary.files}
             selectedId={selectedId}
             entrypoint={summary.entrypoint}
-            onSelect={onSelect}
+            onSelect={selectFile}
           />
           <p className="editor-scope-note">
             {local
@@ -355,14 +544,33 @@ function ScopedWorkbench({
           </p>
         </div>
       </aside>
-      <section className="editor-pane" aria-label="Python workbench">
+      <section
+        ref={editorPanel}
+        className="editor-pane"
+        aria-label="Python workbench"
+        hidden={Boolean(guide && compactGuide && pane !== 'editor')}
+        tabIndex={guide ? -1 : undefined}
+      >
         <FileTabs
           files={tabs}
           selectedId={selectedId}
-          onSelect={onSelect}
+          onSelect={selectFile}
           onClose={close}
         />
         <div className="editor-pane-head">
+          {guide && compactGuide && (
+            <Button
+              type="button"
+              className="guide-files-toggle"
+              variant="secondary"
+              aria-expanded={filesOpen}
+              aria-label={filesOpen ? 'Hide files' : 'Show files'}
+              aria-controls="project-file-list"
+              onClick={() => setFilesOpen((current) => !current)}
+            >
+              Files <span aria-hidden="true">{filesOpen ? '▴' : '▾'}</span>
+            </Button>
+          )}
           <details className="editor-options">
             <summary>Editor options</summary>
             <label className="editor-size">
@@ -443,7 +651,7 @@ function ScopedWorkbench({
         paused={paused}
         toolbar={targets?.runToolbar ?? toolbar}
         onRun={() => {
-          setPane('console');
+          selectPane('console');
           onRun?.();
         }}
       />

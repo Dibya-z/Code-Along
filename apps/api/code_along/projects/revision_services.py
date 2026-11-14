@@ -14,13 +14,7 @@ from code_along.collaboration.services import AdmissionError, session_user
 from code_along.workspaces.policies import require_membership
 from code_along.workspaces.services import require_open
 
-from .models import (
-    CollaborationDocument,
-    Project,
-    ProjectFile,
-    ProjectRevision,
-    RevisionFile,
-)
+from .models import Project, ProjectRevision, RevisionFile
 from .policies import project_role, visible_projects
 from .revision_contract import (
     HELPER_RELEASE,
@@ -316,24 +310,8 @@ def copy_revision(
                 "detail": "This historical runtime is unavailable for a new project. Export its source instead."
             }
         )
-    identifiers = {file["file_id"]: uuid.uuid4() for file in manifest["files"]}
-    copied = Project.objects.create(
-        workspace=source.workspace,
-        owner=current,
-        name=name,
-        runtime_profile=profile,
-        entrypoint_file_id=identifiers[manifest["entrypoint_file_id"]],
-    )
-    for source_file in manifest["files"]:
-        file = ProjectFile.objects.create(
-            id=identifiers[source_file["file_id"]],
-            project=copied,
-            path=source_file["path"],
-            initial_source=source_file["source"],
-            initial_sha256=source_file["sha256"],
-        )
-        CollaborationDocument.objects.create(project=copied, file=file)
-    from code_along.events.services import project_changed
+    from .frozen_projects import create_from_manifest
 
-    project_changed(copied)
-    return copied
+    return create_from_manifest(
+        source.workspace, current, name=name, profile=profile, manifest=manifest
+    )

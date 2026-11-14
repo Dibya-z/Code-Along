@@ -8,11 +8,11 @@ export async function loadEditorProject(
 ) {
   for (let attempt = 0; attempt < 3; attempt++) {
     signal?.throwIfAborted();
-    const before = await read.project(projectId);
+    const before = await read.project(projectId, signal);
     signal?.throwIfAborted();
-    const files = await read.files(projectId);
+    const files = await read.files(projectId, signal);
     signal?.throwIfAborted();
-    const project = await read.project(projectId);
+    const project = await read.project(projectId, signal);
     signal?.throwIfAborted();
     if (
       before.id === project.id &&
