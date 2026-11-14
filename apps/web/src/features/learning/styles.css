@@ -1,0 +1,88 @@
+.assignment-reading,
+.assignment-author,
+.assignment-author fieldset,
+.assignment-author select,
+.assignment-author textarea,
+.learning-view {
+  min-width: 0;
+}
+.learning-view {
+  scroll-margin-top: var(--space-6);
+}
+.learning-view:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.assignment-reading > *,
+.assignment-author > * {
+  max-width: 100%;
+}
+.assignment-prose {
+  max-width: 65ch;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.assignment-author fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 var(--space-6);
+}
+.assignment-author legend {
+  font-size: var(--text-heading-sm);
+  font-weight: 600;
+  margin-block-end: var(--space-4);
+}
+.assignment-author textarea {
+  width: 100%;
+  min-height: 8rem;
+  font: inherit;
+  line-height: 1.5;
+  padding: var(--space-3);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--target-min);
+}
+.checkbox-field input {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-primary);
+}
+.assignment-author .source-input,
+.learning-source {
+  font-family: var(--font-code);
+}
+.learning-source {
+  max-height: 28rem;
+  overflow: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  background: var(--color-raised);
+  color: var(--color-ink);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.assignment-author .hint-editor {
+  border-block-start: 1px solid var(--color-separator);
+  padding-block: var(--space-4);
+}
+.assignment-reading dd {
+  margin-inline-start: 0;
+  overflow-wrap: anywhere;
+}
+.assignment-author .rule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-4);
+}
+.assignment-status {
+  margin-block: var(--space-4);
+}

@@ -99,6 +99,8 @@ def test_product_schema_and_real_restricted_role_preserve_binary_receipt_boundar
                 "SELECT * FROM events_outboxevent",
                 "SELECT * FROM events_invalidationdelivery",
                 "SELECT * FROM chat_chatmessage",
+                "SELECT * FROM learning_assignment",
+                "SELECT * FROM learning_assignmentversion",
                 "UPDATE projects_collaborationdocument SET schema_version=1",
                 "UPDATE collaboration_documentstate SET generation=1",
                 "DELETE FROM collaboration_documentstate",

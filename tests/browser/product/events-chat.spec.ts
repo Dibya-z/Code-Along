@@ -373,6 +373,87 @@ test('bootstrap buffers concurrent chat and authenticated heads repair a final d
   }
 });
 
+test('a late committed message reply preserves the next keyboard-typed composer draft', async ({
+  page,
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(120000);
+  await notifications(
+    page,
+    (frame) =>
+      frame.type === 'head' || frame.event_type === 'chat.message.created',
+  );
+  const p = await pair(page, browser, browserName);
+  const release = deferred();
+  const requests: { client_message_id: string; body: string }[] = [];
+  let committed = false,
+    first = true;
+  try {
+    await ready(page);
+    await ready(p.peer);
+    await page.route(
+      `**/api/v1/projects/${p.projectId}/chat/messages/`,
+      async (route) => {
+        if (route.request().method() !== 'POST') return route.continue();
+        requests.push(
+          route.request().postDataJSON() as (typeof requests)[number],
+        );
+        if (!first) return route.continue();
+        first = false;
+        const response = await route.fetch();
+        expect(response.status()).toBe(201);
+        committed = true;
+        await release.promise;
+        await route.abort('failed');
+      },
+    );
+    const previous = 'Committed before the reply is released';
+    const next = 'Keep this next keyboard-typed draft';
+    await send(page, previous);
+    await expect.poll(() => committed).toBe(true);
+    await expect(row(p.peer, previous)).toHaveCount(1, { timeout: 15000 });
+    await expect(discussion(page).locator('.discussion-pending')).toContainText(
+      'Sending…',
+    );
+    const composer = discussion(page).getByLabel('Message to project');
+    await composer.pressSequentially(next);
+    await expect(composer).toHaveValue(next);
+    release.resolve();
+    await expect(discussion(page).locator('.discussion-pending')).toContainText(
+      'Not confirmed',
+    );
+    await expect(composer).toHaveValue(next);
+    expect(requests).toHaveLength(1);
+    await discussion(page)
+      .getByRole('button', { name: 'Send message', exact: true })
+      .click();
+    await expect(composer).toHaveValue('');
+    await expect(row(page, next)).toHaveCount(1, { timeout: 15000 });
+    await expect(row(p.peer, next)).toHaveCount(1);
+    expect(requests).toHaveLength(2);
+    expect(requests[1]!.body).toBe(next);
+    expect(requests[1]!.client_message_id).not.toBe(
+      requests[0]!.client_message_id,
+    );
+    await discussion(page)
+      .locator('.discussion-pending')
+      .filter({ hasText: previous })
+      .getByRole('button', { name: 'Retry unconfirmed message', exact: true })
+      .click();
+    await expect(row(page, previous)).toHaveCount(1);
+    await expect(row(page, previous)).toContainText('Sent');
+    expect(requests).toHaveLength(3);
+    expect(requests[2]).toEqual(requests[0]);
+    await expect(discussion(page).locator('.discussion-pending')).toHaveCount(
+      0,
+    );
+  } finally {
+    release.resolve();
+    await p.context.close();
+  }
+});
+
 test('unconfirmed messages retry one immutable nonce only manually, never replay offline, and pending state is destroyed across accounts', async ({
   page,
   browser,

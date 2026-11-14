@@ -8,6 +8,7 @@ from rest_framework.exceptions import APIException, ValidationError
 
 from code_along.accounts.models import User
 from code_along.collaboration.profiles import public_display_name
+from code_along.common.text import BLANK_CODEPOINTS as BLANK_CODEPOINTS
 from code_along.events.contracts import utc
 from code_along.events.services import emit_project_event
 from code_along.projects.policies import project_role, visible_projects
@@ -18,11 +19,6 @@ from .models import ChatMessage
 
 MAX_MESSAGES = 10000
 MAX_CHAT_BYTES = 32 * 1024 * 1024
-BLANK_CODEPOINTS = frozenset(
-    "\u0009\u000a\u000b\u000c\u000d\u001c\u001d\u001e\u001f\u0020"
-    "\u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006"
-    "\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
-)
 
 
 class ChatConflict(APIException):

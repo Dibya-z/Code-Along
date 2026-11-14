@@ -21,6 +21,11 @@ const ProjectPage = lazy(() =>
     default: module.ProjectPage,
   })),
 );
+const AssignmentPage = lazy(() =>
+  import('../features/learning/page.tsx').then((module) => ({
+    default: module.AssignmentPage,
+  })),
+);
 const SharedPage = lazy(() =>
   import('../features/shares/page.tsx').then((module) => ({
     default: module.SharedPage,
@@ -41,7 +46,7 @@ function Shell() {
   const identity = useIdentity();
   const actor = identity.data?.id;
   const workspaceActive =
-    /^\/(workspaces|projects)(\/|$)/.test(location.pathname) ||
+    /^\/(workspaces|projects|assignments)(\/|$)/.test(location.pathname) ||
     (location.pathname === '/' && Boolean(actor));
   useEffect(
     () =>
@@ -82,7 +87,7 @@ function Shell() {
       </aside>
       <div className="app-body">
         <header className="topbar">
-          <span>Python workbench</span>
+          <span className="topbar-context">Python workbench</span>
           {identity.data ? (
             <div className="actions">
               <span>{identity.data.display_name}</span>
@@ -211,6 +216,20 @@ const router = createBrowserRouter([
         ),
       },
       { path: 'workspaces/:workspaceId', element: <WorkspacePage /> },
+      {
+        path: 'assignments/:assignmentId',
+        element: (
+          <Suspense
+            fallback={
+              <div className="page" role="status">
+                Loading assignment…
+              </div>
+            }
+          >
+            <AssignmentPage />
+          </Suspense>
+        ),
+      },
       { path: 'invitations/:token', element: <InvitationPage /> },
       {
         path: 'shares',

@@ -70,6 +70,473 @@
         "enum": ["project.access.changed"],
         "type": "string"
       },
+      "AssignmentArchiveRequest": {
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "expected_revision": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": ["archived", "expected_revision"],
+        "type": "object"
+      },
+      "AssignmentCreateRequest": {
+        "properties": {
+          "title": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": ["title"],
+        "type": "object"
+      },
+      "AssignmentDraft": {
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "due_at": {
+            "format": "date-time",
+            "type": ["string", "null"]
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/AssignmentHint"
+            },
+            "type": "array"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "max_attempts": {
+            "type": "integer"
+          },
+          "max_team_size": {
+            "type": "integer"
+          },
+          "public_checks_source": {
+            "type": ["string", "null"]
+          },
+          "revision": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "starter_origin": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/StarterOrigin"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "starter_project_id": {
+            "format": "uuid",
+            "type": ["string", "null"]
+          },
+          "starter_revision_id": {
+            "format": "uuid",
+            "type": ["string", "null"]
+          },
+          "submission_mode": {
+            "$ref": "#/components/schemas/AssignmentSubmissionMode"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "due_at",
+          "hints",
+          "instructions",
+          "max_attempts",
+          "max_team_size",
+          "public_checks_source",
+          "revision",
+          "starter_origin",
+          "starter_project_id",
+          "starter_revision_id",
+          "submission_mode",
+          "title"
+        ],
+        "type": "object"
+      },
+      "AssignmentDraftPatchRequest": {
+        "properties": {
+          "due_at": {
+            "format": "date-time",
+            "type": ["string", "null"]
+          },
+          "expected_revision": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/AssignmentHintRequest"
+            },
+            "type": "array"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "max_attempts": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_team_size": {
+            "maximum": 6,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "public_checks_source": {
+            "minLength": 1,
+            "type": ["string", "null"]
+          },
+          "starter_revision_id": {
+            "format": "uuid",
+            "type": ["string", "null"]
+          },
+          "submission_mode": {
+            "$ref": "#/components/schemas/AssignmentSubmissionMode"
+          },
+          "title": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": ["expected_revision"],
+        "type": "object"
+      },
+      "AssignmentHint": {
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": ["body", "id", "title"],
+        "type": "object"
+      },
+      "AssignmentHintRequest": {
+        "properties": {
+          "body": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": ["body", "id", "title"],
+        "type": "object"
+      },
+      "AssignmentPage": {
+        "properties": {
+          "count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AssignmentSummary"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["count", "items"],
+        "type": "object"
+      },
+      "AssignmentPublishRequest": {
+        "properties": {
+          "client_request_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expected_revision": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": ["client_request_id", "expected_revision"],
+        "type": "object"
+      },
+      "AssignmentStarter": {
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "assignment_version_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/RevisionManifest"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "assignment_version_id",
+          "manifest",
+          "revision_id"
+        ],
+        "type": "object"
+      },
+      "AssignmentStarterIdentity": {
+        "properties": {
+          "manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": ["manifest_sha256", "revision_id"],
+        "type": "object"
+      },
+      "AssignmentStarterOrigin": {
+        "description": "* `owned_project` - owned_project\n* `published_assignment` - published_assignment",
+        "enum": ["owned_project", "published_assignment"],
+        "type": "string"
+      },
+      "AssignmentSubmissionMode": {
+        "description": "* `individual` - individual\n* `team` - team",
+        "enum": ["individual", "team"],
+        "type": "string"
+      },
+      "AssignmentSummary": {
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "can_author": {
+            "type": "boolean"
+          },
+          "current_version": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AssignmentVersionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "published": {
+            "type": "boolean"
+          },
+          "title": {
+            "type": "string"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "archived",
+          "can_author",
+          "current_version",
+          "id",
+          "published",
+          "title",
+          "workspace_id"
+        ],
+        "type": "object"
+      },
+      "AssignmentVersionDetail": {
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "content_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "helper_release": {
+            "$ref": "#/components/schemas/RevisionHelper"
+          },
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/AssignmentHint"
+            },
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "number": {
+            "type": "integer"
+          },
+          "public_checks": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PublishedChecks"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "publisher": {
+            "$ref": "#/components/schemas/RevisionAuthor"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/RevisionRuntime"
+          },
+          "starter": {
+            "$ref": "#/components/schemas/AssignmentStarterIdentity"
+          },
+          "submission_policy": {
+            "$ref": "#/components/schemas/SubmissionPolicy"
+          },
+          "title": {
+            "type": "string"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "content_sha256",
+          "helper_release",
+          "hints",
+          "id",
+          "instructions",
+          "number",
+          "public_checks",
+          "published_at",
+          "publisher",
+          "runtime",
+          "starter",
+          "submission_policy",
+          "title",
+          "workspace_id"
+        ],
+        "type": "object"
+      },
+      "AssignmentVersionPage": {
+        "properties": {
+          "count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AssignmentVersionSummary"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["count", "items"],
+        "type": "object"
+      },
+      "AssignmentVersionSummary": {
+        "properties": {
+          "content_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "due_at": {
+            "format": "date-time",
+            "type": ["string", "null"]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "max_attempts": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_team_size": {
+            "maximum": 6,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "number": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "published_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "starter_manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "submission_mode": {
+            "$ref": "#/components/schemas/AssignmentSubmissionMode"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "content_sha256",
+          "due_at",
+          "id",
+          "max_attempts",
+          "max_team_size",
+          "number",
+          "published_at",
+          "starter_manifest_sha256",
+          "submission_mode",
+          "title"
+        ],
+        "type": "object"
+      },
       "ChatData": {
         "properties": {
           "message": {
@@ -663,6 +1130,11 @@
         "enum": ["pending", "accepted", "revoked", "expired"],
         "type": "string"
       },
+      "LatePolicyEnum": {
+        "description": "* `reject` - reject",
+        "enum": ["reject"],
+        "type": "string"
+      },
       "LiveShareAccess": {
         "properties": {
           "kind": {
@@ -1030,14 +1502,49 @@
         "required": ["expected_version", "new_owner_id"],
         "type": "object"
       },
-      "ProtocolEnum": {
-        "description": "* `code-along.revision` - code-along.revision",
-        "enum": ["code-along.revision"],
-        "type": "string"
-      },
       "ProvenanceEnum": {
         "description": "* `shared_room_capture` - shared_room_capture",
         "enum": ["shared_room_capture"],
+        "type": "string"
+      },
+      "PublishedChecks": {
+        "properties": {
+          "language": {
+            "$ref": "#/components/schemas/FileKind"
+          },
+          "protocol": {
+            "$ref": "#/components/schemas/PublishedChecksProtocolEnum"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "version": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "language",
+          "protocol",
+          "sha256",
+          "source",
+          "source_sha256",
+          "version"
+        ],
+        "type": "object"
+      },
+      "PublishedChecksProtocolEnum": {
+        "description": "* `code-along.public-checks` - code-along.public-checks",
+        "enum": ["code-along.public-checks"],
         "type": "string"
       },
       "ReleaseIdEnum": {
@@ -1259,7 +1766,7 @@
             "type": "string"
           },
           "protocol": {
-            "$ref": "#/components/schemas/ProtocolEnum"
+            "$ref": "#/components/schemas/RevisionManifestProtocolEnum"
           },
           "runtime": {
             "$ref": "#/components/schemas/RevisionRuntime"
@@ -1286,6 +1793,11 @@
           "version"
         ],
         "type": "object"
+      },
+      "RevisionManifestProtocolEnum": {
+        "description": "* `code-along.revision` - code-along.revision",
+        "enum": ["code-along.revision"],
+        "type": "string"
       },
       "RevisionOutput": {
         "properties": {
@@ -1642,6 +2154,51 @@
         "enum": ["read", "write"],
         "type": "string"
       },
+      "StarterOrigin": {
+        "properties": {
+          "assignment_version_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AssignmentStarterOrigin"
+          },
+          "number": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": ["kind"],
+        "type": "object"
+      },
+      "SubmissionPolicy": {
+        "properties": {
+          "due_at": {
+            "format": "date-time",
+            "type": ["string", "null"]
+          },
+          "late_policy": {
+            "$ref": "#/components/schemas/LatePolicyEnum"
+          },
+          "max_attempts": {
+            "type": "integer"
+          },
+          "max_team_size": {
+            "type": "integer"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/AssignmentSubmissionMode"
+          }
+        },
+        "required": [
+          "due_at",
+          "late_policy",
+          "max_attempts",
+          "max_team_size",
+          "mode"
+        ],
+        "type": "object"
+      },
       "TicketBodyRequest": {
         "properties": {
           "awareness_client_id": {
@@ -1812,6 +2369,722 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/assignments/{assignment_id}/": {
+      "get": {
+        "operationId": "get_assignment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentSummary"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      },
+      "patch": {
+        "operationId": "archive_assignment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentArchiveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentSummary"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/draft/": {
+      "get": {
+        "operationId": "get_assignment_draft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentDraft"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      },
+      "patch": {
+        "operationId": "update_assignment_draft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentDraftPatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentDraft"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/versions/": {
+      "get": {
+        "operationId": "list_assignment_versions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentVersionPage"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      },
+      "post": {
+        "operationId": "publish_assignment_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentPublishRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentVersionDetail"
+                }
+              }
+            },
+            "description": ""
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentVersionDetail"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "No response body"
+          },
+          "403": {
+            "description": "No response body"
+          },
+          "404": {
+            "description": "No response body"
+          },
+          "409": {
+            "description": "No response body"
+          },
+          "429": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/versions/{version_id}/": {
+      "get": {
+        "operationId": "get_assignment_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentVersionDetail"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/versions/{version_id}/starter/": {
+      "get": {
+        "operationId": "get_assignment_starter",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentStarter"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
     "/api/v1/csrf/": {
       "get": {
         "operationId": "get_csrf_token",
@@ -4826,6 +6099,164 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WorkspaceOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["workspaces"]
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/assignments/": {
+      "get": {
+        "operationId": "list_assignments",
+        "parameters": [
+          {
+            "description": "* `true` - true\n* `false` - false",
+            "in": "query",
+            "name": "include_archived",
+            "schema": {
+              "default": "false",
+              "enum": ["true", "false"],
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentPage"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["workspaces"]
+      },
+      "post": {
+        "operationId": "create_assignment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentSummary"
                 }
               }
             },

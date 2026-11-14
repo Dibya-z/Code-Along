@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     "code_along.collaboration.apps.CollaborationConfig",
     "code_along.events.apps.EventsConfig",
     "code_along.chat.apps.ChatConfig",
+    "code_along.learning.apps.LearningConfig",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -133,5 +134,7 @@ SPECTACULAR_SETTINGS = {
         "InvitationRole": ["learner", "instructor", "editor", "viewer"],
         "InvitationStatus": ["pending", "accepted", "revoked", "expired"],
         "FileKind": ["python"],
+        "AssignmentSubmissionMode": ["individual", "team"],
+        "AssignmentStarterOrigin": ["owned_project", "published_assignment"],
     },
 }

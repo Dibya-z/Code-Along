@@ -14,6 +14,7 @@ export function Pagination({
   return (
     <nav aria-label="Pagination" className="actions content-section">
       <Button
+        type="button"
         variant="secondary"
         disabled={offset === 0}
         onClick={() => onChange(Math.max(0, offset - limit))}
@@ -24,6 +25,7 @@ export function Pagination({
         {offset + 1}–{Math.min(offset + limit, count)} of {count}
       </span>
       <Button
+        type="button"
         variant="secondary"
         disabled={offset + limit >= count}
         onClick={() => onChange(offset + limit)}

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Button } from '@code-along/design-system';
+import { runtimeProfile } from '@code-along/contracts/execution/profiles';
 import {
   downloadArchive,
   downloadSourceFile,
@@ -36,6 +37,7 @@ export function RevisionViewer({
         <nav aria-label="Revision files" className="file-list">
           {manifest.files.map((file) => (
             <Button
+              type="button"
               key={file.file_id}
               variant="secondary"
               aria-pressed={active.file_id === file.file_id}
@@ -60,9 +62,8 @@ export function RevisionViewer({
         </div>
       </div>
       <p className="muted">
-        Runtime: {manifest.runtime.runtime_id} · Python{' '}
-        {manifest.runtime.python_version}. Helper release:{' '}
-        {manifest.helper_release.release_id}.
+        {runtimeProfile(manifest.runtime.runtime_id)?.name ?? 'Python'} · Python{' '}
+        {manifest.runtime.python_version}.
       </p>
       <details className="revision-provenance">
         <summary>Source and runtime provenance</summary>
@@ -76,8 +77,16 @@ export function RevisionViewer({
           <dd>{manifest.metadata_version}</dd>
           <dt>Manifest SHA-256</dt>
           <dd>{manifest.sha256}</dd>
+          <dt>Runtime ID</dt>
+          <dd>{manifest.runtime.runtime_id}</dd>
+          <dt>Engine</dt>
+          <dd>
+            {manifest.runtime.engine} {manifest.runtime.engine_version}
+          </dd>
           <dt>Runtime manifest SHA-256</dt>
           <dd>{manifest.runtime.manifest_sha256}</dd>
+          <dt>Helper release</dt>
+          <dd>{manifest.helper_release.release_id}</dd>
           <dt>Helper source SHA-256</dt>
           <dd>{manifest.helper_release.source_sha256}</dd>
           <dt>{active.path} SHA-256</dt>
@@ -86,12 +95,14 @@ export function RevisionViewer({
       </details>
       <div className="actions content-section">
         <Button
+          type="button"
           variant="secondary"
           onClick={() => downloadArchive(revisionArchive(manifest, name))}
         >
           Export revision source
         </Button>
         <Button
+          type="button"
           variant="secondary"
           onClick={() => downloadSourceFile(active.path, active.source)}
         >

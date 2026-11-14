@@ -3,7 +3,7 @@ import { ProjectsPanel } from '../projects/list.tsx';
 import { SignedIn } from '../auth/guard.tsx';
 import { Pagination } from '../../components/pagination.tsx';
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button, Dialog, Field, Notice } from '@code-along/design-system';
 import { api } from '../../api/client.ts';
@@ -11,6 +11,8 @@ import { Failure } from '../../api/feedback.tsx';
 import { queryClient } from '../../app/providers.tsx';
 import { useIdentity } from '../auth/session.ts';
 import { InvitationsPanel } from '../invitations/pages.tsx';
+import { WorkspaceAssignments } from '../learning/list.tsx';
+import { TaskNavigation } from '../learning/navigation.tsx';
 export function WorkspacesPage() {
   return (
     <SignedIn>
@@ -129,6 +131,8 @@ export function WorkspacePage() {
   );
 }
 function WorkspaceDetail() {
+  const location = useLocation();
+  const active = location.hash === '#assignments' ? 'assignments' : 'projects';
   const { workspaceId } = useParams();
   const [memberOffset, setMemberOffset] = useState(0);
   const identity = useIdentity();
@@ -225,7 +229,33 @@ function WorkspaceDetail() {
           make changes.
         </Notice>
       )}
-      <ProjectsPanel workspace={workspace} />
+      <TaskNavigation
+        label="Workspace sections"
+        active={active}
+        sections={[
+          { id: 'projects', label: 'Projects' },
+          { id: 'assignments', label: 'Assignments' },
+        ]}
+      />
+      <div
+        className="learning-view"
+        id="projects"
+        tabIndex={-1}
+        hidden={active !== 'projects'}
+      >
+        <ProjectsPanel workspace={workspace} active={active === 'projects'} />
+      </div>
+      <div
+        className="learning-view"
+        id="assignments"
+        tabIndex={-1}
+        hidden={active !== 'assignments'}
+      >
+        <WorkspaceAssignments
+          workspace={workspace}
+          active={active === 'assignments'}
+        />
+      </div>
       <details className="content-section task-disclosure">
         <summary>Members</summary>
         <section className="content-section" aria-labelledby="members-heading">

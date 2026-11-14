@@ -30,6 +30,25 @@ const projectSections = [
   'settings',
 ] as const;
 type ProjectSection = (typeof projectSections)[number];
+function revealFocusedLink(nav: HTMLElement, link: HTMLAnchorElement) {
+  // Keep keyboard focus fully visible inside this scroller without moving the page.
+  queueMicrotask(() => {
+    if (
+      !nav.isConnected ||
+      document.activeElement !== link ||
+      nav.scrollWidth <= nav.clientWidth
+    )
+      return;
+    const bounds = nav.getBoundingClientRect(),
+      item = link.getBoundingClientRect();
+    const gutter =
+      Number.parseFloat(getComputedStyle(nav).scrollPaddingInlineStart) || 0;
+    const left = bounds.left + nav.clientLeft + gutter,
+      right = bounds.left + nav.clientLeft + nav.clientWidth - gutter;
+    if (item.left < left) nav.scrollLeft += item.left - left;
+    else if (item.right > right) nav.scrollLeft += item.right - right;
+  });
+}
 export function ProjectPage() {
   return (
     <SignedIn>
@@ -239,7 +258,14 @@ function ProjectDetails() {
           </Button>
         </div>
       </div>
-      <nav className="project-section-nav" aria-label="Project sections">
+      <nav
+        className="project-section-nav"
+        aria-label="Project sections"
+        onFocus={(event) => {
+          if (event.target instanceof HTMLAnchorElement)
+            revealFocusedLink(event.currentTarget, event.target);
+        }}
+      >
         {projectSections
           .filter(
             (item) =>

@@ -63,11 +63,18 @@ export const productApi = {
         params: { path: { workspace_id }, query: { offset, limit: 50 } },
       }),
     ),
-  createProject: (workspace_id: string, name: string) =>
+  createProject: (
+    workspace_id: string,
+    name: string,
+    runtime_profile_id?: string,
+  ) =>
     result(
       client().POST('/api/v1/workspaces/{workspace_id}/projects/', {
         params: { path: { workspace_id } },
-        body: { name },
+        body: {
+          name,
+          ...(runtime_profile_id === undefined ? {} : { runtime_profile_id }),
+        },
       }),
     ),
   project: (project_id: string) =>

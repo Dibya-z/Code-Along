@@ -4,6 +4,86 @@
  */
 
 export interface paths {
+  '/api/v1/assignments/{assignment_id}/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_assignment'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations['archive_assignment'];
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/draft/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_assignment_draft'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations['update_assignment_draft'];
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/versions/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_assignment_versions'];
+    put?: never;
+    post: operations['publish_assignment_version'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/versions/{version_id}/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_assignment_version'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/versions/{version_id}/starter/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_assignment_starter'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/csrf/': {
     parameters: {
       query?: never;
@@ -388,6 +468,22 @@ export interface paths {
     patch: operations['update_workspace'];
     trace?: never;
   };
+  '/api/v1/workspaces/{workspace_id}/assignments/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_assignments'];
+    put?: never;
+    post: operations['create_assignment'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/workspaces/{workspace_id}/invitations/': {
     parameters: {
       query?: never;
@@ -515,6 +611,148 @@ export interface components {
      * @enum {string}
      */
     AccessEventEventTypeEnum: 'project.access.changed';
+    AssignmentArchiveRequest: {
+      archived: boolean;
+      /** Format: int64 */
+      expected_revision: number;
+    };
+    AssignmentCreateRequest: {
+      title: string;
+    };
+    AssignmentDraft: {
+      /** Format: uuid */
+      assignment_id: string;
+      /** Format: date-time */
+      due_at: string | null;
+      hints: components['schemas']['AssignmentHint'][];
+      instructions: string;
+      max_attempts: number;
+      max_team_size: number;
+      public_checks_source: string | null;
+      /** Format: int64 */
+      revision: number;
+      starter_origin: components['schemas']['StarterOrigin'] | null;
+      /** Format: uuid */
+      starter_project_id: string | null;
+      /** Format: uuid */
+      starter_revision_id: string | null;
+      submission_mode: components['schemas']['AssignmentSubmissionMode'];
+      title: string;
+    };
+    AssignmentDraftPatchRequest: {
+      /** Format: date-time */
+      due_at?: string | null;
+      /** Format: int64 */
+      expected_revision: number;
+      hints?: components['schemas']['AssignmentHintRequest'][];
+      instructions?: string;
+      max_attempts?: number;
+      max_team_size?: number;
+      public_checks_source?: string | null;
+      /** Format: uuid */
+      starter_revision_id?: string | null;
+      submission_mode?: components['schemas']['AssignmentSubmissionMode'];
+      title?: string;
+    };
+    AssignmentHint: {
+      body: string;
+      /** Format: uuid */
+      id: string;
+      title: string;
+    };
+    AssignmentHintRequest: {
+      body: string;
+      /** Format: uuid */
+      id: string;
+      title: string;
+    };
+    AssignmentPage: {
+      count: number;
+      items: components['schemas']['AssignmentSummary'][];
+    };
+    AssignmentPublishRequest: {
+      /** Format: uuid */
+      client_request_id: string;
+      /** Format: int64 */
+      expected_revision: number;
+    };
+    AssignmentStarter: {
+      /** Format: uuid */
+      assignment_id: string;
+      /** Format: uuid */
+      assignment_version_id: string;
+      manifest: components['schemas']['RevisionManifest'];
+      /** Format: uuid */
+      revision_id: string;
+    };
+    AssignmentStarterIdentity: {
+      manifest_sha256: string;
+      /** Format: uuid */
+      revision_id: string;
+    };
+    /**
+     * @description * `owned_project` - owned_project
+     *     * `published_assignment` - published_assignment
+     * @enum {string}
+     */
+    AssignmentStarterOrigin: 'owned_project' | 'published_assignment';
+    /**
+     * @description * `individual` - individual
+     *     * `team` - team
+     * @enum {string}
+     */
+    AssignmentSubmissionMode: 'individual' | 'team';
+    AssignmentSummary: {
+      archived: boolean;
+      can_author: boolean;
+      current_version: components['schemas']['AssignmentVersionSummary'] | null;
+      /** Format: uuid */
+      id: string;
+      published: boolean;
+      title: string;
+      /** Format: uuid */
+      workspace_id: string;
+    };
+    AssignmentVersionDetail: {
+      /** Format: uuid */
+      assignment_id: string;
+      content_sha256: string;
+      helper_release: components['schemas']['RevisionHelper'];
+      hints: components['schemas']['AssignmentHint'][];
+      /** Format: uuid */
+      id: string;
+      instructions: string;
+      number: number;
+      public_checks: components['schemas']['PublishedChecks'] | null;
+      /** Format: date-time */
+      published_at: string;
+      publisher: components['schemas']['RevisionAuthor'];
+      runtime: components['schemas']['RevisionRuntime'];
+      starter: components['schemas']['AssignmentStarterIdentity'];
+      submission_policy: components['schemas']['SubmissionPolicy'];
+      title: string;
+      /** Format: uuid */
+      workspace_id: string;
+    };
+    AssignmentVersionPage: {
+      count: number;
+      items: components['schemas']['AssignmentVersionSummary'][];
+    };
+    AssignmentVersionSummary: {
+      content_sha256: string;
+      /** Format: date-time */
+      due_at: string | null;
+      /** Format: uuid */
+      id: string;
+      max_attempts: number;
+      max_team_size: number;
+      number: number;
+      /** Format: date-time */
+      published_at: string;
+      starter_manifest_sha256: string;
+      submission_mode: components['schemas']['AssignmentSubmissionMode'];
+      title: string;
+    };
     ChatData: {
       message: components['schemas']['ChatMessageOutput'];
     };
@@ -719,6 +957,11 @@ export interface components {
      * @enum {string}
      */
     InvitationStatus: 'pending' | 'accepted' | 'revoked' | 'expired';
+    /**
+     * @description * `reject` - reject
+     * @enum {string}
+     */
+    LatePolicyEnum: 'reject';
     LiveShareAccess: {
       kind: components['schemas']['LiveShareAccessKindEnum'];
       scope: components['schemas']['SourceShareScope'];
@@ -858,15 +1101,23 @@ export interface components {
       new_owner_id: string;
     };
     /**
-     * @description * `code-along.revision` - code-along.revision
-     * @enum {string}
-     */
-    ProtocolEnum: 'code-along.revision';
-    /**
      * @description * `shared_room_capture` - shared_room_capture
      * @enum {string}
      */
     ProvenanceEnum: 'shared_room_capture';
+    PublishedChecks: {
+      language: components['schemas']['FileKind'];
+      protocol: components['schemas']['PublishedChecksProtocolEnum'];
+      sha256: string;
+      source: string;
+      source_sha256: string;
+      version: number;
+    };
+    /**
+     * @description * `code-along.public-checks` - code-along.public-checks
+     * @enum {string}
+     */
+    PublishedChecksProtocolEnum: 'code-along.public-checks';
     /**
      * @description * `code-along-python-helpers-v1` - code-along-python-helpers-v1
      * @enum {string}
@@ -943,11 +1194,16 @@ export interface components {
       metadata_version: number;
       /** Format: uuid */
       project_id: string;
-      protocol: components['schemas']['ProtocolEnum'];
+      protocol: components['schemas']['RevisionManifestProtocolEnum'];
       runtime: components['schemas']['RevisionRuntime'];
       sha256: string;
       version: number;
     };
+    /**
+     * @description * `code-along.revision` - code-along.revision
+     * @enum {string}
+     */
+    RevisionManifestProtocolEnum: 'code-along.revision';
     RevisionOutput: {
       author: components['schemas']['RevisionAuthor'];
       /** Format: date-time */
@@ -1071,6 +1327,20 @@ export interface components {
      * @enum {string}
      */
     SourceShareScope: 'read' | 'write';
+    StarterOrigin: {
+      /** Format: uuid */
+      assignment_version_id?: string;
+      kind: components['schemas']['AssignmentStarterOrigin'];
+      number?: number;
+    };
+    SubmissionPolicy: {
+      /** Format: date-time */
+      due_at: string | null;
+      late_policy: components['schemas']['LatePolicyEnum'];
+      max_attempts: number;
+      max_team_size: number;
+      mode: components['schemas']['AssignmentSubmissionMode'];
+    };
     TicketBodyRequest: {
       /** Format: int64 */
       awareness_client_id: number;
@@ -1139,6 +1409,528 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  get_assignment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssignmentSummary'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  archive_assignment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssignmentArchiveRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssignmentSummary'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  get_assignment_draft: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssignmentDraft'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  update_assignment_draft: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssignmentDraftPatchRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssignmentDraft'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  list_assignment_versions: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssignmentVersionPage'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  publish_assignment_version: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssignmentPublishRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssignmentVersionDetail'];
+        };
+      };
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssignmentVersionDetail'];
+        };
+      };
+      /** @description No response body */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  get_assignment_version: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        version_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssignmentVersionDetail'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  get_assignment_starter: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        version_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssignmentStarter'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
   get_csrf_token: {
     parameters: {
       query?: never;
@@ -3286,6 +4078,102 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['WorkspaceOutput'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  list_assignments: {
+    parameters: {
+      query?: {
+        /**
+         * @description * `true` - true
+         *     * `false` - false
+         */
+        include_archived?: 'true' | 'false';
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        workspace_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssignmentPage'];
+        };
+      };
+    };
+  };
+  create_assignment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        workspace_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssignmentCreateRequest'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AssignmentSummary'];
         };
       };
       400: {

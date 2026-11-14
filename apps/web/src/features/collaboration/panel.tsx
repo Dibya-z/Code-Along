@@ -66,7 +66,7 @@ export function CollaborationPanel({
       </div>
       <details className="collaboration-details">
         <summary>
-          People and save options <span aria-hidden="true">({users.size})</span>
+          People &amp; saving <span aria-hidden="true">({users.size})</span>
         </summary>
         <div className="collaboration-actions">
           <ul

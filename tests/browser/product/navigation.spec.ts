@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import process from 'node:process';
 import {
   createEditorProject,
   openProjectSection,
@@ -175,6 +176,56 @@ test('project tasks retain source, undo, a waiting run and discussion draft whil
     const diagnostic = `Default code at ${width}x${height}: ${JSON.stringify({ before, after, settled }).slice(0, 1900)}`;
     expect(y, diagnostic).toBeLessThan(700);
     await expect(line, diagnostic).toBeInViewport();
+    const codeLink = navigation.getByRole('link', {
+      name: 'Code',
+      exact: true,
+    });
+    const settingsLink = navigation.getByRole('link', {
+      name: 'Settings',
+      exact: true,
+    });
+    await codeLink.focus();
+    // Match Safari's default link-navigation key, as the shell keyboard proof does.
+    const nextLinkKey =
+      browserName === 'webkit' && process.platform === 'darwin'
+        ? 'Alt+Tab'
+        : 'Tab';
+    for (let index = 0; index < 4; index++)
+      await page.keyboard.press(nextLinkKey);
+    await expect(settingsLink).toBeFocused();
+    const focusedNav = await navigation.evaluate((element) => {
+      const nav = element.getBoundingClientRect(),
+        link = document.activeElement?.getBoundingClientRect();
+      return {
+        scrollLeft: element.scrollLeft,
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        nav: { x: nav.x, y: nav.y, width: nav.width, height: nav.height },
+        link: link
+          ? { x: link.x, y: link.y, width: link.width, height: link.height }
+          : null,
+        pageX: scrollX,
+        pageY: scrollY,
+      };
+    });
+    await expect(settingsLink, JSON.stringify(focusedNav)).toBeInViewport({
+      ratio: 1,
+    });
+    if (width === 320) {
+      await expect(settingsLink).toHaveCSS('outline-width', '2px');
+      await expect(settingsLink).toHaveCSS('outline-offset', '-2px');
+      await page.screenshot({
+        path: test.info().outputPath('tasks-320-navigation-focus.png'),
+        fullPage: true,
+      });
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    for (const link of await navigation.getByRole('link').all())
+      expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await showFiles(page);
     await expect(
       page.getByRole('button', { name: 'Add file', exact: true }),

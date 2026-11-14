@@ -103,7 +103,7 @@ export async function openRecovery(page: Page) {
 export const openRunOptions = (page: Page) =>
   openDisclosure(page, /^Run options$/);
 export const openPeople = (page: Page) =>
-  openDisclosure(page, /^People and save options/);
+  openDisclosure(page, /^People & saving/);
 export const openEditorOptions = (page: Page) =>
   openDisclosure(page, /^Editor options$/);
 export async function showFiles(page: Page) {
