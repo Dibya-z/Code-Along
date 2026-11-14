@@ -6,6 +6,7 @@ import http.server
 import json
 import mimetypes
 import os
+import re
 import ssl
 from contextlib import closing
 from pathlib import Path
@@ -18,6 +19,20 @@ ROOT = Path(__file__).resolve().parents[2]
 PORT = int(os.environ.get("CODE_ALONG_HTTPS_PORT", "8443"))
 APP = f"https://127.0.0.1:{PORT}"
 RUNNER = f"https://localhost:{PORT}"
+SUBMISSION_POST_PATH = re.compile(
+    r"/api/v1/assignments/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/works/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/submissions/"
+)
+SUBMISSION_BODY_BYTES = 6 * 1024 * 1024 + 64 * 1024
+
+
+def api_body_limit(method: str, path: str) -> int:
+    return (
+        SUBMISSION_BODY_BYTES
+        if method == "POST" and SUBMISSION_POST_PATH.fullmatch(path)
+        else 2 * 1024 * 1024
+    )
+
+
 RUNTIME_INVENTORIES = {
     "pyodide-core.json": ROOT
     / "apps/runner-web/public/runtime-manifests/pyodide-core.json",
@@ -80,7 +95,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if length < 0 or self.headers.get("Transfer-Encoding"):
                 self.send_error(400)
                 return
-            if length > 2 * 1024 * 1024:
+            if length > api_body_limit(self.command, path):
                 self.send_error(413)
                 return
             request_headers = {

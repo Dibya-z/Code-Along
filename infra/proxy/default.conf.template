@@ -13,6 +13,21 @@ server {
   ssl_certificate /certs/cert.pem;
   ssl_certificate_key /certs/key.pem;
   client_max_body_size 2m;
+  # Server rewrite runs before body-limit location selection. Only this exact
+  # POST receives the larger escaped-source budget; every other API stays 2m.
+  if ($request_method = POST) {
+    rewrite "^(/api/v1/assignments/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/works/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/submissions/)$" /_code_along_submission$1 last;
+  }
+  location ^~ /_code_along_submission/ {
+    internal;
+    client_max_body_size 6356992;
+    rewrite "^/_code_along_submission(/api/v1/assignments/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/works/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/submissions/)$" $1 break;
+    proxy_pass http://api:8000;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Host "";
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
   root /srv/web;
   add_header X-Content-Type-Options nosniff always;
   add_header Referrer-Policy same-origin always;

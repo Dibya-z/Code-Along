@@ -21,6 +21,7 @@ import { FileTabs } from './components/file-tabs.tsx';
 import { FileTree } from './components/file-tree.tsx';
 import { ExecutionPanel, type PracticeAction } from '../execution/panel.tsx';
 import type { WorkExecutionContext } from '../execution/practice.ts';
+import type { SourceActionPortal } from '../execution/source-actions.ts';
 import './styles.css';
 import { RecoveryController } from '../recovery/controller.ts';
 import { recoveryStore } from '../recovery/store.ts';
@@ -77,6 +78,7 @@ type Props = WorkbenchProps &
         task?: WorkExecutionContext;
         practice?: PracticeAction;
         executionConflict?: string | null;
+        sourceActions?: SourceActionPortal;
         capability?: never;
       }
     | {
@@ -88,6 +90,7 @@ type Props = WorkbenchProps &
         task?: never;
         practice?: never;
         executionConflict?: never;
+        sourceActions?: never;
         capability: {
           readonly kind: 'live_share';
           readonly shareId: string;
@@ -123,6 +126,7 @@ function ScopedWorkbench({
   task,
   practice,
   executionConflict,
+  sourceActions,
 }: Props) {
   const name = useRef(project.name);
   name.current = project.name;
@@ -662,6 +666,7 @@ function ScopedWorkbench({
         {...(task ? { task } : {})}
         {...(practice ? { practice } : {})}
         {...(executionConflict ? { conflict: executionConflict } : {})}
+        {...(!capability && sourceActions ? { sourceActions } : {})}
         toolbar={targets?.runToolbar ?? toolbar}
         onRun={() => {
           selectPane('console');

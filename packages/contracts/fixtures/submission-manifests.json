@@ -1,0 +1,1320 @@
+{
+  "protocol": "code-along.submission-manifest-goldens",
+  "version": 1,
+  "cases": [
+    {
+      "name": "empty",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "version": 2,
+        "sha256": "b31712eac3939dec1497cc4b1cc4eaef5c85770146cc4ce8da263ad55c4bab5e"
+      },
+      "source_bytes": 0,
+      "canonical_json": "{\"version\":2,\"project_id\":\"00000000-0000-4000-8000-000000000099\",\"source_kind\":\"project\",\"metadata_version\":1,\"entrypoint_file_id\":\"00000000-0000-4000-8000-000000000001\",\"runtime\":{\"runtime_id\":\"pyodide-314.0.7-core\",\"manifest_sha256\":\"4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40\",\"engine\":\"pyodide\",\"engine_version\":\"314.0.7\",\"python_version\":\"3.14.2\"},\"stdin_mode\":\"batch\",\"files\":[{\"file_id\":\"00000000-0000-4000-8000-000000000001\",\"document_id\":\"00000000-0000-4000-8000-000000000101\",\"generation\":1,\"path\":\"main.py\",\"source\":\"\",\"sha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"}]}",
+      "artifact_manifest_sha256": "5a1cbe5877cfd8409493de3b94c746fdab9b35f36f225c16204bf3076c5708ff"
+    },
+    {
+      "name": "empty-interactive",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "interactive",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "version": 2,
+        "sha256": "2bf1ab78baa42e748c0dfcb352af27259d5961d8547fa215c2e1e39eb0acdbff"
+      },
+      "source_bytes": 0,
+      "artifact_manifest_sha256": "5a1cbe5877cfd8409493de3b94c746fdab9b35f36f225c16204bf3076c5708ff"
+    },
+    {
+      "name": "trailing-lf",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "answer = 42\n",
+            "sha256": "0a775022744f64c352863f165f2e125898419999bc57c83204772036d0ef6b2e"
+          }
+        ],
+        "version": 2,
+        "sha256": "6dfd14576bcd3e5b47326611c8cd98d4e2463694d01de9c3a3426f3b928d4035"
+      },
+      "source_bytes": 12,
+      "artifact_manifest_sha256": "56364cc5f227be85872d3dc74b29803307ab51a965c08b300f59a5a16389c2fe"
+    },
+    {
+      "name": "multiple-trailing-lfs",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "answer = 42\n\n",
+            "sha256": "8929c7ebed35b874c43381235d4495f836bd9d1c0d8713deda7ed8b9876bb86f"
+          }
+        ],
+        "version": 2,
+        "sha256": "c8f3e3fa670c4ae252f4c2361185a9886d8da7d30789764e48856057aa16e5df"
+      },
+      "source_bytes": 13,
+      "artifact_manifest_sha256": "d689f4e6ba40a6325515712785dc850d6b65d23f1c1143beddf6cdecb02d3c18"
+    },
+    {
+      "name": "crlf",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "answer = 42\r\nprint(answer)\r\n",
+            "sha256": "b0439ab458a06f1b785c480fb8ac53c9f9b114534132068bebf8944e5bfe372d"
+          }
+        ],
+        "version": 2,
+        "sha256": "17abcf99d0dc8c12f51ec549c320dcc775ac1b3d168b793e150f190f69f6d834"
+      },
+      "source_bytes": 28,
+      "artifact_manifest_sha256": "fe68427749b1735a624a83055168308cdbcbe8b6837c9dc53361c5f13e488105"
+    },
+    {
+      "name": "leading-bom",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "﻿print(\"BOM\")\n",
+            "sha256": "a7d1244e5fdee354ec221d8b69335cb13aee9ccfb73eca9d2d0babda5fe65ad1"
+          }
+        ],
+        "version": 2,
+        "sha256": "dfafdb14586575e3267e40980562c0d20a61170b8cee12ddba6c47d7cc3de5fb"
+      },
+      "source_bytes": 16,
+      "artifact_manifest_sha256": "871d52de5e4343d3aaf4a9ff117f778446eed1426d3797ef19f93d8dc01edf88"
+    },
+    {
+      "name": "escapes-controls-slash",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "# \"\\\t\b\f\u0001\u001f/\n",
+            "sha256": "bcbf1e94974997cbd85c9c5f8e2fd2f5ab2947a1028ee44fe9388c1423a688b9"
+          }
+        ],
+        "version": 2,
+        "sha256": "1b2312e923b2571f020cd7c2189fc57c9723deaaa6009c820f6f40909d1472b3"
+      },
+      "source_bytes": 11,
+      "artifact_manifest_sha256": "27687ee6ff966ea8b47da0c1690e453e8e073de004fbd24b3d21a54c36ebe877"
+    },
+    {
+      "name": "precomposed",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "é",
+            "sha256": "4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c"
+          }
+        ],
+        "version": 2,
+        "sha256": "a92cc5b329c368c1da93503855ce209dd62917b43cf572b0bc6ff7d4b49178ef"
+      },
+      "source_bytes": 2,
+      "artifact_manifest_sha256": "bcd1a07993a524364dc5e2fa7a57b99d137bde526e52fd3d86e45fb2eca6eec4"
+    },
+    {
+      "name": "combining",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "é",
+            "sha256": "bf12767b0f2a56b2190075bae8169f656e3ce8d6357d4aff184bc6c7ea48f9f6"
+          }
+        ],
+        "version": 2,
+        "sha256": "8cbf2a9cee4d955b4d4ce9598c607bc1cc04834882f2b8b82161f8606e6da731"
+      },
+      "source_bytes": 3,
+      "artifact_manifest_sha256": "78335ab770855987f8ee4751a837006de536cd05a99850151b578ae341575b7d"
+    },
+    {
+      "name": "astral-unicode",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "雪🙂🚀",
+            "sha256": "ccb11c1a82d746473c5d7d8f0582f186364a08468e29121f164ca3af34ec97e6"
+          }
+        ],
+        "version": 2,
+        "sha256": "e64fee9b785ce2456596fec04af75478fe9b01ab786bd473f7f1a28f031c09ab"
+      },
+      "source_bytes": 11,
+      "artifact_manifest_sha256": "92bf6b49030fb0019eef5f92dda3b62e2113ed36b752a39b331f8e464f01eefd"
+    },
+    {
+      "name": "unicode-line-separators",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "a b c",
+            "sha256": "f697df1f62230dd3adc456189e505808442665173789316624f2b00133b4d679"
+          }
+        ],
+        "version": 2,
+        "sha256": "0667ae953d461b158adcecd81a7f25059b91a0749ae85b386edbe036bee97262"
+      },
+      "source_bytes": 9,
+      "artifact_manifest_sha256": "9717a97d6451e8d6b60e7a039b6ca08c745a7820f870f93bdf01ce55539397c7"
+    },
+    {
+      "name": "ascii-path-order-and-packages",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000005",
+            "document_id": "00000000-0000-4000-8000-000000000105",
+            "generation": 1,
+            "path": "Z.py",
+            "source": "z = 1\n",
+            "sha256": "1bc01ef3687ccfe07da22018dfe7851781c442c8b4ec7bd718d0c1f145529ad1"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000003",
+            "document_id": "00000000-0000-4000-8000-000000000103",
+            "generation": 1,
+            "path": "_helper.py",
+            "source": "answer = 42\n",
+            "sha256": "0a775022744f64c352863f165f2e125898419999bc57c83204772036d0ef6b2e"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000002",
+            "document_id": "00000000-0000-4000-8000-000000000102",
+            "generation": 1,
+            "path": "a.py",
+            "source": "a = 1\n",
+            "sha256": "cb78bd8a17f7b751fe0d4663366dcbc257204033ef7ddd64b1f2969573b5b2e2"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000004",
+            "document_id": "00000000-0000-4000-8000-000000000104",
+            "generation": 1,
+            "path": "pkg/__init__.py",
+            "source": "answer = 42\n",
+            "sha256": "0a775022744f64c352863f165f2e125898419999bc57c83204772036d0ef6b2e"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "pkg/main.py",
+            "source": "from . import answer\n",
+            "sha256": "6897a94301c69373b95de5b119939a65702d7ccc179dcd47ba857760f9916e96"
+          }
+        ],
+        "version": 2,
+        "sha256": "729f793fd0d8662e9c4cae58af45b0f1c81439fb888b44d619a0fde1ec6da041"
+      },
+      "source_bytes": 57,
+      "artifact_manifest_sha256": "294b0fccfd3abd51f7dcb62c5b3ef3dcd6aa5e7ce3af19988a9a87a6ee8b854d"
+    },
+    {
+      "name": "scientific-interactive",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-scientific",
+          "manifest_sha256": "eb2bfd5f172ccce38411575452b4c723f939a14e095a94a612fb1f9d5fdf21ea",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "interactive",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "import numpy as np\nprint(np.arange(3))\n",
+            "sha256": "ce689b5ea0a8471b3cbe2a2be60cc299d8b0bd3c299644105ecae1b59806d95a"
+          }
+        ],
+        "version": 2,
+        "sha256": "c004158c52de52a5861d0600ab85412f1d0a066ae426e8fd176c9c14eaa9b14f"
+      },
+      "source_bytes": 39,
+      "artifact_manifest_sha256": "5628daa5426c33ec0fbf3c593abdbd09dcc8ff60896dc668b1aaf61671a6893e"
+    },
+    {
+      "name": "maximum-domain-numbers",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 9007199254740991,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 2147483647,
+            "path": "main.py",
+            "source": "x\n",
+            "sha256": "73cb3858a687a8494ca3323053016282f3dad39d42cf62ca4e79dda2aac7d9ac"
+          }
+        ],
+        "version": 2,
+        "sha256": "21d4a3f8bef06776291772422cf1ac7100f84059e2b503b4be6b9f1de1847ac3"
+      },
+      "source_bytes": 2,
+      "artifact_manifest_sha256": "a7605a8446e2af8cf49bd2b00d141cc98b880273b8296d531a2ee9ef907cf520"
+    },
+    {
+      "name": "integral-number-json-lexemes",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1000,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "value = 1000\n",
+            "sha256": "8aaa0de9e460af5ef7e61122d337aac7302d193c60e6c47780edb56b52d699ac"
+          }
+        ],
+        "version": 2,
+        "sha256": "2d28f82d3ce40842b67a28d493d59b14c4a6c3c3d7b26a170f2488af65a79a3b"
+      },
+      "source_bytes": 13,
+      "raw_manifest_json": "{\"project_id\":\"00000000-0000-4000-8000-000000000099\",\"source_kind\":\"project\",\"metadata_version\":1e3,\"entrypoint_file_id\":\"00000000-0000-4000-8000-000000000001\",\"runtime\":{\"runtime_id\":\"pyodide-314.0.7-core\",\"manifest_sha256\":\"4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40\",\"engine\":\"pyodide\",\"engine_version\":\"314.0.7\",\"python_version\":\"3.14.2\"},\"stdin_mode\":\"batch\",\"files\":[{\"file_id\":\"00000000-0000-4000-8000-000000000001\",\"document_id\":\"00000000-0000-4000-8000-000000000101\",\"generation\":1.0,\"path\":\"main.py\",\"source\":\"value = 1000\\n\",\"sha256\":\"8aaa0de9e460af5ef7e61122d337aac7302d193c60e6c47780edb56b52d699ac\"}],\"version\":2.0,\"sha256\":\"2d28f82d3ce40842b67a28d493d59b14c4a6c3c3d7b26a170f2488af65a79a3b\"}",
+      "artifact_manifest_sha256": "2bbc6045b2ce10cad67a64d5bbee7c58723df4a101df282e5ca0ce75c6893f9b"
+    },
+    {
+      "name": "utf8-file-exact-limit",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "<materialized from source_recipes>",
+            "sha256": "1fbc85e36a660d09a6dff0728df54fa2b034ea5f7206b89645f49a6e1b6b6d10"
+          }
+        ],
+        "version": 2,
+        "sha256": "0451cf0e52482766b24531595355186bd6e9e28c78e5c2a62627c0db05694804"
+      },
+      "source_bytes": 131072,
+      "source_recipes": {
+        "main.py": {
+          "prefix": "",
+          "unit": "雪",
+          "repeat": 43690,
+          "suffix": "xx"
+        }
+      },
+      "artifact_manifest_sha256": "203231d37b8b94fa0ec6d23d6fcb3a733096e45a57c327ef168624268886b64b"
+    },
+    {
+      "name": "bom-file-exact-limit",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "<materialized from source_recipes>",
+            "sha256": "612fdd6f404de6cff5e0301add70ba2034bda5ab5ab754b3db2c0d4d63573cc8"
+          }
+        ],
+        "version": 2,
+        "sha256": "a44b9b49d024ebdcacabc38949bdfe1022a6025e664b18e104e5fa8a9f468baf"
+      },
+      "source_bytes": 131072,
+      "source_recipes": {
+        "main.py": {
+          "prefix": "﻿",
+          "unit": "x",
+          "repeat": 131069,
+          "suffix": ""
+        }
+      },
+      "artifact_manifest_sha256": "67ab84de04c5795e2cfce3629f18a52a2a0dee33b4ce07c3027d77a5bed71307"
+    },
+    {
+      "name": "aggregate-exact-limit",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "m00.py",
+            "source": "<materialized from source_recipes>",
+            "sha256": "15601535eca4a38b7e31ad6494861121cb9f84ccf55d4beb6a707d4f7a87813d"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000002",
+            "document_id": "00000000-0000-4000-8000-000000000102",
+            "generation": 1,
+            "path": "m01.py",
+            "source": "<materialized from source_recipes>",
+            "sha256": "15601535eca4a38b7e31ad6494861121cb9f84ccf55d4beb6a707d4f7a87813d"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000003",
+            "document_id": "00000000-0000-4000-8000-000000000103",
+            "generation": 1,
+            "path": "m02.py",
+            "source": "<materialized from source_recipes>",
+            "sha256": "15601535eca4a38b7e31ad6494861121cb9f84ccf55d4beb6a707d4f7a87813d"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000004",
+            "document_id": "00000000-0000-4000-8000-000000000104",
+            "generation": 1,
+            "path": "m03.py",
+            "source": "<materialized from source_recipes>",
+            "sha256": "15601535eca4a38b7e31ad6494861121cb9f84ccf55d4beb6a707d4f7a87813d"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000005",
+            "document_id": "00000000-0000-4000-8000-000000000105",
+            "generation": 1,
+            "path": "m04.py",
+            "source": "<materialized from source_recipes>",
+            "sha256": "15601535eca4a38b7e31ad6494861121cb9f84ccf55d4beb6a707d4f7a87813d"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000006",
+            "document_id": "00000000-0000-4000-8000-000000000106",
+            "generation": 1,
+            "path": "m05.py",
+            "source": "<materialized from source_recipes>",
+            "sha256": "15601535eca4a38b7e31ad6494861121cb9f84ccf55d4beb6a707d4f7a87813d"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000007",
+            "document_id": "00000000-0000-4000-8000-000000000107",
+            "generation": 1,
+            "path": "m06.py",
+            "source": "<materialized from source_recipes>",
+            "sha256": "15601535eca4a38b7e31ad6494861121cb9f84ccf55d4beb6a707d4f7a87813d"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000008",
+            "document_id": "00000000-0000-4000-8000-000000000108",
+            "generation": 1,
+            "path": "m07.py",
+            "source": "<materialized from source_recipes>",
+            "sha256": "15601535eca4a38b7e31ad6494861121cb9f84ccf55d4beb6a707d4f7a87813d"
+          }
+        ],
+        "version": 2,
+        "sha256": "1271d9fb04d57088d7d5d1ee6fd0da9c38a785afbe56b6aae3ca7d0ddbb2dc21"
+      },
+      "source_bytes": 1048576,
+      "source_recipes": {
+        "m00.py": {
+          "prefix": "",
+          "unit": "x",
+          "repeat": 131072,
+          "suffix": ""
+        },
+        "m01.py": {
+          "prefix": "",
+          "unit": "x",
+          "repeat": 131072,
+          "suffix": ""
+        },
+        "m02.py": {
+          "prefix": "",
+          "unit": "x",
+          "repeat": 131072,
+          "suffix": ""
+        },
+        "m03.py": {
+          "prefix": "",
+          "unit": "x",
+          "repeat": 131072,
+          "suffix": ""
+        },
+        "m04.py": {
+          "prefix": "",
+          "unit": "x",
+          "repeat": 131072,
+          "suffix": ""
+        },
+        "m05.py": {
+          "prefix": "",
+          "unit": "x",
+          "repeat": 131072,
+          "suffix": ""
+        },
+        "m06.py": {
+          "prefix": "",
+          "unit": "x",
+          "repeat": 131072,
+          "suffix": ""
+        },
+        "m07.py": {
+          "prefix": "",
+          "unit": "x",
+          "repeat": 131072,
+          "suffix": ""
+        }
+      },
+      "artifact_manifest_sha256": "7529f4cf856ad204d473ed8ddd1249a3594e9a82792f3f98ee49b62aad01db4f"
+    },
+    {
+      "name": "twenty-source-files",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "m00.py",
+            "source": "value = 0\n",
+            "sha256": "a06106e01c0ed5a953720fe62093cdd5cc2cbcc2144ca6a260e43a2393c81c0f"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000002",
+            "document_id": "00000000-0000-4000-8000-000000000102",
+            "generation": 1,
+            "path": "m01.py",
+            "source": "value = 1\n",
+            "sha256": "585c93666fcb046b7b264d3fa73202aa2a38254ae82a4b3ba19e873c2d5a9886"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000003",
+            "document_id": "00000000-0000-4000-8000-000000000103",
+            "generation": 1,
+            "path": "m02.py",
+            "source": "value = 2\n",
+            "sha256": "69ef4f409b530264b0da21ad4054978ada08895c93631a0da1957e2a10b592b5"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000004",
+            "document_id": "00000000-0000-4000-8000-000000000104",
+            "generation": 1,
+            "path": "m03.py",
+            "source": "value = 3\n",
+            "sha256": "5c6324d83a24ed49a86ba6a947b0ae64bd495c86d39c090e1c5f1852a7e35874"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000005",
+            "document_id": "00000000-0000-4000-8000-000000000105",
+            "generation": 1,
+            "path": "m04.py",
+            "source": "value = 4\n",
+            "sha256": "8eaa67ded7e4bbc5fb10b3cffcd218590a96bbb11474d65fba15d8e5984cae21"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000006",
+            "document_id": "00000000-0000-4000-8000-000000000106",
+            "generation": 1,
+            "path": "m05.py",
+            "source": "value = 5\n",
+            "sha256": "0f8c6e2d3ef9adae359607c44f3e3d8c176c07d19bf7f829ccb361a0ff83d39d"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000007",
+            "document_id": "00000000-0000-4000-8000-000000000107",
+            "generation": 1,
+            "path": "m06.py",
+            "source": "value = 6\n",
+            "sha256": "2d7e55e549c28f71eb73c82ff95394571f57cf6629b1466e224bf1e5521a40bf"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000008",
+            "document_id": "00000000-0000-4000-8000-000000000108",
+            "generation": 1,
+            "path": "m07.py",
+            "source": "value = 7\n",
+            "sha256": "66c511a5a5e7f84ae5572f226a63b4066a14de6e19657ea2f3739a9e5cde7826"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000009",
+            "document_id": "00000000-0000-4000-8000-000000000109",
+            "generation": 1,
+            "path": "m08.py",
+            "source": "value = 8\n",
+            "sha256": "5f61b5f6cb4b42cbb8fa266f4974f96946fdf19625cf452c6ab6cf9b74a7472a"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000010",
+            "document_id": "00000000-0000-4000-8000-000000000110",
+            "generation": 1,
+            "path": "m09.py",
+            "source": "value = 9\n",
+            "sha256": "39ba6d2e1c4c6e4fdc853d09df8fdc7f96e11d06c3f65dc8a121687698022ef7"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000011",
+            "document_id": "00000000-0000-4000-8000-000000000111",
+            "generation": 1,
+            "path": "m10.py",
+            "source": "value = 10\n",
+            "sha256": "d555c8d5b41cd44a70ae616b4fdf2e865009fa9dd2dbe270c71dcbf081ac9a0f"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000012",
+            "document_id": "00000000-0000-4000-8000-000000000112",
+            "generation": 1,
+            "path": "m11.py",
+            "source": "value = 11\n",
+            "sha256": "77a82f750987e07789c1aac02b43fccbd326d5581b141892f35b7e7b3b887372"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000013",
+            "document_id": "00000000-0000-4000-8000-000000000113",
+            "generation": 1,
+            "path": "m12.py",
+            "source": "value = 12\n",
+            "sha256": "b1732a266368a5bc9b3741f488570158549b955147bd2bf4d76a2d8eb6abe823"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000014",
+            "document_id": "00000000-0000-4000-8000-000000000114",
+            "generation": 1,
+            "path": "m13.py",
+            "source": "value = 13\n",
+            "sha256": "240dfcba932b0e7a66fdad4d3fd2e027b2f84b2887599aad6c4c38b0d64faf3d"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000015",
+            "document_id": "00000000-0000-4000-8000-000000000115",
+            "generation": 1,
+            "path": "m14.py",
+            "source": "value = 14\n",
+            "sha256": "c9dbf8230dd6e5e1081527171f42ad557e90ff19d43c952e3e25bdedbfe43874"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000016",
+            "document_id": "00000000-0000-4000-8000-000000000116",
+            "generation": 1,
+            "path": "m15.py",
+            "source": "value = 15\n",
+            "sha256": "8aeb751535f38aae43018c5eabdc51a35b462c4627737577c33101e2795c845b"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000017",
+            "document_id": "00000000-0000-4000-8000-000000000117",
+            "generation": 1,
+            "path": "m16.py",
+            "source": "value = 16\n",
+            "sha256": "69696dd176e7a518822d4ee4a6140132b3312631a66b4affb9dc1388c2ae54e0"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000018",
+            "document_id": "00000000-0000-4000-8000-000000000118",
+            "generation": 1,
+            "path": "m17.py",
+            "source": "value = 17\n",
+            "sha256": "f649ef6474d16e1cbe6d0b78d24bffaf95779432d964a981f7e50e455d9e6ef3"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000019",
+            "document_id": "00000000-0000-4000-8000-000000000119",
+            "generation": 1,
+            "path": "m18.py",
+            "source": "value = 18\n",
+            "sha256": "e08aba0ccaafef16aaefe41467063a3199766b8b02a00a3a6499b7940747e57b"
+          },
+          {
+            "file_id": "00000000-0000-4000-8000-000000000020",
+            "document_id": "00000000-0000-4000-8000-000000000120",
+            "generation": 1,
+            "path": "m19.py",
+            "source": "value = 19\n",
+            "sha256": "4545b40222bd59c38da7ea7a6f4b82861726be91dc4f6f78f98e7d58c16a5fa5"
+          }
+        ],
+        "version": 2,
+        "sha256": "cf77e28f9bd9a8e67dc4c3552e09eff918f1e84b40f97052187d00a9bf9a8bf4"
+      },
+      "source_bytes": 210,
+      "artifact_manifest_sha256": "a980269489f56c3239d81d96c07311a59a12528556a35564872984e7ad76f82a"
+    },
+    {
+      "name": "maximum-path-length",
+      "wire_valid": true,
+      "submission_valid": true,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.py",
+            "source": "",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "version": 2,
+        "sha256": "053bd6643c7d76b318977f42cdf80baf8999a93123abd0a7e0d0f75a6020c2f9"
+      },
+      "source_bytes": 0,
+      "artifact_manifest_sha256": "aa6b317183cf76962c3c6acdfce49b31b7d7d4502fe6ade0ef4e86728d607482"
+    },
+    {
+      "name": "wire-local-draft-not-submission",
+      "wire_valid": true,
+      "submission_valid": false,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "local_draft",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 1,
+            "path": "main.py",
+            "source": "",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "version": 2,
+        "sha256": "69cfb4de9afcb1565a41ad5b1575fe85af06eb02a74fba4b38b9a322a1721977"
+      },
+      "source_bytes": 0
+    },
+    {
+      "name": "wire-generation-above-db-not-submission",
+      "wire_valid": true,
+      "submission_valid": false,
+      "manifest": {
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "source_kind": "project",
+        "metadata_version": 1,
+        "entrypoint_file_id": "00000000-0000-4000-8000-000000000001",
+        "runtime": {
+          "runtime_id": "pyodide-314.0.7-core",
+          "manifest_sha256": "4eb12f345e0f14f57c93603c8d8a2d3d62c69e2e82618c63cac87dc0aafadf40",
+          "engine": "pyodide",
+          "engine_version": "314.0.7",
+          "python_version": "3.14.2"
+        },
+        "stdin_mode": "batch",
+        "files": [
+          {
+            "file_id": "00000000-0000-4000-8000-000000000001",
+            "document_id": "00000000-0000-4000-8000-000000000101",
+            "generation": 2147483648,
+            "path": "main.py",
+            "source": "",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "version": 2,
+        "sha256": "dc1396e058f7eb92c86961b1ae637f25358ede814d7343a7c5fbc8a083162e68"
+      },
+      "source_bytes": 0
+    }
+  ],
+  "rejections": [
+    {
+      "name": "version-bool",
+      "path": ["version"],
+      "value": true,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "version-fraction",
+      "path": ["version"],
+      "value": 2.5,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "version-string",
+      "path": ["version"],
+      "value": "2",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "metadata-bool",
+      "path": ["metadata_version"],
+      "value": true,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "metadata-fraction",
+      "path": ["metadata_version"],
+      "value": 1.5,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "metadata-zero",
+      "path": ["metadata_version"],
+      "value": 0,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "metadata-unsafe",
+      "path": ["metadata_version"],
+      "value": 9007199254740992,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "metadata-string",
+      "path": ["metadata_version"],
+      "value": "1",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "generation-bool",
+      "path": ["files", 0, "generation"],
+      "value": true,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "generation-fraction",
+      "path": ["files", 0, "generation"],
+      "value": 1.5,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "generation-zero",
+      "path": ["files", 0, "generation"],
+      "value": 0,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "generation-unsafe",
+      "path": ["files", 0, "generation"],
+      "value": 9007199254740992,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "generation-string",
+      "path": ["files", 0, "generation"],
+      "value": "1",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "project-nil-uuid",
+      "path": ["project_id"],
+      "value": "00000000-0000-0000-0000-000000000000",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "project-uppercase-uuid",
+      "path": ["project_id"],
+      "value": "ABCDEF00-0000-4000-8000-000000000099",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "missing-entrypoint",
+      "path": ["entrypoint_file_id"],
+      "value": "00000000-0000-4000-8000-000000000999",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "uppercase-digest",
+      "path": ["sha256"],
+      "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "wrong-digest",
+      "path": ["sha256"],
+      "value": "0000000000000000000000000000000000000000000000000000000000000000",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "wrong-source-digest",
+      "path": ["files", 0, "sha256"],
+      "value": "0000000000000000000000000000000000000000000000000000000000000000",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "unknown-runtime",
+      "path": ["runtime", "runtime_id"],
+      "value": "unreviewed",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "wrong-runtime-hash",
+      "path": ["runtime", "manifest_sha256"],
+      "value": "0000000000000000000000000000000000000000000000000000000000000000",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "wrong-engine",
+      "path": ["runtime", "engine"],
+      "value": "cpython",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "wrong-engine-version",
+      "path": ["runtime", "engine_version"],
+      "value": "later",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "wrong-python-version",
+      "path": ["runtime", "python_version"],
+      "value": "later",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "unknown-top-key",
+      "path": ["_extra"],
+      "value": true,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "unknown-runtime-key",
+      "path": ["runtime", "_extra"],
+      "value": true,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "unknown-file-key",
+      "path": ["files", 0, "_extra"],
+      "value": true,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "nul-source",
+      "path": ["files", 0, "source"],
+      "value": "\u0000",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "non-string-source",
+      "path": ["files", 0, "source"],
+      "value": 42,
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "traversal-path",
+      "path": ["files", 0, "path"],
+      "value": "../main.py",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "absolute-path",
+      "path": ["files", 0, "path"],
+      "value": "/main.py",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "hyphen-path",
+      "path": ["files", 0, "path"],
+      "value": "bad-name.py",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "invalid-segment",
+      "path": ["files", 0, "path"],
+      "value": "x/2bad.py",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "empty-path",
+      "path": ["files", 0, "path"],
+      "value": "",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "long-path",
+      "path": ["files", 0, "path"],
+      "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.py",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "array-kind",
+      "path": ["source_kind"],
+      "value": ["project"],
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "array-mode",
+      "path": ["stdin_mode"],
+      "value": ["batch"],
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "empty-files",
+      "path": ["files"],
+      "value": [],
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "unpaired-high-surrogate",
+      "path": ["files", 0, "source"],
+      "value_json": "\"\\ud800\"",
+      "wire_valid": false,
+      "submission_valid": false
+    },
+    {
+      "name": "unpaired-low-surrogate",
+      "path": ["files", 0, "source"],
+      "value_json": "\"\\udfff\"",
+      "wire_valid": false,
+      "submission_valid": false
+    }
+  ]
+}

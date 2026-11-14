@@ -12,10 +12,12 @@ export function RevisionViewer({
   manifest,
   name,
   actions,
+  provenance = 'shared',
 }: {
   manifest: RevisionManifest;
   name: string;
   actions?: ReactNode;
+  provenance?: 'shared' | 'submission' | 'candidate';
 }) {
   const [selected, setSelected] = useState(manifest.entrypoint_file_id);
   const active =
@@ -27,7 +29,12 @@ export function RevisionViewer({
         <div>
           <h3>{name}</h3>
           <p className="muted">
-            Immutable shared-room capture · {manifest.files.length}{' '}
+            {provenance === 'shared'
+              ? 'Immutable shared-room capture'
+              : provenance === 'submission'
+                ? 'Submitted code'
+                : 'Chosen code'}{' '}
+            · {manifest.files.length}{' '}
             {manifest.files.length === 1 ? 'file' : 'files'}
           </p>
         </div>
@@ -70,8 +77,11 @@ export function RevisionViewer({
         <dl>
           <dt>Capture</dt>
           <dd>
-            Shared room at the server capture point. Later room edits do not
-            change this revision.
+            {provenance === 'shared'
+              ? 'Shared room at the server capture point. Later room edits do not change this revision.'
+              : provenance === 'submission'
+                ? 'Exact client-submitted snapshot. Later project edits do not change this submission.'
+                : 'Exact code chosen in this tab. Later edits or runs do not replace this choice.'}
           </dd>
           <dt>Metadata version</dt>
           <dd>{manifest.metadata_version}</dd>
@@ -99,7 +109,11 @@ export function RevisionViewer({
           variant="secondary"
           onClick={() => downloadArchive(revisionArchive(manifest, name))}
         >
-          Export revision source
+          {provenance === 'shared'
+            ? 'Export revision source'
+            : provenance === 'submission'
+              ? 'Export submission source'
+              : 'Export chosen source'}
         </Button>
         <Button
           type="button"

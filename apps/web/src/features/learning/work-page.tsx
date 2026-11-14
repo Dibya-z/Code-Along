@@ -29,6 +29,8 @@ import {
 } from './task-practice.tsx';
 import type { WorkExecutionContext } from '../execution/practice.ts';
 import { TaskHints } from './task-hints.tsx';
+import { SubmissionPanel } from '../submissions/panel.tsx';
+import { SubmissionList } from '../submissions/list.tsx';
 import './styles.css';
 
 export function AssignmentWorkPage() {
@@ -144,6 +146,7 @@ function WorkDetail({
         <WorkSource
           key={opened.projectId}
           accountId={accountId}
+          workId={workId}
           projectId={opened.projectId}
           work={work.data}
           version={version.data}
@@ -160,6 +163,12 @@ function WorkDetail({
             No source project has been opened.
           </p>
           {version.data && <TaskGuide version={version.data} />}
+          <SubmissionList
+            accountId={accountId}
+            assignmentId={assignmentId}
+            workId={workId}
+            active
+          />
         </section>
       ) : !work.error && !version.error ? (
         <Notice>Verifying work and its published task…</Notice>
@@ -170,6 +179,7 @@ function WorkDetail({
 
 function WorkSource({
   accountId,
+  workId,
   projectId,
   work,
   version,
@@ -178,6 +188,7 @@ function WorkSource({
   onRecheckWork,
 }: {
   accountId: string;
+  workId: string;
   projectId: string;
   work: AssignmentWork | undefined;
   version: AssignmentVersion;
@@ -216,6 +227,8 @@ function WorkSource({
   const [practiceTarget, setPracticeTarget] = useState<HTMLDivElement | null>(
     null,
   );
+  const [submissionTarget, setSubmissionTarget] =
+    useState<HTMLDivElement | null>(null);
   useLayoutEffect(() => {
     if (!commandBar) return;
     const measure = () =>
@@ -339,6 +352,19 @@ function WorkSource({
         onSelect={setSelected}
         paused={sourcePaused}
         task={task}
+        sourceActions={{
+          target: submissionTarget,
+          render: (actions) => (
+            <SubmissionPanel
+              accountId={accountId}
+              assignmentId={version.assignment_id}
+              workId={workId}
+              versionNumber={version.number}
+              eligible={Boolean(work?.can_continue) && !sourcePaused}
+              actions={actions}
+            />
+          ),
+        }}
         executionConflict={executionConflict}
         {...(version.public_checks
           ? {
@@ -375,6 +401,7 @@ function WorkSource({
                   onTarget: setPracticeTarget,
                 }}
               />
+              <div ref={setSubmissionTarget} />
               <details
                 className="task-disclosure"
                 open={discussionOpen}

@@ -16,6 +16,7 @@ urlpatterns = [
         "api/v1/workspaces/<uuid:workspace_id>/assignments/",
         AssignmentListView.as_view(),
     ),
+    path("api/v1/assignments/", include("code_along.submissions.urls")),
     path("api/v1/assignments/", include("code_along.learning.urls")),
     path("api/v1/shares/resolve/", ShareResolveView.as_view()),
     path("internal/v1/collaboration/", include("code_along.collaboration.urls")),

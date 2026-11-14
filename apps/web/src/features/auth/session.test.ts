@@ -101,13 +101,19 @@ describe('post-authentication destination', () => {
   it('returns to a complete assignment or pinned work route after sign-in', () => {
     const assignment = '/assignments/ae95a338-9057-4b8f-a405-d676a70b4d3d';
     const work = assignment + '/works/e2f62cf8-b2cc-4dac-b4ed-668937c32223';
+    const submission =
+      assignment + '/submissions/e2f62cf8-b2cc-4dac-b4ed-668937c32223';
     expect(safeDestination(assignment)).toBe(assignment);
     expect(safeDestination(work)).toBe(work);
+    expect(safeDestination(submission)).toBe(submission);
     for (const path of [
       assignment + '?next=//evil.invalid',
       work + '/extra',
       assignment + '/works/' + '-'.repeat(36),
       assignment + '/works/%2f%2fevil.invalid',
+      submission + '?share_token=private',
+      submission + '/copies',
+      assignment + '/submissions/' + '-'.repeat(36),
     ])
       expect(safeDestination(path)).toBe('/workspaces');
   });

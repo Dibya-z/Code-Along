@@ -253,3 +253,102 @@ def test_native_static_responses_keep_large_tls_bodies_length_framed(
                 assert not response.will_close
         finally:
             client.close()
+
+
+def test_native_submission_post_alone_accepts_the_escaped_source_budget(
+    certificate, monkeypatch
+):
+    import hashlib
+    import json
+
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[2] / "tools/dev"))
+    from tools.dev import native_proxy
+
+    forwarded = []
+
+    class API(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+            forwarded.append((self.command, self.path, dict(self.headers), len(body)))
+            payload = json.dumps(
+                {"bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()}
+            ).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, *_args):
+            pass
+
+    upstream = http.server.ThreadingHTTPServer(("127.0.0.1", 0), API)
+    thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+    thread.start()
+    try:
+        monkeypatch.setenv("CODE_ALONG_NATIVE_API_PORT", str(upstream.server_port))
+        server_context, client_context = certificate
+        path = "/api/v1/assignments/11111111-1111-4111-8111-111111111111/works/22222222-2222-4222-8222-222222222222/submissions/"
+        body = b'{"source":"' + b"\\u0001" * (1024 * 1024) + b'"}'
+        assert 6 * 1024 * 1024 < len(body) <= native_proxy.SUBMISSION_BODY_BYTES
+        with serving(server_context, native_proxy.Handler) as address:
+            monkeypatch.setattr(native_proxy, "PORT", address[1])
+            client = http.client.HTTPSConnection(
+                *address, context=client_context, timeout=10
+            )
+            try:
+                client.request(
+                    "POST",
+                    path + "?transport=preserved",
+                    body,
+                    headers={
+                        "Content-Type": "application/json",
+                        "X-Forwarded-For": "attacker",
+                        "X-Forwarded-Proto": "http",
+                        "X-Forwarded-Host": "attacker.example",
+                    },
+                )
+                response = client.getresponse()
+                assert response.status == 200
+                assert json.loads(response.read()) == {
+                    "bytes": len(body),
+                    "sha256": hashlib.sha256(body).hexdigest(),
+                }
+            finally:
+                client.close()
+            assert len(forwarded) == 1
+            assert forwarded[0][1] == path + "?transport=preserved"
+            assert forwarded[0][2]["X-Forwarded-Proto"] == "https"
+            assert forwarded[0][2]["X-Forwarded-For"] == "127.0.0.1"
+            assert "X-Forwarded-Host" not in forwarded[0][2]
+            # Send just the declared oversized headers: rejection must precede
+            # attempting any large body read or contacting the upstream.
+            cases = [
+                ("POST", path, native_proxy.SUBMISSION_BODY_BYTES + 1, 413, {}),
+                ("GET", path, 2 * 1024 * 1024 + 1, 413, {}),
+                ("PATCH", path, 2 * 1024 * 1024 + 1, 413, {}),
+                ("POST", path.rstrip("/"), 2 * 1024 * 1024 + 1, 413, {}),
+                ("POST", "/api/v1/me/", 2 * 1024 * 1024 + 1, 413, {}),
+                ("POST", "/internal/submissions/", 0, 404, {}),
+                ("POST", path, 0, 400, {"Transfer-Encoding": "chunked"}),
+            ]
+            for method, target, length, expected, headers in cases:
+                client = http.client.HTTPSConnection(
+                    *address, context=client_context, timeout=3
+                )
+                try:
+                    client.putrequest(method, target)
+                    client.putheader("Content-Length", str(length))
+                    for key, value in headers.items():
+                        client.putheader(key, value)
+                    client.endheaders()
+                    response = client.getresponse()
+                    assert response.status == expected
+                    response.read()
+                finally:
+                    client.close()
+            assert len(forwarded) == 1
+    finally:
+        upstream.shutdown()
+        upstream.server_close()
+        thread.join(timeout=2)

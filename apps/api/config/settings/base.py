@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "code_along.events.apps.EventsConfig",
     "code_along.chat.apps.ChatConfig",
     "code_along.learning.apps.LearningConfig",
+    "code_along.submissions.apps.SubmissionsConfig",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -136,5 +137,28 @@ SPECTACULAR_SETTINGS = {
         "FileKind": ["python"],
         "AssignmentSubmissionMode": ["individual", "team"],
         "AssignmentStarterOrigin": ["owned_project", "published_assignment"],
+        "ExecutionTerminalStatus": [
+            "succeeded",
+            "failed",
+            "cancelled",
+            "timed_out",
+            "output_limit",
+        ],
+        "ProvenanceEnum": ["shared_room_capture"],
+        "SubmissionProvenance": ["client_submitted_snapshot"],
+        "ReasonEnum": ["mode_mismatch", "team_size"],
+        "SubmissionAvailabilityReasonEnum": [
+            "submission_work_unavailable",
+            "submission_participation_unavailable",
+            "submission_roster_changed",
+            "submission_source_unavailable",
+            "submission_runtime_changed",
+            "submission_deadline_passed",
+            "submission_attempt_limit",
+            "assignment_submission_capacity",
+            "workspace_submission_capacity",
+            "assignment_submission_storage_capacity",
+            "workspace_submission_storage_capacity",
+        ],
     },
 }

@@ -14,11 +14,13 @@ import { ConsoleView } from './console-view.tsx';
 import { PlotGallery } from './plot-gallery.tsx';
 import { createPortal } from 'react-dom';
 import {
+  captureWorkspaceWorkRun,
   checksCopyError,
   workExecutionConflict,
   type WorkExecutionContext,
   type WorkPracticeInput,
 } from './practice.ts';
+import { retainedSource, type SourceActionPortal } from './source-actions.ts';
 export interface PracticeAction {
   readonly input: WorkPracticeInput;
   readonly target: HTMLElement | null;
@@ -60,6 +62,7 @@ export function ExecutionPanel({
   task,
   practice,
   conflict,
+  sourceActions,
 }: {
   workspace: EditorWorkspace;
   paused: boolean;
@@ -68,6 +71,7 @@ export function ExecutionPanel({
   task?: WorkExecutionContext;
   practice?: PracticeAction;
   conflict?: string | null;
+  sourceActions?: SourceActionPortal;
 }) {
   const [resource] = useState(() => ({
     model: new ExecutionController(
@@ -170,6 +174,25 @@ export function ExecutionPanel({
   return (
     <section className="execution-panel" aria-label="Python execution">
       {toolbar ? createPortal(controls, toolbar) : controls}
+      {sourceActions?.target &&
+        task &&
+        workspace.sourceKind === 'project' &&
+        createPortal(
+          sourceActions.render({
+            canCapture: complete && !paused && !taskConflict,
+            conflict: taskConflict,
+            retained: retainedSource(snapshot),
+            retainedEarlier: snapshot.earlierSource,
+            captureCurrent: () => {
+              if (!complete || paused || taskConflict)
+                throw new Error(
+                  'Recheck current source access before choosing new code.',
+                );
+              return captureWorkspaceWorkRun(workspace, task, mode);
+            },
+          }),
+          sourceActions.target,
+        )}
       {practice?.target &&
         createPortal(
           <div className="practice-action">

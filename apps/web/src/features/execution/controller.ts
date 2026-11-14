@@ -44,6 +44,8 @@ export interface ExecutionSnapshot {
   readonly kind: ExecutionKind;
   readonly practice: PracticeManifest | null;
   readonly task: WorkExecutionContext | null;
+  /** Present only for a terminal that passed the active connection/run/hash checks. */
+  readonly terminal: Readonly<{ runId: string; status: TerminalStatus }> | null;
   readonly earlierSource: boolean;
   readonly output: readonly ConsoleLine[];
   readonly plots: readonly RasterPlot[];
@@ -68,6 +70,7 @@ export class ExecutionController {
     kind: 'product',
     practice: null,
     task: null,
+    terminal: null,
     earlierSource: false,
     output: [],
     plots: [],
@@ -161,6 +164,7 @@ export class ExecutionController {
       kind,
       practice: null,
       task: null,
+      terminal: null,
       earlierSource: false,
       output: [],
       plots: [],
@@ -269,6 +273,9 @@ export class ExecutionController {
         return;
       }
       // The trusted shell terminates the Worker before sending this terminal event.
+      this.publish({
+        terminal: Object.freeze({ runId: event.run_id, status: event.status }),
+      });
       const reusable =
         event.status === 'succeeded' || event.status === 'failed';
       this.finish(

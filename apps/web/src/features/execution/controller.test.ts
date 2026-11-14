@@ -26,6 +26,7 @@ import {
 } from './bridge.ts';
 import type { WorkPracticeInput } from './practice.ts';
 import type { Project } from '../projects/types.ts';
+import { retainedSource } from './source-actions.ts';
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 async function fixture() {
@@ -152,6 +153,44 @@ async function checksInput(): Promise<WorkPracticeInput> {
   };
 }
 describe('product execution state', () => {
+  it('attaches evidence only to a fully matched terminal and clears it before a new capture or local Stop/fault', async () => {
+    const f = await fixture();
+    const input = await checksInput();
+    await f.controller.run([], CORE_RUNTIME, 'batch', input);
+    expect(retainedSource(f.controller.getSnapshot())?.practice).toBeNull();
+    f.finish();
+    expect(retainedSource(f.controller.getSnapshot())?.practice).toMatchObject({
+      kind: 'run',
+      status: 'succeeded',
+      source_manifest_sha256: f.sessions[0]!.manifest!.sha256,
+    });
+    await f.controller.runChecks(input);
+    expect(f.controller.getSnapshot().terminal).toBeNull();
+    f.controller.stop();
+    expect(retainedSource(f.controller.getSnapshot())?.practice).toBeNull();
+    await f.controller.runChecks(input);
+    f.event(2, {
+      type: 'terminal',
+      status: 'succeeded',
+      source_manifest_sha256: '0'.repeat(64),
+      practice_manifest_sha256: f.sessions[2]!.practice!.sha256,
+      checks_sha256: f.sessions[2]!.practice!.checks.sha256,
+      helper_release_sha256: REVIEWED_HELPER_RELEASE.source_sha256,
+      runtime_id: CORE_RUNTIME.runtime_id,
+    });
+    expect(f.controller.getSnapshot().terminal).toBeNull();
+    await f.controller.runChecks(input);
+    f.finish(3);
+    expect(retainedSource(f.controller.getSnapshot())?.practice).toMatchObject({
+      kind: 'visible_checks',
+      practice_manifest_sha256: f.sessions[3]!.practice!.sha256,
+    });
+    await f.controller.run([], CORE_RUNTIME, 'batch', input);
+    f.sessions[4]!.fault('The runtime connection closed.');
+    expect(retainedSource(f.controller.getSnapshot())?.practice).toBeNull();
+    f.controller.destroy();
+    f.workspace.destroy();
+  });
   it('caps empty output packets and keeps repeated Stop/late events terminal exactly once', async () => {
     const f = await fixture();
     await f.controller.run();

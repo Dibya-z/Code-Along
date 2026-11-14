@@ -15,6 +15,7 @@ import { formatPublicationTime } from './presentation.ts';
 import { MyAssignmentWork } from './my-work.tsx';
 import { TeachingRoster } from './teaching-roster.tsx';
 import { TeachingTeams } from './teaching-teams.tsx';
+import { SubmissionList } from '../submissions/list.tsx';
 import './styles.css';
 
 export function AssignmentPage() {
@@ -60,6 +61,7 @@ function AssignmentDetail({
       ? [
           { id: 'teaching-roster', label: 'Teaching roster' },
           { id: 'teaching-teams', label: 'Teams' },
+          { id: 'submissions', label: 'Submissions' },
         ]
       : []),
   ];
@@ -204,6 +206,19 @@ function AssignmentDetail({
       </section>
       {assignment.can_author && (
         <>
+          <section
+            className="content-section learning-view"
+            id="submissions"
+            tabIndex={-1}
+            hidden={active !== 'submissions'}
+            aria-label="Assignment submission discovery"
+          >
+            <SubmissionList
+              accountId={accountId}
+              assignmentId={assignmentId}
+              active={active === 'submissions'}
+            />
+          </section>
           <section
             className="content-section learning-view"
             id="teaching-roster"

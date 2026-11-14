@@ -70,6 +70,11 @@
         "enum": ["project.access.changed"],
         "type": "string"
       },
+      "ArtifactScopeEnum": {
+        "description": "* `submission` - submission",
+        "enum": ["submission"],
+        "type": "string"
+      },
       "AssignmentArchiveRequest": {
         "properties": {
           "archived": {
@@ -690,6 +695,142 @@
         ],
         "type": "object"
       },
+      "CheckOriginEnum": {
+        "description": "* `published` - published\n* `local_practice` - local_practice",
+        "enum": ["published", "local_practice"],
+        "type": "string"
+      },
+      "ChecksEvidence": {
+        "properties": {
+          "check_origin": {
+            "$ref": "#/components/schemas/CheckOriginEnum"
+          },
+          "checks_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ChecksEvidenceKindEnum"
+          },
+          "practice_manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "published_checks_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "source_manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExecutionTerminalStatus"
+          }
+        },
+        "required": [
+          "check_origin",
+          "checks_sha256",
+          "kind",
+          "practice_manifest_sha256",
+          "published_checks_sha256",
+          "run_id",
+          "source_manifest_sha256",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ChecksEvidenceKindEnum": {
+        "description": "* `visible_checks` - visible_checks",
+        "enum": ["visible_checks"],
+        "type": "string"
+      },
+      "ChecksEvidenceRequest": {
+        "properties": {
+          "check_origin": {
+            "$ref": "#/components/schemas/CheckOriginEnum"
+          },
+          "checks_sha256": {
+            "minLength": 1,
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ChecksEvidenceKindEnum"
+          },
+          "practice_manifest_sha256": {
+            "minLength": 1,
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "published_checks_sha256": {
+            "minLength": 1,
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "source_manifest_sha256": {
+            "minLength": 1,
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExecutionTerminalStatus"
+          }
+        },
+        "required": [
+          "check_origin",
+          "checks_sha256",
+          "kind",
+          "practice_manifest_sha256",
+          "published_checks_sha256",
+          "run_id",
+          "source_manifest_sha256",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ClientPracticeEvidence": {
+        "discriminator": {
+          "mapping": {
+            "run": "#/components/schemas/RunEvidence",
+            "visible_checks": "#/components/schemas/ChecksEvidence"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RunEvidence"
+          },
+          {
+            "$ref": "#/components/schemas/ChecksEvidence"
+          }
+        ]
+      },
+      "ClientPracticeEvidenceRequest": {
+        "discriminator": {
+          "mapping": {
+            "run": "#/components/schemas/RunEvidenceRequest",
+            "visible_checks": "#/components/schemas/ChecksEvidenceRequest"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RunEvidenceRequest"
+          },
+          {
+            "$ref": "#/components/schemas/ChecksEvidenceRequest"
+          }
+        ]
+      },
       "CopyRevisionBodyRequest": {
         "properties": {
           "name": {
@@ -851,6 +992,17 @@
           "refresh_required"
         ],
         "type": "object"
+      },
+      "ExecutionTerminalStatus": {
+        "description": "* `succeeded` - succeeded\n* `failed` - failed\n* `cancelled` - cancelled\n* `timed_out` - timed_out\n* `output_limit` - output_limit",
+        "enum": [
+          "succeeded",
+          "failed",
+          "cancelled",
+          "timed_out",
+          "output_limit"
+        ],
+        "type": "string"
       },
       "FileBodyRequest": {
         "properties": {
@@ -2054,6 +2206,39 @@
         ],
         "type": "object"
       },
+      "RevisionRuntimeRequest": {
+        "properties": {
+          "engine": {
+            "$ref": "#/components/schemas/EngineEnum"
+          },
+          "engine_version": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "minLength": 1,
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "python_version": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "runtime_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "engine",
+          "engine_version",
+          "manifest_sha256",
+          "python_version",
+          "runtime_id"
+        ],
+        "type": "object"
+      },
       "RevisionSource": {
         "properties": {
           "document_id": {
@@ -2088,6 +2273,90 @@
           "sha256",
           "source"
         ],
+        "type": "object"
+      },
+      "RevisionSourceRequest": {
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "file_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "generation": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "path": {
+            "maxLength": 160,
+            "minLength": 1,
+            "type": "string"
+          },
+          "sha256": {
+            "minLength": 1,
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "file_id",
+          "generation",
+          "path",
+          "sha256",
+          "source"
+        ],
+        "type": "object"
+      },
+      "RunEvidence": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/RunEvidenceKindEnum"
+          },
+          "run_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "source_manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExecutionTerminalStatus"
+          }
+        },
+        "required": ["kind", "run_id", "source_manifest_sha256", "status"],
+        "type": "object"
+      },
+      "RunEvidenceKindEnum": {
+        "description": "* `run` - run",
+        "enum": ["run"],
+        "type": "string"
+      },
+      "RunEvidenceRequest": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/RunEvidenceKindEnum"
+          },
+          "run_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "source_manifest_sha256": {
+            "minLength": 1,
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExecutionTerminalStatus"
+          }
+        },
+        "required": ["kind", "run_id", "source_manifest_sha256", "status"],
         "type": "object"
       },
       "RuntimeOutput": {
@@ -2312,6 +2581,11 @@
         "enum": ["snapshot"],
         "type": "string"
       },
+      "SourceKindEnum": {
+        "description": "* `project` - project",
+        "enum": ["project"],
+        "type": "string"
+      },
       "SourceShareKind": {
         "description": "* `live` - live\n* `snapshot` - snapshot",
         "enum": ["live", "snapshot"],
@@ -2339,6 +2613,189 @@
         "required": ["kind"],
         "type": "object"
       },
+      "StdinModeEnum": {
+        "description": "* `batch` - batch\n* `interactive` - interactive",
+        "enum": ["batch", "interactive"],
+        "type": "string"
+      },
+      "SubmissionAvailability": {
+        "properties": {
+          "can_submit": {
+            "type": "boolean"
+          },
+          "checked_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "reason": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SubmissionAvailabilityReasonEnum"
+              },
+              {
+                "$ref": "#/components/schemas/NullEnum"
+              }
+            ]
+          }
+        },
+        "required": ["can_submit", "checked_at", "reason"],
+        "type": "object"
+      },
+      "SubmissionAvailabilityReasonEnum": {
+        "description": "* `submission_work_unavailable` - submission_work_unavailable\n* `submission_participation_unavailable` - submission_participation_unavailable\n* `submission_roster_changed` - submission_roster_changed\n* `submission_source_unavailable` - submission_source_unavailable\n* `submission_runtime_changed` - submission_runtime_changed\n* `submission_deadline_passed` - submission_deadline_passed\n* `submission_attempt_limit` - submission_attempt_limit\n* `assignment_submission_capacity` - assignment_submission_capacity\n* `workspace_submission_capacity` - workspace_submission_capacity\n* `assignment_submission_storage_capacity` - assignment_submission_storage_capacity\n* `workspace_submission_storage_capacity` - workspace_submission_storage_capacity",
+        "enum": [
+          "submission_work_unavailable",
+          "submission_participation_unavailable",
+          "submission_roster_changed",
+          "submission_source_unavailable",
+          "submission_runtime_changed",
+          "submission_deadline_passed",
+          "submission_attempt_limit",
+          "assignment_submission_capacity",
+          "workspace_submission_capacity",
+          "assignment_submission_storage_capacity",
+          "workspace_submission_storage_capacity"
+        ],
+        "type": "string"
+      },
+      "SubmissionCreateRequest": {
+        "properties": {
+          "client_request_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/SubmissionSourceManifestRequest"
+          },
+          "practice": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ClientPracticeEvidenceRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["client_request_id", "manifest", "practice"],
+        "type": "object"
+      },
+      "SubmissionDetail": {
+        "properties": {
+          "artifact_manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "artifact_scope": {
+            "$ref": "#/components/schemas/ArtifactScopeEnum"
+          },
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "assignment_submission_number": {
+            "maximum": 256,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "assignment_version_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/LearningUser"
+          },
+          "can_review": {
+            "type": "boolean"
+          },
+          "client_request_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "helper_release": {
+            "$ref": "#/components/schemas/RevisionHelper"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/SubmissionSourceManifest"
+          },
+          "participants": {
+            "items": {
+              "$ref": "#/components/schemas/LearningUser"
+            },
+            "type": "array"
+          },
+          "practice": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ClientPracticeEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/SubmissionProvenance"
+          },
+          "published_version": {
+            "$ref": "#/components/schemas/SubmissionPublishedVersion"
+          },
+          "source_manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "work_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact_manifest_sha256",
+          "artifact_scope",
+          "assignment_id",
+          "assignment_submission_number",
+          "assignment_version_id",
+          "author",
+          "can_review",
+          "client_request_id",
+          "helper_release",
+          "id",
+          "manifest",
+          "participants",
+          "practice",
+          "provenance",
+          "published_version",
+          "source_manifest_sha256",
+          "submitted_at",
+          "work_id"
+        ],
+        "type": "object"
+      },
+      "SubmissionPage": {
+        "properties": {
+          "count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SubmissionSummary"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["count", "items"],
+        "type": "object"
+      },
       "SubmissionPolicy": {
         "properties": {
           "due_at": {
@@ -2364,6 +2821,230 @@
           "max_attempts",
           "max_team_size",
           "mode"
+        ],
+        "type": "object"
+      },
+      "SubmissionProvenance": {
+        "description": "* `client_submitted_snapshot` - client_submitted_snapshot",
+        "enum": ["client_submitted_snapshot"],
+        "type": "string"
+      },
+      "SubmissionPublishedVersion": {
+        "properties": {
+          "content_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "number": {
+            "type": "integer"
+          },
+          "submission_mode": {
+            "$ref": "#/components/schemas/AssignmentSubmissionMode"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": ["content_sha256", "number", "submission_mode", "title"],
+        "type": "object"
+      },
+      "SubmissionSourceManifest": {
+        "properties": {
+          "entrypoint_file_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/RevisionSource"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array"
+          },
+          "metadata_version": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/RevisionRuntime"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "source_kind": {
+            "$ref": "#/components/schemas/SourceKindEnum"
+          },
+          "stdin_mode": {
+            "$ref": "#/components/schemas/StdinModeEnum"
+          },
+          "version": {
+            "maximum": 2,
+            "minimum": 2,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entrypoint_file_id",
+          "files",
+          "metadata_version",
+          "project_id",
+          "runtime",
+          "sha256",
+          "source_kind",
+          "stdin_mode",
+          "version"
+        ],
+        "type": "object"
+      },
+      "SubmissionSourceManifestRequest": {
+        "properties": {
+          "entrypoint_file_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/RevisionSourceRequest"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array"
+          },
+          "metadata_version": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/RevisionRuntimeRequest"
+          },
+          "sha256": {
+            "minLength": 1,
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "source_kind": {
+            "$ref": "#/components/schemas/SourceKindEnum"
+          },
+          "stdin_mode": {
+            "$ref": "#/components/schemas/StdinModeEnum"
+          },
+          "version": {
+            "maximum": 2,
+            "minimum": 2,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entrypoint_file_id",
+          "files",
+          "metadata_version",
+          "project_id",
+          "runtime",
+          "sha256",
+          "source_kind",
+          "stdin_mode",
+          "version"
+        ],
+        "type": "object"
+      },
+      "SubmissionSummary": {
+        "properties": {
+          "artifact_manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "artifact_scope": {
+            "$ref": "#/components/schemas/ArtifactScopeEnum"
+          },
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "assignment_submission_number": {
+            "maximum": 256,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "assignment_version_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/LearningUser"
+          },
+          "can_review": {
+            "type": "boolean"
+          },
+          "client_request_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "participants": {
+            "items": {
+              "$ref": "#/components/schemas/LearningUser"
+            },
+            "type": "array"
+          },
+          "practice": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ClientPracticeEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/SubmissionProvenance"
+          },
+          "source_manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "work_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact_manifest_sha256",
+          "artifact_scope",
+          "assignment_id",
+          "assignment_submission_number",
+          "assignment_version_id",
+          "author",
+          "can_review",
+          "client_request_id",
+          "id",
+          "participants",
+          "practice",
+          "provenance",
+          "source_manifest_sha256",
+          "submitted_at",
+          "work_id"
         ],
         "type": "object"
       },
@@ -2850,6 +3531,25 @@
         "description": "* `active` - active\n* `retired` - retired",
         "enum": ["active", "retired"],
         "type": "string"
+      },
+      "WorkSubmissionPage": {
+        "properties": {
+          "availability": {
+            "$ref": "#/components/schemas/SubmissionAvailability"
+          },
+          "count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SubmissionSummary"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["availability", "count", "items"],
+        "type": "object"
       },
       "WorkspaceAssignableRole": {
         "description": "* `instructor` - instructor\n* `learner` - learner",
@@ -3958,6 +4658,162 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Participation"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/submissions/": {
+      "get": {
+        "operationId": "list_assignment_submissions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "assignment_version_id",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionPage"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/submissions/{submission_id}/": {
+      "get": {
+        "operationId": "get_submission",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionDetail"
                 }
               }
             },
@@ -5226,6 +6082,199 @@
               }
             },
             "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/works/{work_id}/submissions/": {
+      "get": {
+        "operationId": "list_work_submissions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "work_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkSubmissionPage"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      },
+      "post": {
+        "operationId": "create_submission",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "work_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionDetail"
+                }
+              }
+            },
+            "description": ""
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionDetail"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "No response body"
+          },
+          "403": {
+            "description": "No response body"
+          },
+          "404": {
+            "description": "No response body"
+          },
+          "409": {
+            "description": "No response body"
+          },
+          "413": {
+            "description": "No response body"
+          },
+          "429": {
+            "description": "No response body"
           }
         },
         "security": [

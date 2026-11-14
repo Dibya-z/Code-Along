@@ -8,6 +8,7 @@ from code_along.learning.tests.test_assignments import publish, ready_assignment
 from code_along.projects.models import ProjectRevision
 from code_along.projects.revision_services import revision_manifest
 from code_along.projects.tests.test_artifact_scope import private_artifact
+from code_along.submissions.models import Submission
 from django.core.cache import cache
 from django.core.management import call_command
 from django.db import IntegrityError, connection, transaction
@@ -20,6 +21,8 @@ pytestmark = [pytest.mark.postgres, pytest.mark.django_db(transaction=True)]
 
 PROJECT_SCOPE = ("projects", "0010_revision_artifact_scope")
 LEARNING_SCOPE = ("learning", "0005_starter_artifact_scope")
+SUBMISSION_INITIAL = ("submissions", "0001_initial")
+SUBMISSION_INTEGRITY = ("submissions", "0002_submission_integrity")
 OLD = [("projects", "0009_project_event_sequence"), ("learning", "0004_work_integrity")]
 SCOPED_FKS = {
     "share_revision_artifact_scope",
@@ -122,7 +125,7 @@ def test_forward_defaults_preserve_public_bytes_hashes_and_fixed_publication_cha
         MigrationExecutor(connection).migrate(leaves)
 
 
-def test_both_reverse_guards_refuse_before_dropping_any_boundary_with_private_artifacts() -> (
+def test_all_reverse_guards_refuse_before_dropping_any_boundary_with_private_artifacts() -> (
     None
 ):
     _, client, assignment = ready_assignment()
@@ -132,9 +135,12 @@ def test_both_reverse_guards_refuse_before_dropping_any_boundary_with_private_ar
     private = private_artifact(version.starter_revision)
     exact = revision_manifest(private)
     before_triggers = immutable_triggers()
+    assert not Submission.objects.exists()
+    # A dependent submission integrity guard now runs first, even with no
+    # Submission row. A private revision alone must preserve every boundary.
     with (
         CaptureQueriesContext(connection) as queries,
-        pytest.raises(IrreversibleError, match="Private artifacts"),
+        pytest.raises(IrreversibleError, match="Retained private submissions"),
     ):
         MigrationExecutor(connection).migrate([("learning", "0004_work_integrity")])
     assert not any(
@@ -142,21 +148,41 @@ def test_both_reverse_guards_refuse_before_dropping_any_boundary_with_private_ar
         for query in queries.captured_queries
     )
     assert active_scope_constraints() == SCOPED_FKS
-    # Exercise the projects migration's actual reverse operation separately. A normal
-    # planner reaches the learning guard first; neither leaf may rely on the other.
+    # Exercise each actual leaf reversal directly. Every leaf must refuse before
+    # its first DDL, without relying on another leaf being reached beforehand.
     executor = MigrationExecutor(connection)
-    before_state = executor.loader.project_state(OLD)
-    project_migration = executor.loader.get_migration(*PROJECT_SCOPE)
-    with (
-        CaptureQueriesContext(connection) as queries,
-        pytest.raises(IrreversibleError, match="Private artifacts"),
-    ):
-        executor.unapply_migration(before_state, project_migration)
-    assert not any(
-        query["sql"].lstrip().upper().startswith(("ALTER ", "DROP "))
-        for query in queries.captured_queries
-    )
-    for app, name in [PROJECT_SCOPE, LEARNING_SCOPE]:
+    guards = [
+        (PROJECT_SCOPE, OLD, "Private artifacts"),
+        (
+            LEARNING_SCOPE,
+            [("learning", "0004_work_integrity"), PROJECT_SCOPE],
+            "Private artifacts",
+        ),
+        (
+            SUBMISSION_INITIAL,
+            [LEARNING_SCOPE, PROJECT_SCOPE],
+            "Retained private submissions",
+        ),
+        (SUBMISSION_INTEGRITY, [SUBMISSION_INITIAL], "Retained private submissions"),
+    ]
+    for target, before_nodes, message in guards:
+        before_state = executor.loader.project_state(before_nodes)
+        migration = executor.loader.get_migration(*target)
+        with (
+            CaptureQueriesContext(connection) as queries,
+            pytest.raises(IrreversibleError, match=message),
+        ):
+            executor.unapply_migration(before_state, migration)
+        assert not any(
+            query["sql"].lstrip().upper().startswith(("ALTER ", "DROP "))
+            for query in queries.captured_queries
+        )
+    for app, name in [
+        PROJECT_SCOPE,
+        LEARNING_SCOPE,
+        SUBMISSION_INITIAL,
+        SUBMISSION_INTEGRITY,
+    ]:
         assert MigrationRecorder.Migration.objects.filter(app=app, name=name).exists()
     assert (
         active_scope_constraints() == SCOPED_FKS

@@ -31,6 +31,11 @@ const AssignmentWorkPage = lazy(() =>
     default: module.AssignmentWorkPage,
   })),
 );
+const SubmissionPage = lazy(() =>
+  import('../features/submissions/page.tsx').then((module) => ({
+    default: module.SubmissionPage,
+  })),
+);
 const SharedPage = lazy(() =>
   import('../features/shares/page.tsx').then((module) => ({
     default: module.SharedPage,
@@ -232,6 +237,20 @@ const router = createBrowserRouter([
             }
           >
             <AssignmentPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'assignments/:assignmentId/submissions/:submissionId',
+        element: (
+          <Suspense
+            fallback={
+              <div className="page" role="status">
+                Opening submitted code…
+              </div>
+            }
+          >
+            <SubmissionPage />
           </Suspense>
         ),
       },

@@ -148,6 +148,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/assignments/{assignment_id}/submissions/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_assignment_submissions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/submissions/{submission_id}/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_submission'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/assignments/{assignment_id}/teams/': {
     parameters: {
       query?: never;
@@ -302,6 +334,22 @@ export interface paths {
     get: operations['get_assignment_work'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/works/{work_id}/submissions/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_work_submissions'];
+    put?: never;
+    post: operations['create_submission'];
     delete?: never;
     options?: never;
     head?: never;
@@ -835,6 +883,11 @@ export interface components {
      * @enum {string}
      */
     AccessEventEventTypeEnum: 'project.access.changed';
+    /**
+     * @description * `submission` - submission
+     * @enum {string}
+     */
+    ArtifactScopeEnum: 'submission';
     AssignmentArchiveRequest: {
       archived: boolean;
       /** Format: int64 */
@@ -1028,6 +1081,53 @@ export interface components {
       next_after: string;
       next_before: string | null;
     };
+    /**
+     * @description * `published` - published
+     *     * `local_practice` - local_practice
+     * @enum {string}
+     */
+    CheckOriginEnum: 'published' | 'local_practice';
+    ChecksEvidence: {
+      check_origin: components['schemas']['CheckOriginEnum'];
+      checks_sha256: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'visible_checks';
+      practice_manifest_sha256: string;
+      published_checks_sha256: string;
+      /** Format: uuid */
+      run_id: string;
+      source_manifest_sha256: string;
+      status: components['schemas']['ExecutionTerminalStatus'];
+    };
+    /**
+     * @description * `visible_checks` - visible_checks
+     * @enum {string}
+     */
+    ChecksEvidenceKindEnum: 'visible_checks';
+    ChecksEvidenceRequest: {
+      check_origin: components['schemas']['CheckOriginEnum'];
+      checks_sha256: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'visible_checks';
+      practice_manifest_sha256: string;
+      published_checks_sha256: string;
+      /** Format: uuid */
+      run_id: string;
+      source_manifest_sha256: string;
+      status: components['schemas']['ExecutionTerminalStatus'];
+    };
+    ClientPracticeEvidence:
+      | components['schemas']['RunEvidence']
+      | components['schemas']['ChecksEvidence'];
+    ClientPracticeEvidenceRequest:
+      | components['schemas']['RunEvidenceRequest']
+      | components['schemas']['ChecksEvidenceRequest'];
     CopyRevisionBodyRequest: {
       name: string;
     };
@@ -1087,6 +1187,16 @@ export interface components {
       next_after: string;
       refresh_required: boolean;
     };
+    /**
+     * @description * `succeeded` - succeeded
+     *     * `failed` - failed
+     *     * `cancelled` - cancelled
+     *     * `timed_out` - timed_out
+     *     * `output_limit` - output_limit
+     * @enum {string}
+     */
+    ExecutionTerminalStatus:
+      'succeeded' | 'failed' | 'cancelled' | 'timed_out' | 'output_limit';
     FileBodyRequest: {
       /** Format: int64 */
       expected_version: number;
@@ -1533,6 +1643,13 @@ export interface components {
       python_version: string;
       runtime_id: string;
     };
+    RevisionRuntimeRequest: {
+      engine: components['schemas']['EngineEnum'];
+      engine_version: string;
+      manifest_sha256: string;
+      python_version: string;
+      runtime_id: string;
+    };
     RevisionSource: {
       /** Format: uuid */
       document_id: string;
@@ -1542,6 +1659,43 @@ export interface components {
       path: string;
       sha256: string;
       source: string;
+    };
+    RevisionSourceRequest: {
+      /** Format: uuid */
+      document_id: string;
+      /** Format: uuid */
+      file_id: string;
+      generation: number;
+      path: string;
+      sha256: string;
+      source: string;
+    };
+    RunEvidence: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'run';
+      /** Format: uuid */
+      run_id: string;
+      source_manifest_sha256: string;
+      status: components['schemas']['ExecutionTerminalStatus'];
+    };
+    /**
+     * @description * `run` - run
+     * @enum {string}
+     */
+    RunEvidenceKindEnum: 'run';
+    RunEvidenceRequest: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      kind: 'run';
+      /** Format: uuid */
+      run_id: string;
+      source_manifest_sha256: string;
+      status: components['schemas']['ExecutionTerminalStatus'];
     };
     RuntimeOutput: {
       /** Format: uuid */
@@ -1626,6 +1780,11 @@ export interface components {
      */
     SnapshotShareResolvedKindEnum: 'snapshot';
     /**
+     * @description * `project` - project
+     * @enum {string}
+     */
+    SourceKindEnum: 'project';
+    /**
      * @description * `live` - live
      *     * `snapshot` - snapshot
      * @enum {string}
@@ -1643,6 +1802,82 @@ export interface components {
       kind: components['schemas']['AssignmentStarterOrigin'];
       number?: number;
     };
+    /**
+     * @description * `batch` - batch
+     *     * `interactive` - interactive
+     * @enum {string}
+     */
+    StdinModeEnum: 'batch' | 'interactive';
+    SubmissionAvailability: {
+      can_submit: boolean;
+      /** Format: date-time */
+      checked_at: string;
+      reason:
+        | components['schemas']['SubmissionAvailabilityReasonEnum']
+        | components['schemas']['NullEnum'];
+    };
+    /**
+     * @description * `submission_work_unavailable` - submission_work_unavailable
+     *     * `submission_participation_unavailable` - submission_participation_unavailable
+     *     * `submission_roster_changed` - submission_roster_changed
+     *     * `submission_source_unavailable` - submission_source_unavailable
+     *     * `submission_runtime_changed` - submission_runtime_changed
+     *     * `submission_deadline_passed` - submission_deadline_passed
+     *     * `submission_attempt_limit` - submission_attempt_limit
+     *     * `assignment_submission_capacity` - assignment_submission_capacity
+     *     * `workspace_submission_capacity` - workspace_submission_capacity
+     *     * `assignment_submission_storage_capacity` - assignment_submission_storage_capacity
+     *     * `workspace_submission_storage_capacity` - workspace_submission_storage_capacity
+     * @enum {string}
+     */
+    SubmissionAvailabilityReasonEnum:
+      | 'submission_work_unavailable'
+      | 'submission_participation_unavailable'
+      | 'submission_roster_changed'
+      | 'submission_source_unavailable'
+      | 'submission_runtime_changed'
+      | 'submission_deadline_passed'
+      | 'submission_attempt_limit'
+      | 'assignment_submission_capacity'
+      | 'workspace_submission_capacity'
+      | 'assignment_submission_storage_capacity'
+      | 'workspace_submission_storage_capacity';
+    SubmissionCreateRequest: {
+      /** Format: uuid */
+      client_request_id: string;
+      manifest: components['schemas']['SubmissionSourceManifestRequest'];
+      practice: components['schemas']['ClientPracticeEvidenceRequest'] | null;
+    };
+    SubmissionDetail: {
+      artifact_manifest_sha256: string;
+      artifact_scope: components['schemas']['ArtifactScopeEnum'];
+      /** Format: uuid */
+      assignment_id: string;
+      assignment_submission_number: number;
+      /** Format: uuid */
+      assignment_version_id: string;
+      author: components['schemas']['LearningUser'];
+      can_review: boolean;
+      /** Format: uuid */
+      client_request_id: string;
+      helper_release: components['schemas']['RevisionHelper'];
+      /** Format: uuid */
+      id: string;
+      manifest: components['schemas']['SubmissionSourceManifest'];
+      participants: components['schemas']['LearningUser'][];
+      practice: components['schemas']['ClientPracticeEvidence'] | null;
+      provenance: components['schemas']['SubmissionProvenance'];
+      published_version: components['schemas']['SubmissionPublishedVersion'];
+      source_manifest_sha256: string;
+      /** Format: date-time */
+      submitted_at: string;
+      /** Format: uuid */
+      work_id: string;
+    };
+    SubmissionPage: {
+      count: number;
+      items: components['schemas']['SubmissionSummary'][];
+    };
     SubmissionPolicy: {
       /** Format: date-time */
       due_at: string | null;
@@ -1650,6 +1885,68 @@ export interface components {
       max_attempts: number;
       max_team_size: number;
       mode: components['schemas']['AssignmentSubmissionMode'];
+    };
+    /**
+     * @description * `client_submitted_snapshot` - client_submitted_snapshot
+     * @enum {string}
+     */
+    SubmissionProvenance: 'client_submitted_snapshot';
+    SubmissionPublishedVersion: {
+      content_sha256: string;
+      number: number;
+      submission_mode: components['schemas']['AssignmentSubmissionMode'];
+      title: string;
+    };
+    SubmissionSourceManifest: {
+      /** Format: uuid */
+      entrypoint_file_id: string;
+      files: components['schemas']['RevisionSource'][];
+      /** Format: int64 */
+      metadata_version: number;
+      /** Format: uuid */
+      project_id: string;
+      runtime: components['schemas']['RevisionRuntime'];
+      sha256: string;
+      source_kind: components['schemas']['SourceKindEnum'];
+      stdin_mode: components['schemas']['StdinModeEnum'];
+      version: number;
+    };
+    SubmissionSourceManifestRequest: {
+      /** Format: uuid */
+      entrypoint_file_id: string;
+      files: components['schemas']['RevisionSourceRequest'][];
+      /** Format: int64 */
+      metadata_version: number;
+      /** Format: uuid */
+      project_id: string;
+      runtime: components['schemas']['RevisionRuntimeRequest'];
+      sha256: string;
+      source_kind: components['schemas']['SourceKindEnum'];
+      stdin_mode: components['schemas']['StdinModeEnum'];
+      version: number;
+    };
+    SubmissionSummary: {
+      artifact_manifest_sha256: string;
+      artifact_scope: components['schemas']['ArtifactScopeEnum'];
+      /** Format: uuid */
+      assignment_id: string;
+      assignment_submission_number: number;
+      /** Format: uuid */
+      assignment_version_id: string;
+      author: components['schemas']['LearningUser'];
+      can_review: boolean;
+      /** Format: uuid */
+      client_request_id: string;
+      /** Format: uuid */
+      id: string;
+      participants: components['schemas']['LearningUser'][];
+      practice: components['schemas']['ClientPracticeEvidence'] | null;
+      provenance: components['schemas']['SubmissionProvenance'];
+      source_manifest_sha256: string;
+      /** Format: date-time */
+      submitted_at: string;
+      /** Format: uuid */
+      work_id: string;
     };
     Team: {
       approved_roster_revision: number | null;
@@ -1802,6 +2099,11 @@ export interface components {
      * @enum {string}
      */
     WorkStateEnum: 'active' | 'retired';
+    WorkSubmissionPage: {
+      availability: components['schemas']['SubmissionAvailability'];
+      count: number;
+      items: components['schemas']['SubmissionSummary'][];
+    };
     /**
      * @description * `instructor` - instructor
      *     * `learner` - learner
@@ -2551,6 +2853,95 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['Participation'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  list_assignment_submissions: {
+    parameters: {
+      query?: {
+        assignment_version_id?: string;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SubmissionPage'];
+        };
+      };
+    };
+  };
+  get_submission: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        submission_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SubmissionDetail'];
         };
       };
       400: {
@@ -3367,6 +3758,149 @@ export interface operations {
         content: {
           'application/json': components['schemas']['ErrorOutput'];
         };
+      };
+    };
+  };
+  list_work_submissions: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkSubmissionPage'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  create_submission: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SubmissionCreateRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SubmissionDetail'];
+        };
+      };
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SubmissionDetail'];
+        };
+      };
+      /** @description No response body */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };
