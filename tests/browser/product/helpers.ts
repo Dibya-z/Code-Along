@@ -2,6 +2,7 @@ import {
   expect,
   test,
   type Page,
+  type ConsoleMessage,
   type Request,
   type Response,
 } from '@playwright/test';
@@ -126,6 +127,48 @@ function projectSetupDiagnostics(page: Page) {
     s: number | 'network-failed';
     ms: number;
   }[] = [];
+  const assets: { p: string; s: number | 'network-failed' }[] = [];
+  const errors: { from: 'page' | 'console'; kind: string; at?: string }[] = [];
+  const classifyError = (message: string) => {
+    const known = message.match(
+      /Cannot access '[A-Za-z_$][\w$]{0,40}' before initialization|[A-Za-z_$][\w$]{0,40} is not defined|Minified React error #\d{1,4}/,
+    );
+    if (known) return known[0];
+    if (
+      /Failed to fetch dynamically imported module|Importing a module script failed/.test(
+        message,
+      )
+    )
+      return 'dynamic-import-failed';
+    if (/Unable to preload CSS/.test(message)) return 'css-preload-failed';
+    if (/Failed to load module script/.test(message))
+      return 'module-script-failed';
+    if (/is not a function/.test(message)) return 'not-a-function';
+    if (/is not a constructor/.test(message)) return 'not-a-constructor';
+    if (/Cannot read properties of (undefined|null)/.test(message))
+      return 'null-or-undefined-property';
+    return 'other-js-error';
+  };
+  const addError = (
+    from: 'page' | 'console',
+    message: string,
+    stack = message,
+  ) => {
+    const frame = stack.match(
+      /\/assets\/([A-Za-z0-9_-]{1,100}\.js):([0-9]{1,9}):([0-9]{1,9})(?=[\s)]|$)/,
+    );
+    errors.push({
+      from,
+      kind: classifyError(message),
+      ...(frame ? { at: `${frame[1]}:${frame[2]}:${frame[3]}` } : {}),
+    });
+    if (errors.length > 4) errors.shift();
+  };
+  const pageError = (error: Error) =>
+    addError('page', error.message, error.stack);
+  const consoleError = (message: ConsoleMessage) => {
+    if (message.type() === 'error') addError('console', message.text());
+  };
   const uuid = '[0-9a-f-]{36}';
   const routes: [RegExp, string][] = [
     [/^\/api\/v1\/me\/$/, 'me'],
@@ -155,11 +198,10 @@ function projectSetupDiagnostics(page: Page) {
   ];
   const routeShape = (value: string) => {
     const url = new URL(value);
-    if (
-      !['http:', 'https:'].includes(url.protocol) ||
-      !url.pathname.startsWith('/api/')
-    )
-      return null;
+    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    if (/^\/assets\/[A-Za-z0-9_-]{1,100}\.(?:js|css)$/.test(url.pathname))
+      return url.pathname;
+    if (!url.pathname.startsWith('/api/')) return null;
     return (
       routes.find(([pattern]) => pattern.test(url.pathname))?.[1] ?? 'other-api'
     );
@@ -173,6 +215,11 @@ function projectSetupDiagnostics(page: Page) {
   const record = (value: Request, status: number | 'network-failed') => {
     const route = routeShape(value.url());
     if (!route) return;
+    if (route.startsWith('/assets/')) {
+      assets.push({ p: route.slice('/assets/'.length), s: status });
+      if (assets.length > 20) assets.splice(3, 1);
+      return;
+    }
     recent.push({
       m: value.method(),
       r: route,
@@ -193,6 +240,8 @@ function projectSetupDiagnostics(page: Page) {
   page.on('response', response);
   page.on('requestfinished', finished);
   page.on('requestfailed', failed);
+  page.on('pageerror', pageError);
+  page.on('console', consoleError);
   return {
     async snapshot() {
       const path = new URL(page.url()).pathname;
@@ -270,6 +319,14 @@ function projectSetupDiagnostics(page: Page) {
             ),
             projectUnavailable: knownHeading('Project unavailable.'),
             appError: knownHeading('Something went wrong.'),
+            routeError: knownHeading("Let's get you back."),
+            defaultRouteError: knownHeading('Unexpected Application Error!'),
+            authLoading: [...document.querySelectorAll('[role="status"]')].some(
+              (element) =>
+                element.textContent?.trim() === 'Loading your account…' &&
+                visible(element),
+            ),
+            signIn: knownHeading('Sign in to continue.'),
             createDialog: visible(dialog),
             createDisabled: submit?.disabled ?? null,
             createAlert: Boolean(dialog?.querySelector('[role="alert"]')),
@@ -285,11 +342,21 @@ function projectSetupDiagnostics(page: Page) {
         .catch(() => ({ snapshotUnavailable: true }));
       return {
         path: safePath,
+        errors,
         ui,
+        assets: [
+          ...new Set([
+            ...assets.filter(
+              (asset) => asset.s === 'network-failed' || asset.s >= 400,
+            ),
+            ...assets.slice(0, 3),
+            ...assets.slice(-3),
+          ]),
+        ].slice(0, 8),
         pending: [...pending.values()]
           .slice(-8)
           .map((item) => ({ m: item.m, r: item.r, ms: Date.now() - item.at })),
-        recent,
+        recent: recent.slice(-6),
       };
     },
     dispose() {
@@ -297,6 +364,8 @@ function projectSetupDiagnostics(page: Page) {
       page.off('response', response);
       page.off('requestfinished', finished);
       page.off('requestfailed', failed);
+      page.off('pageerror', pageError);
+      page.off('console', consoleError);
     },
   };
 }
