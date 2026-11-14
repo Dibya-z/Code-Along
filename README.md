@@ -4,7 +4,7 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-M0 integration proofs, M1 product foundation and the M2 Python IDE are implemented. You can register, verify an email locally, sign in, create a workspace, invite another account and create private projects with explicit editor/viewer access.
+M0 integration proofs and the M1–M3 product milestones are implemented. You can register, verify an email locally, sign in, create a workspace, invite another account and create private projects with explicit editor/viewer access.
 
 Projects open a multi-file Python editor with stable tabs, syntax highlighting, undo and adjustable text size. Run code executes a complete frozen source snapshot in a fresh, separate-site Python Worker. It offers batch/interactive input, a bounded plain-text console, captured-source inspection, PNG plots and Stop. Core and opt-in NumPy use reviewed, hash-pinned assets; Matplotlib awaits compatible dependencies that pass the advisory gate. See [runtime profiles](packages/runtime-profiles/README.md). Desktop editor/console panes resize with a keyboard-friendly control; small screens retain both panes behind Editor/Console buttons.
 
@@ -12,43 +12,44 @@ Account-scoped [local recovery](docs/protocols/local-recovery.md) supplements se
 
 An already open complete project/local draft can run offline after its trusted runner connection and chosen environment are warmed. Large verified runtime assets stay in the frame's bounded memory cache; small scripts still need the browser cache. Stop, navigation, eviction or invalid/untrusted HTTPS can require a connection again. Cold offline login/installation is not provided, and login/API responses are never persisted. See [execution and offline limits](docs/protocols/product-execution.md).
 
-M3 features are implemented, with final regression and handoff in progress. Shared projects use canonical server documents with live code/cursors/selections, user/tab presence, opt-in cursor following and receipt-based **Saved**. Already synchronized write buffers can be edited through a network partition and reconcile only after fresh admission. Revoked/replaced files stop editing and retain export/local-copy options. Older independently seeded M2 recovery opens as a separate local draft. The service uses a restricted database role, one-use session-bound tickets, renewable authorization leases and bounded transport. **History** captures named frozen revisions and copies them to fresh projects. Owners can create expiring/revocable snapshot or live source links with explicit scope and optional recipients. **Discussion** stores project chat with server UTC, duplicate-safe manual retry, older history and unread controls. Versioned notifications repair missed updates through database replay. See [product collaboration](docs/protocols/product-collaboration.md), [history and sharing](docs/protocols/history-and-sharing.md) and [events and chat](docs/protocols/project-events-and-chat.md). Nothing is deployed.
+M3 is complete on the verified Chromium/WebKit baseline. Shared projects use canonical server documents with live code/cursors/selections, user/tab presence, opt-in cursor following and receipt-based **Saved**. Already synchronized write buffers can be edited through a network partition and reconcile only after fresh admission. Revoked/replaced files stop editing and retain export/local-copy options. Older independently seeded M2 recovery opens as a separate local draft. The service uses a restricted database role, one-use session-bound tickets, renewable authorization leases and bounded transport. **History** captures named frozen revisions and copies them to fresh projects. Owners can create expiring/revocable snapshot or live source links with explicit scope and optional recipients. **Discussion** stores project chat with server UTC, duplicate-safe manual retry, older history and unread controls. Versioned notifications repair missed updates through database replay. See [product collaboration](docs/protocols/product-collaboration.md), [history and sharing](docs/protocols/history-and-sharing.md) and [events and chat](docs/protocols/project-events-and-chat.md). Nothing is deployed.
 
 Open **https://127.0.0.1:8443** after starting the [local development stack](docs/operations/development-stack.md). This workstation uses the project-owned Lima VM; that guide includes its exact commands. Development verification/reset emails stay in a private local mail store, described in the [account guide](docs/operations/authentication.md).
 
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): milestones, dependencies, verification, commits and remaining work.
 - [M2 validation report](docs/architecture/m2-validation.md): editor/runner/recovery functionality, browser evidence and remaining boundaries.
-- [M3 validation record](docs/architecture/m3-validation.md): current collaboration evidence and remaining milestone gates.
+- [M3 validation record](docs/architecture/m3-validation.md): completed collaboration tests, crash recovery, CI and preservation evidence.
 - [M1 validation report](docs/architecture/m1-validation.md): completed functionality, test evidence, CI and limitations.
 - [Approved architecture](docs/architecture/approved-architecture.html): decisions, schema, protocols and roadmap. Open the HTML in a browser; some archived investigation links are machine-local.
 - [Design direction](DESIGN.md) and [repository instructions](AGENTS.md).
 
 ## Architecture and implemented modules
 
-| Responsibility         | Technology / boundary                                                                           |
-| ---------------------- | ----------------------------------------------------------------------------------------------- |
-| Product UI             | React 19, TypeScript 6, Vite, React Router, TanStack Query                                      |
-| Product APIs           | Python 3.13, Django 5.2 LTS, DRF, Channels/Daphne                                               |
-| Identity               | allauth headless, verified email, host-only Django sessions and CSRF                            |
-| Durable storage        | PostgreSQL 18; Django owns product migrations                                                   |
-| Transient coordination | Redis; shared account/API abuse controls                                                        |
-| Design system          | Original tokens, Radix-based primitives, Tailwind and Storybook                                 |
-| API contracts          | Offline-generated OpenAPI and typed clients with CI drift checks                                |
-| Editor                 | CodeMirror 6, stable Yjs documents and independently admitted multiplexed providers             |
-| Local recovery, M2     | Account-scoped Dexie/IndexedDB binary records with revision/epoch checks                        |
-| Collaboration, M3      | Narrow Node/Hocuspocus service; Django authority and restricted-role binary persistence         |
-| Browser execution, M2  | Hash-pinned Pyodide; frozen product runs in a separate-site supervised fresh Worker             |
-| Later trusted grading  | Separate Linux sandbox hosts and external scoring; never Django or ordinary application workers |
+| Responsibility          | Technology / boundary                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
+| Product UI              | React 19, TypeScript 6, Vite, React Router, TanStack Query                                        |
+| Product APIs            | Python 3.13, Django 5.2 LTS, DRF, Channels/Daphne                                                 |
+| Identity                | allauth headless, verified email, host-only Django sessions and CSRF                              |
+| Durable storage         | PostgreSQL 18; Django owns product migrations                                                     |
+| Transient coordination  | Redis; shared account/API abuse controls                                                          |
+| Design system           | Original tokens, Radix-based primitives, Tailwind and Storybook                                   |
+| API contracts           | Offline-generated OpenAPI and typed clients with CI drift checks                                  |
+| Editor                  | CodeMirror 6, stable Yjs documents and independently admitted multiplexed providers               |
+| Local recovery, M2      | Account-scoped Dexie/IndexedDB binary records with revision/epoch checks                          |
+| Collaboration, M3       | Narrow Node/Hocuspocus service; Django authority and restricted-role binary persistence           |
+| Trusted background work | Celery notification worker and scheduler; durable outbox delivery and bounded receipt maintenance |
+| Browser execution, M2   | Hash-pinned Pyodide; frozen product runs in a separate-site supervised fresh Worker               |
+| Later trusted grading   | Separate Linux sandbox hosts and external scoring; never Django or ordinary application workers   |
 
 Workspace teaching roles do not grant access to private projects. Provider synchronization is not a durable save receipt. Browser practice is not a trusted grade. Runtime/framework/tool versions are exact in the lockfiles, and development base images use digest pins.
 
 ```text
-apps/api/                 Django config, accounts, workspaces and projects
+apps/api/                 Django accounts, workspaces, projects, collaboration policy, history/shares and events/chat
 apps/web/                 React routes, feature screens and credential transport
 apps/collaboration/       Product document service and independent checkpoint/transport proofs
 apps/runner-web/          Separate-site supervised Pyodide product runner and v1 proof adapter
 packages/api-client/      Generated product/auth types and client factories
-packages/contracts/       Versioned checkpoint and execution contracts
+packages/contracts/       Versioned checkpoint, execution and product-event contracts
 packages/design-system/   Original tokens, reusable controls and stories
 packages/runtime-profiles/ Reviewed self-hosted runtime/package inventories
 tests/browser/            Owned runner, UI and two-user product browser checks
@@ -81,7 +82,7 @@ After the prerequisites above, run from the repository root:
 npm run dev
 ```
 
-Open **https://127.0.0.1:8443** and keep the terminal open. The command builds/starts the backend, database, Redis, HTTPS proxy and React watcher. Frontend source edits update the browser automatically; restart the command after backend/dependency changes to rebuild their images. It uses this workstation's existing owned Lima VM when present, or a working Docker engine on other machines. The first uncached build needs registry access.
+Open **https://127.0.0.1:8443** and keep the terminal open. The command builds/starts the API, collaboration service, notification worker/scheduler, database, Redis, HTTPS proxy and React watcher. Frontend source edits update the browser automatically; restart the command after backend/dependency changes to rebuild their images. It uses this workstation's existing owned Lima VM when present, or a working Docker engine on other machines. The first uncached build needs registry access.
 
 ```sh
 npm run status                 # Read current state; never starts a stopped VM.
@@ -152,6 +153,8 @@ OpenSSL and free loopback fixture ports are required: runner HTTPS 9443, UI 1517
 
 [CI](.github/workflows/ci.yml) runs the foundation gates and a separate fresh Compose build/smoke test. The [M2 report](docs/architecture/m2-validation.md) records complete/focused local regressions, observed CI and limitations. Audits are point-in-time checks. Three scoped lint-tool minimatch overrides and one Storybook-docgen glob override remain until their parent packages update. Storybook's package-local `skipLibCheck` covers upstream declarations only; own source/stories remain strict.
 
+The completed **M3** gate passes **539 Python cases plus 38 subtests**, **396 regular JavaScript cases**, and separate **20 storage / 13 transport / 13 actual product persistence cases**. All four builds, workspace checks, strict API typing, locks and contract drift pass. [Full source CI 43539066552](https://github.com/Dibya-z/Code-Along/actions/runs/43539066552) confirms **78 product, 26 isolation, four foundation and six development browser cases** in Chromium/WebKit. Normal startup/shutdown and read-only primary-data/protected-file preservation checks pass. The [M3 report](docs/architecture/m3-validation.md) records the initial failures, verified corrections, storage results and release limits.
+
 Firefox is **unverified** on this workstation: its owned launcher fails before navigation with `Could not find profile folder`. `test:firefox` and `test:all` retain the explicit gate. Chromium/WebKit automation does not certify every retail/mobile browser or replace later screen-reader/load/deployment checks. The [M0 report](docs/architecture/m0-validation.md) and [runner threat model](docs/architecture/runner-threat-model.md) describe execution limits, including no hard browser memory quota or grade authority.
 
 ## Feature and operations guides
@@ -163,6 +166,9 @@ Firefox is **unverified** on this workstation: its owned launcher fails before n
 - [Python execution, input/plots and warmed offline practice](docs/protocols/product-execution.md)
 - [Local recovery and shared-device retention](docs/protocols/local-recovery.md)
 - [Templates, source backups and local drafts](docs/protocols/project-tools.md)
+- [Shared editing, presence and durable saves](docs/protocols/product-collaboration.md)
+- [Named history and scoped snapshot/live shares](docs/protocols/history-and-sharing.md)
+- [Project notifications and discussion](docs/protocols/project-events-and-chat.md)
 - [Backend configuration and commands](docs/operations/backend-development.md)
 - [Checkpoint protocol](docs/protocols/collaboration-checkpoints.md) and [persistence proof](docs/architecture/checkpoint-persistence-proof.md)
 
