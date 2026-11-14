@@ -19,7 +19,8 @@ import type { FileMetadata } from './model/document.ts';
 import { CodeEditor } from './components/code-editor.tsx';
 import { FileTabs } from './components/file-tabs.tsx';
 import { FileTree } from './components/file-tree.tsx';
-import { ExecutionPanel } from '../execution/panel.tsx';
+import { ExecutionPanel, type PracticeAction } from '../execution/panel.tsx';
+import type { WorkExecutionContext } from '../execution/practice.ts';
 import './styles.css';
 import { RecoveryController } from '../recovery/controller.ts';
 import { recoveryStore } from '../recovery/store.ts';
@@ -73,6 +74,9 @@ type Props = WorkbenchProps &
         fileActions: ReactNode;
         local?: ValidatedRecovery;
         localSources?: ReadonlyMap<string, string>;
+        task?: WorkExecutionContext;
+        practice?: PracticeAction;
+        executionConflict?: string | null;
         capability?: never;
       }
     | {
@@ -81,6 +85,9 @@ type Props = WorkbenchProps &
         fileActions?: never;
         local?: never;
         localSources?: never;
+        task?: never;
+        practice?: never;
+        executionConflict?: never;
         capability: {
           readonly kind: 'live_share';
           readonly shareId: string;
@@ -113,6 +120,9 @@ function ScopedWorkbench({
   targets,
   onRun,
   guide,
+  task,
+  practice,
+  executionConflict,
 }: Props) {
   const name = useRef(project.name);
   name.current = project.name;
@@ -649,6 +659,9 @@ function ScopedWorkbench({
       <ExecutionPanel
         workspace={workspace}
         paused={paused}
+        {...(task ? { task } : {})}
+        {...(practice ? { practice } : {})}
+        {...(executionConflict ? { conflict: executionConflict } : {})}
         toolbar={targets?.runToolbar ?? toolbar}
         onRun={() => {
           selectPane('console');

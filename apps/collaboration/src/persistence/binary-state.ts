@@ -33,7 +33,9 @@ export function stateHash(state: Uint8Array): string {
 export function validateSource(source: string): void {
   if (
     source.includes('\0') ||
-    new TextDecoder('utf-8').decode(new TextEncoder().encode(source)) !== source
+    new TextDecoder('utf-8', { ignoreBOM: true }).decode(
+      new TextEncoder().encode(source),
+    ) !== source
   ) {
     throw new CheckpointStoreError('invalid_state');
   }
@@ -44,7 +46,7 @@ export function validateSource(source: string): void {
 
 class StrictUpdateDecoder extends Y.UpdateDecoderV1 {
   override readString(): string {
-    return new TextDecoder('utf-8', { fatal: true }).decode(
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(
       decoding.readVarUint8Array(this.restDecoder),
     );
   }

@@ -5,6 +5,7 @@ import {
   login,
   openProjectSection,
   openRecovery,
+  projectSetupDiagnostics,
   register,
   showFiles,
 } from './helpers.ts';
@@ -13,12 +14,42 @@ const discussion = (page: Page) =>
   page.getByRole('region', { name: 'Discussion', exact: true });
 const rows = (page: Page) => discussion(page).locator('li[data-message-id]');
 const row = (page: Page, text: string) => rows(page).filter({ hasText: text });
+const readinessDiagnostics = new WeakMap<
+  Page,
+  ReturnType<typeof projectSetupDiagnostics>
+>();
+function observeProjectReadiness(page: Page) {
+  readinessDiagnostics.get(page)?.dispose();
+  const diagnostic = projectSetupDiagnostics(page);
+  function dispose() {
+    diagnostic.dispose();
+    page.off('close', dispose);
+    if (readinessDiagnostics.get(page)?.dispose === dispose)
+      readinessDiagnostics.delete(page);
+  }
+  readinessDiagnostics.set(page, { ...diagnostic, dispose });
+  page.once('close', dispose);
+}
 async function ready(page: Page) {
-  await openProjectSection(page, 'Discussion');
-  await expect(page.locator('.discussion-status')).toHaveText(
-    'Discussion is up to date.',
-    { timeout: 20000 },
-  );
+  const diagnostic = readinessDiagnostics.get(page);
+  try {
+    await openProjectSection(page, 'Discussion');
+    await expect(page.locator('.discussion-status')).toHaveText(
+      'Discussion is up to date.',
+      { timeout: 20000 },
+    );
+  } catch (error) {
+    if (!diagnostic) throw error;
+    const state = await diagnostic
+      .snapshot()
+      .catch(() => ({ snapshotUnavailable: true }));
+    throw new Error(
+      `${error instanceof Error ? error.message : 'Discussion readiness assertion failed.'}\nBounded project readiness diagnostic: ${JSON.stringify(state).slice(0, 1900)}`,
+      { cause: error },
+    );
+  } finally {
+    diagnostic?.dispose();
+  }
 }
 async function send(
   page: Page,
@@ -141,7 +172,9 @@ async function pair(
     expect(grantResponse.status()).toBe(204);
     if (seed) await seed(owner, projectId);
     if (prepare) await prepare(peer);
+    observeProjectReadiness(owner);
     await owner.goto(url);
+    observeProjectReadiness(peer);
     await peer.goto(url);
     try {
       await expect(

@@ -8,6 +8,17 @@ import {
   type RunnerEvent,
   type RunManifest,
 } from '@code-along/contracts/execution';
+import {
+  capturePracticeManifest,
+  capturePublicChecksManifest,
+  parsePracticeReady,
+  parsePracticeEvent,
+  PRACTICE_PROTOCOL,
+  PRACTICE_VERSION,
+  REVIEWED_HELPER_RELEASE,
+  type PracticeRunnerEvent,
+} from '@code-along/contracts/execution/practice';
+import { CORE_RUNTIME } from '@code-along/contracts/execution/profiles';
 import * as Y from 'yjs';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
@@ -23,9 +34,22 @@ frame.src = `${runnerOrigin}/${location.search.includes('fallback') ? '?fallback
 const nonce = crypto.randomUUID();
 const channel = new MessageChannel();
 const events: RunnerEvent[] = [];
-let ready: { interactive: boolean; cross_origin_isolated: boolean } | null =
+const practiceEvents: PracticeRunnerEvent[] = [];
+const practice = new URLSearchParams(location.search).has('practice');
+const wire = practice
+  ? { protocol: PRACTICE_PROTOCOL, version: PRACTICE_VERSION }
+  : { protocol: RUNNER_PROTOCOL, version: RUNNER_VERSION };
+let ready:
+  ReturnType<typeof parseRunnerReady> | ReturnType<typeof parsePracticeReady> =
   null;
 channel.port1.onmessage = (event: MessageEvent<unknown>) => {
+  if (practice) {
+    const capability = parsePracticeReady(event.data, nonce);
+    if (capability) ready = capability;
+    const result = parsePracticeEvent(event.data, nonce);
+    if (result) practiceEvents.push(result);
+    return;
+  }
   const capability = parseRunnerReady(event.data, nonce);
   if (capability) {
     ready = capability;
@@ -37,8 +61,7 @@ channel.port1.onmessage = (event: MessageEvent<unknown>) => {
 function connect() {
   frame.contentWindow!.postMessage(
     {
-      protocol: RUNNER_PROTOCOL,
-      version: RUNNER_VERSION,
+      ...wire,
       type: 'connect',
       session_nonce: nonce,
     },
@@ -52,8 +75,7 @@ frame.onload = () => {
 document.body.append(frame);
 function command(run_id: string, body: object) {
   channel.port1.postMessage({
-    protocol: RUNNER_PROTOCOL,
-    version: RUNNER_VERSION,
+    ...wire,
     session_nonce: nonce,
     run_id,
     ...body,
@@ -62,6 +84,7 @@ function command(run_id: string, body: object) {
 const proof = {
   connect,
   events,
+  practiceEvents,
   get ready() {
     return ready;
   },
@@ -74,6 +97,34 @@ const proof = {
     const manifest = await pending;
     const id = crypto.randomUUID();
     command(id, { type: 'run', manifest, stdin });
+    return { id, manifest };
+  },
+  async runPractice(files: readonly SourceFile[], checks_source: string) {
+    const sourceFiles = files.map((file) => ({
+      ...file,
+      file_id: crypto.randomUUID(),
+    }));
+    const published = await capturePublicChecksManifest(checks_source);
+    const manifest = await capturePracticeManifest({
+      assignment_id: crypto.randomUUID(),
+      assignment_version_id: crypto.randomUUID(),
+      assignment_content_sha256: 'a'.repeat(64),
+      source: {
+        project_id: crypto.randomUUID(),
+        source_kind: 'project',
+        metadata_version: 1,
+        entrypoint_file_id: sourceFiles[0]!.file_id,
+        runtime: CORE_RUNTIME,
+        stdin_mode: 'batch',
+        files: sourceFiles,
+      },
+      helper_release: REVIEWED_HELPER_RELEASE,
+      published_checks_sha256: published.sha256,
+      checks_source,
+      check_origin: 'published',
+    });
+    const id = crypto.randomUUID();
+    command(id, { type: 'run', manifest, stdin: [] });
     return { id, manifest };
   },
   sendRaw(value: unknown) {

@@ -1,4 +1,4 @@
-import { RuntimeAssetCache } from './asset-cache.ts';
+import { RuntimeAssetCache, type RuntimeAssets } from './asset-cache.ts';
 import {
   RUN_LIMITS,
   RUNTIME_ID,
@@ -17,12 +17,17 @@ import {
   type RasterPlot,
 } from '@code-along/contracts/execution/plots';
 import { PRACTICE_BUDGETS } from '@code-along/contracts/execution/budgets';
+import {
+  verifyPracticeManifest,
+  type PracticeManifest,
+} from '@code-along/contracts/execution/practice';
 export type EngineCommand =
   | {
       type: 'run';
       run_id: string;
       manifest: RunManifest | ProjectRunManifest;
       stdin: readonly string[];
+      practice?: PracticeManifest;
     }
   | { type: 'cancel'; run_id: string }
   | { type: 'stdin'; run_id: string; text: string | null };
@@ -34,10 +39,16 @@ export type EngineEvent =
       status: TerminalStatus;
       manifest_sha256: string;
       runtime_id: string;
+      practice?: {
+        readonly practice_manifest_sha256: string;
+        readonly checks_sha256: string;
+        readonly helper_release_sha256: string;
+      };
     };
 interface ActiveRun {
   id: string;
   manifest: RunManifest | ProjectRunManifest;
+  practice: PracticeManifest | null;
   worker: Worker | null;
   timer: ReturnType<typeof setTimeout>;
   input: Int32Array | null;
@@ -49,6 +60,22 @@ interface ActiveRun {
   plotBytes: number;
   outputMessages: number;
   cacheOffered: boolean;
+}
+function ownRun(
+  command: Extract<EngineCommand, { type: 'run' }>,
+): Extract<EngineCommand, { type: 'run' }> {
+  // A boolean verifier cannot transfer ownership of an object a caller can mutate.
+  // One clone preserves the adapter's source/practice alias while removing external aliases.
+  const owned = structuredClone(command);
+  const seen = new WeakSet<object>();
+  function freeze(value: unknown): void {
+    if (value === null || typeof value !== 'object' || seen.has(value)) return;
+    seen.add(value);
+    for (const child of Object.values(value)) freeze(child);
+    Object.freeze(value);
+  }
+  freeze(owned);
+  return owned;
 }
 /** Trusted shell: owns worker handles, time and output budgets; never trusts Python as a grader. */
 export class ExecutionSupervisor {
@@ -81,6 +108,15 @@ export class ExecutionSupervisor {
         run.manifest.version === 1
           ? RUNTIME_ID
           : run.manifest.runtime.runtime_id,
+      ...(run.practice
+        ? {
+            practice: {
+              practice_manifest_sha256: run.practice.sha256,
+              checks_sha256: run.practice.checks.sha256,
+              helper_release_sha256: run.practice.helper_release.source_sha256,
+            },
+          }
+        : {}),
     });
   }
   async handle(command: EngineCommand): Promise<void> {
@@ -112,9 +148,17 @@ export class ExecutionSupervisor {
       return;
     // Reserve before hashing: cancel/new messages cannot race two starts.
     this.usedIds.add(command.run_id);
+    let owned: Extract<EngineCommand, { type: 'run' }>;
+    try {
+      owned = ownRun(command);
+    } catch {
+      // Parsed wire manifests are bounded plain data. Uncloneable internal input is not admitted.
+      return;
+    }
     const run: ActiveRun = {
-      id: command.run_id,
-      manifest: command.manifest,
+      id: owned.run_id,
+      manifest: owned.manifest,
+      practice: owned.practice ?? null,
       worker: null,
       timer: setTimeout(
         () => this.finish(run, 'timed_out'),
@@ -135,23 +179,34 @@ export class ExecutionSupervisor {
     let valid: boolean;
     try {
       valid =
-        command.manifest.version === 1
-          ? await verifyRunManifest(command.manifest)
-          : await verifyProjectManifest(command.manifest);
+        run.practice !== null
+          ? run.manifest.version === 2 &&
+            run.manifest === run.practice.source &&
+            (await verifyPracticeManifest(run.practice))
+          : run.manifest.version === 1
+            ? await verifyRunManifest(run.manifest)
+            : await verifyProjectManifest(run.manifest);
     } catch {
       this.finish(run, 'failed');
       return;
     }
+    if (this.active !== run) return;
     if (!valid) {
       this.finish(run, 'failed');
       return;
     }
-    const runtime_cache =
-      command.manifest.version === 2
-        ? await this.runtimeAssets.copy(command.manifest.runtime)
-        : undefined;
+    let runtime_cache: RuntimeAssets | undefined;
+    try {
+      runtime_cache =
+        run.manifest.version === 2
+          ? await this.runtimeAssets.copy(run.manifest.runtime)
+          : undefined;
+    } catch {
+      this.finish(run, 'failed');
+      return;
+    }
     if (this.active !== run) return;
-    if (command.manifest.stdin_mode === 'interactive') {
+    if (run.manifest.stdin_mode === 'interactive') {
       if (!crossOriginIsolated || typeof SharedArrayBuffer === 'undefined') {
         this.finish(run, 'failed');
         return;
@@ -248,10 +303,11 @@ export class ExecutionSupervisor {
       };
       run.worker.postMessage({
         run_id: run.id,
-        manifest: command.manifest,
-        stdin: command.stdin,
+        manifest: run.manifest,
+        stdin: owned.stdin,
         input: run.input?.buffer,
-        ...(command.manifest.version === 2 ? { runtime_cache } : {}),
+        ...(run.manifest.version === 2 ? { runtime_cache } : {}),
+        ...(run.practice ? { checks_source: run.practice.checks.source } : {}),
       });
     } catch {
       this.finish(run, 'failed');

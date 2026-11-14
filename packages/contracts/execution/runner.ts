@@ -53,7 +53,8 @@ function path(v: unknown): v is string {
 export function sourceBytes(source: string): Uint8Array {
   const bytes = new TextEncoder().encode(source);
   if (
-    new TextDecoder('utf-8', { fatal: true }).decode(bytes) !== source ||
+    new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes) !==
+      source ||
     source.includes('\0')
   )
     throw new Error('invalid_source');

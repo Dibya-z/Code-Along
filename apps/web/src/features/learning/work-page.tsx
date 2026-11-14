@@ -22,6 +22,13 @@ import { OLD_WORK_NOTICE } from './work-model.ts';
 import { workSourceAccess } from './work-source.ts';
 import type { AssignmentVersion } from './types.ts';
 import type { AssignmentWork } from './participation-types.ts';
+import {
+  TaskPractice,
+  type CheckCopyState,
+  type TaskPracticeControls,
+} from './task-practice.tsx';
+import type { WorkExecutionContext } from '../execution/practice.ts';
+import { TaskHints } from './task-hints.tsx';
 import './styles.css';
 
 export function AssignmentWorkPage() {
@@ -202,6 +209,13 @@ function WorkSource({
   const [commandBar, setCommandBar] = useState<HTMLDivElement | null>(null);
   const [commandHeight, setCommandHeight] = useState(0);
   const [discussionOpen, setDiscussionOpen] = useState(false);
+  const [checkCopy, setCheckCopy] = useState<CheckCopyState>({
+    copy: null,
+    usingCopy: false,
+  });
+  const [practiceTarget, setPracticeTarget] = useState<HTMLDivElement | null>(
+    null,
+  );
   useLayoutEffect(() => {
     if (!commandBar) return;
     const measure = () =>
@@ -232,6 +246,18 @@ function WorkSource({
   const selectedId = files?.items.some((file) => file.id === selected)
     ? selected!
     : (project?.entrypoint_file_id ?? '');
+  const task: WorkExecutionContext = {
+    project_id: projectId,
+    assignment_id: version.assignment_id,
+    assignment_version_id: version.id,
+    assignment_content_sha256: version.content_sha256,
+    runtime: version.runtime,
+    helper_release: version.helper_release,
+  };
+  const executionConflict =
+    metadata.data && !valid
+      ? 'This project and its pinned task use different Python environments. Recheck work access before running.'
+      : null;
   function refreshAccess() {
     return Promise.all([
       onRecheckWork(),
@@ -312,6 +338,25 @@ function WorkSource({
         selectedId={selectedId}
         onSelect={setSelected}
         paused={sourcePaused}
+        task={task}
+        executionConflict={executionConflict}
+        {...(version.public_checks
+          ? {
+              practice: {
+                input: {
+                  ...task,
+                  published_checks_sha256: version.public_checks.sha256,
+                  checks_source: checkCopy.usingCopy
+                    ? (checkCopy.copy ?? version.public_checks.source)
+                    : version.public_checks.source,
+                  check_origin: checkCopy.usingCopy
+                    ? ('local_practice' as const)
+                    : ('published' as const),
+                },
+                target: practiceTarget,
+              },
+            }
+          : {})}
         addControl={null}
         fileActions={null}
         targets={{ runToolbar, collaboration, recovery }}
@@ -321,7 +366,15 @@ function WorkSource({
           onPaneChange: selectPane,
           render: (visible) => (
             <>
-              <TaskGuide version={version} projectId={project.id} />
+              <TaskGuide
+                version={version}
+                projectId={project.id}
+                practice={{
+                  state: checkCopy,
+                  onChange: setCheckCopy,
+                  onTarget: setPracticeTarget,
+                }}
+              />
               <details
                 className="task-disclosure"
                 open={discussionOpen}
@@ -348,9 +401,11 @@ function WorkSource({
 function TaskGuide({
   version,
   projectId,
+  practice,
 }: {
   version: AssignmentVersion;
   projectId?: string;
+  practice?: TaskPracticeControls;
 }) {
   const environment = runtimeProfile(version.runtime.runtime_id);
   const policy = version.submission_policy;
@@ -362,14 +417,7 @@ function TaskGuide({
         task or project.
       </p>
       <div className="assignment-prose">{version.instructions}</div>
-      {version.hints.map((hint, index) => (
-        <details className="task-disclosure" key={hint.id}>
-          <summary>
-            Hint {index + 1}: {hint.title}
-          </summary>
-          <div className="assignment-prose">{hint.body}</div>
-        </details>
-      ))}
+      <TaskHints hints={version.hints} />
       <details className="task-disclosure">
         <summary>Task rules and environment</summary>
         <p>
@@ -403,18 +451,16 @@ function TaskGuide({
           <Link to={`/projects/${projectId}`}>Open source project</Link>
         </details>
       )}
-      {version.public_checks && (
-        <details className="task-disclosure">
-          <summary>Published visible checks</summary>
-          <p>These inspectable checks are practice input, not a grade.</p>
-          <pre
-            className="learning-source"
-            tabIndex={0}
-            aria-label="Pinned visible Python checks"
-          >
-            <code>{version.public_checks.source}</code>
-          </pre>
-        </details>
+      {version.public_checks ? (
+        <TaskPractice
+          checks={version.public_checks}
+          {...(practice ? { controls: practice } : {})}
+        />
+      ) : (
+        <p className="muted">
+          No visible checks were published for this version. Use Run code to
+          practice with the project entrypoint.
+        </p>
       )}
     </article>
   );

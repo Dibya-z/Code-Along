@@ -7,6 +7,8 @@ import { join, resolve, extname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { CORE_RUNTIME } from '@code-along/contracts/execution/profiles';
+import { verifyRuntimeInventory } from '@code-along/contracts/execution/runtime-inventory';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const temporary = await mkdtemp(join(tmpdir(), 'code-along-proof-tls-'));
@@ -35,12 +37,13 @@ execFileSync(
 );
 const app = 'https://127.0.0.1:9443',
   runner = 'https://localhost:9443';
-const inventory = JSON.parse(
-  await readFile(
-    join(root, 'apps/runner-web/public/runtime-manifests/pyodide-core.json'),
-    'utf8',
-  ),
-) as { assets: { name: string; sha256: string }[] };
+const inventoryBytes = await readFile(
+  join(root, 'apps/runner-web/public/runtime-manifests/pyodide-core.json'),
+);
+const inventory = await verifyRuntimeInventory(
+  JSON.parse(inventoryBytes.toString('utf8')),
+  CORE_RUNTIME,
+);
 const runtime = new Map<string, Buffer>();
 for (const asset of inventory.assets) {
   const bytes = await readFile(
@@ -49,6 +52,10 @@ for (const asset of inventory.assets) {
   if (createHash('sha256').update(bytes).digest('hex') !== asset.sha256)
     throw new Error('runtime_integrity_failure');
   runtime.set(`/runtime/${asset.name}`, bytes);
+  runtime.set(
+    `/runtime/v2/${CORE_RUNTIME.manifest_sha256}/${asset.name}`,
+    bytes,
+  );
 }
 let authorityRequests = 0;
 const mime: Record<string, string> = {
@@ -116,7 +123,13 @@ const server = createServer(
         return;
       }
       let bytes: Buffer;
-      if (isRunner && runtime.has(url.pathname) && url.search === '')
+      if (
+        isRunner &&
+        url.pathname === '/runtime-manifests/pyodide-core.json' &&
+        url.search === `?sha256=${CORE_RUNTIME.manifest_sha256}`
+      )
+        bytes = inventoryBytes;
+      else if (isRunner && runtime.has(url.pathname) && url.search === '')
         bytes = runtime.get(url.pathname)!;
       else {
         if (

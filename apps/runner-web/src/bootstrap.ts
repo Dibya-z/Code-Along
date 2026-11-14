@@ -3,7 +3,15 @@ import {
   RUNNER_VERSION,
   isRunnerId,
 } from '@code-along/contracts/execution';
-import { ProductRunnerSupervisor, RunnerSupervisor } from './supervisor.ts';
+import {
+  PracticeRunnerSupervisor,
+  ProductRunnerSupervisor,
+  RunnerSupervisor,
+} from './supervisor.ts';
+import {
+  PRACTICE_PROTOCOL,
+  PRACTICE_VERSION,
+} from '@code-along/contracts/execution/practice';
 import { PRODUCT_RUNNER_VERSION } from '@code-along/contracts/execution/product-runner';
 
 const appOrigin = document.querySelector<HTMLMetaElement>(
@@ -29,9 +37,12 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
   const v = d as Record<string, unknown>;
   if (
     Object.keys(v).length !== 4 ||
-    v['protocol'] !== RUNNER_PROTOCOL ||
-    (v['version'] !== RUNNER_VERSION &&
-      v['version'] !== PRODUCT_RUNNER_VERSION) ||
+    !(
+      (v['protocol'] === RUNNER_PROTOCOL &&
+        (v['version'] === RUNNER_VERSION ||
+          v['version'] === PRODUCT_RUNNER_VERSION)) ||
+      (v['protocol'] === PRACTICE_PROTOCOL && v['version'] === PRACTICE_VERSION)
+    ) ||
     v['type'] !== 'connect' ||
     !isRunnerId(v['session_nonce']) ||
     event.ports.length !== 1
@@ -40,9 +51,11 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
   const port = event.ports[0]!;
   connected = true;
   const Supervisor =
-    v['version'] === PRODUCT_RUNNER_VERSION
-      ? ProductRunnerSupervisor
-      : RunnerSupervisor;
+    v['protocol'] === PRACTICE_PROTOCOL
+      ? PracticeRunnerSupervisor
+      : v['version'] === PRODUCT_RUNNER_VERSION
+        ? ProductRunnerSupervisor
+        : RunnerSupervisor;
   const supervisor = new Supervisor(v['session_nonce'], (message) =>
     port.postMessage(message),
   );
@@ -51,7 +64,7 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
   };
   port.start();
   port.postMessage({
-    protocol: RUNNER_PROTOCOL,
+    protocol: v['protocol'],
     version: v['version'],
     type: 'ready',
     session_nonce: v['session_nonce'],

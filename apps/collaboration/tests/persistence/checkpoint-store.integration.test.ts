@@ -180,26 +180,34 @@ describe('real binary checkpoint persistence', () => {
 
   it('initializes once under two competing cold seeds without duplicating text', async () => {
     const other = new CheckpointStore(writer);
-    const a = binary('starter');
-    const b = binary('starter');
+    const source = '\ufeff# starter 🐍\r\n';
+    const a = binary(source);
+    const b = binary(source);
     expect(a.equals(b)).toBe(false);
     const [first, second] = await Promise.all([
       store.initialize(scope, a),
       other.initialize(scope, b),
     ]);
     expect(first.binary).toEqual(second.binary);
-    expect(textOf(first.binary)).toBe('starter');
+    expect(textOf(first.binary)).toBe(source);
+    expect(Buffer.from(textOf(first.binary), 'utf8')).toEqual(
+      Buffer.from(source, 'utf8'),
+    );
     expect(first.durable_revision).toBe('0');
     expect((await store.initialize(scope, b)).binary).toEqual(first.binary);
   });
 
   it('persists actual binary state and a receipt in the same committed version', async () => {
     await store.initialize(scope, binary());
-    const request = frame(binary('print("π")'));
+    const source = '\ufeffprint("π")\r\n';
+    const request = frame(binary(source));
     const receipt = await store.saveCheckpoint(request);
     expect(parseCheckpointResponse(JSON.stringify(receipt)).ok).toBe(true);
     const loaded = await new CheckpointStore(writer).load(scope);
-    expect(textOf(loaded.binary)).toBe('print("π")');
+    expect(textOf(loaded.binary)).toBe(source);
+    expect(Buffer.from(textOf(loaded.binary), 'utf8')).toEqual(
+      Buffer.from(source, 'utf8'),
+    );
     expect(loaded.durable_revision).toBe('1');
     expect(loaded.state_sha256).toBe(stateHash(loaded.binary));
     expect(receipt.state_sha256).toBe(loaded.state_sha256);

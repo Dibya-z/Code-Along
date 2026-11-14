@@ -1,18 +1,26 @@
 import {
   RUN_LIMITS,
+  RUNNER_PROTOCOL,
   type TerminalStatus,
 } from '@code-along/contracts/execution';
+import { validBatchInput } from '@code-along/contracts/execution/product-runner';
 import {
-  validBatchInput,
-  type ProductRunnerEvent,
-} from '@code-along/contracts/execution/product-runner';
+  PRACTICE_PROTOCOL,
+  type PracticeManifest,
+} from '@code-along/contracts/execution/practice';
 import type { EditorWorkspace } from '../editor/model/workspace.ts';
 import {
   captureWorkspaceRun,
   isCurrentRun,
   type CapturedRun,
 } from '../editor/model/snapshot.ts';
-import type { RunnerBridge } from './bridge.ts';
+import type { RunnerBridge, ExecutionEvent, ExecutionKind } from './bridge.ts';
+import {
+  captureWorkspacePractice,
+  captureWorkspaceWorkRun,
+  type WorkExecutionContext,
+  type WorkPracticeInput,
+} from './practice.ts';
 import type { RuntimeIdentity } from '@code-along/contracts/execution/profiles';
 import { ConsoleBuffer, type ConsoleLine } from './console-buffer.ts';
 import {
@@ -33,6 +41,9 @@ export interface ExecutionSnapshot {
   readonly runId: string;
   readonly phase: RunPhase;
   readonly captured: CapturedRun | null;
+  readonly kind: ExecutionKind;
+  readonly practice: PracticeManifest | null;
+  readonly task: WorkExecutionContext | null;
   readonly earlierSource: boolean;
   readonly output: readonly ConsoleLine[];
   readonly plots: readonly RasterPlot[];
@@ -44,8 +55,9 @@ export function running(phase: RunPhase): boolean {
   );
 }
 type BridgeFactory = (
-  event: (event: ProductRunnerEvent) => void,
+  event: (event: ExecutionEvent) => void,
   fault: (message: string) => void,
+  kind: ExecutionKind,
 ) => RunnerBridge;
 /** UI state owns no writable source. Immutable runs use fresh Workers on a private runner connection. */
 export class ExecutionController {
@@ -53,6 +65,9 @@ export class ExecutionController {
     runId: '',
     phase: 'idle',
     captured: null,
+    kind: 'product',
+    practice: null,
+    task: null,
     earlierSource: false,
     output: [],
     plots: [],
@@ -60,6 +75,7 @@ export class ExecutionController {
   });
   private readonly listeners = new Set<() => void>();
   private bridge: RunnerBridge | null = null;
+  private bridgeKind: ExecutionKind | null = null;
   private connection = 0;
   private runsOnBridge = 0;
   private closed = false;
@@ -85,10 +101,37 @@ export class ExecutionController {
     this.snapshot = Object.freeze({ ...this.snapshot, ...update });
     for (const listener of this.listeners) listener();
   }
-  async run(
+  run(
     stdin: readonly string[] = [],
     runtime?: RuntimeIdentity,
     mode: 'batch' | 'interactive' = 'batch',
+    task?: WorkExecutionContext,
+  ): Promise<void> {
+    return this.execute('product', stdin, () =>
+      task
+        ? captureWorkspaceWorkRun(this.workspace, task, mode, runtime)
+        : captureWorkspaceRun(this.workspace, mode, runtime).then(
+            (captured) => ({ captured, practice: null, task: null }),
+          ),
+    );
+  }
+  runChecks(
+    input: WorkPracticeInput,
+    stdin: readonly string[] = [],
+    mode: 'batch' | 'interactive' = 'batch',
+  ): Promise<void> {
+    return this.execute('practice', stdin, () =>
+      captureWorkspacePractice(this.workspace, input, mode),
+    );
+  }
+  private async execute(
+    kind: ExecutionKind,
+    stdin: readonly string[],
+    capture: () => Promise<{
+      captured: CapturedRun;
+      practice: PracticeManifest | null;
+      task: WorkExecutionContext | null;
+    }>,
   ): Promise<void> {
     if (this.closed || running(this.snapshot.phase)) return;
     this.unsubscribe ??= this.workspace.subscribe(() => {
@@ -100,7 +143,11 @@ export class ExecutionController {
         this.publish({ earlierSource: true });
     });
     this.clearTimers();
-    if (this.runsOnBridge >= 90) this.release();
+    if (
+      this.runsOnBridge >= 90 ||
+      (this.bridgeKind !== null && this.bridgeKind !== kind)
+    )
+      this.release();
     this.sequence = 0;
     this.bytes = 0;
     this.plotBytes = 0;
@@ -111,6 +158,9 @@ export class ExecutionController {
       runId,
       phase: 'capturing',
       captured: null,
+      kind,
+      practice: null,
+      task: null,
       earlierSource: false,
       output: [],
       plots: [],
@@ -122,15 +172,18 @@ export class ExecutionController {
           'Use at most 100 input lines, 4 KiB per line and 64 KiB total.',
         );
       const input = Object.freeze([...stdin]);
-      const captured = await captureWorkspaceRun(this.workspace, mode, runtime);
+      const { captured, practice, task } = await capture();
       if (!this.active(runId)) return;
       this.publish({
         phase: 'initializing',
         captured,
+        practice,
+        task,
         earlierSource: !isCurrentRun(this.workspace, captured),
       });
       if (!this.bridge) {
         const connection = ++this.connection;
+        this.bridgeKind = kind;
         this.bridge = this.createBridge(
           (event) => {
             if (connection === this.connection) this.receive(event);
@@ -143,6 +196,7 @@ export class ExecutionController {
               this.publish({ error: message });
             }
           },
+          kind,
         );
       }
       this.runsOnBridge++;
@@ -156,7 +210,9 @@ export class ExecutionController {
         },
         RUN_LIMITS.startupMs + RUN_LIMITS.wallMs + 15_000,
       );
-      await this.bridge.start(runId, captured.manifest, input);
+      if (practice)
+        await this.bridge.start(runId, captured.manifest, input, practice);
+      else await this.bridge.start(runId, captured.manifest, input);
     } catch (error) {
       if (this.active(runId))
         this.finish(
@@ -172,17 +228,40 @@ export class ExecutionController {
       !this.closed && this.snapshot.runId === id && running(this.snapshot.phase)
     );
   }
-  private receive(event: ProductRunnerEvent) {
+  private receive(event: ExecutionEvent) {
     if (!this.active(event.run_id)) return;
+    if (
+      event.protocol !==
+      (this.snapshot.kind === 'practice' ? PRACTICE_PROTOCOL : RUNNER_PROTOCOL)
+    ) {
+      this.finish(
+        'failed',
+        'The runtime response used a different execution connection.',
+      );
+      return;
+    }
     if (event.type === 'state') {
       this.publish({ phase: event.state });
       return;
     }
     if (event.type === 'terminal') {
-      if (
-        event.manifest_sha256 !== this.snapshot.captured?.manifest.sha256 ||
-        event.runtime_id !== this.snapshot.captured.manifest.runtime.runtime_id
-      ) {
+      const source = this.snapshot.captured?.manifest;
+      const practice = this.snapshot.practice;
+      const matches =
+        source &&
+        (this.snapshot.kind === 'practice'
+          ? practice &&
+            event.protocol === PRACTICE_PROTOCOL &&
+            event.source_manifest_sha256 === source.sha256 &&
+            event.practice_manifest_sha256 === practice.sha256 &&
+            event.checks_sha256 === practice.checks.sha256 &&
+            event.helper_release_sha256 ===
+              practice.helper_release.source_sha256 &&
+            event.runtime_id === source.runtime.runtime_id
+          : event.protocol === RUNNER_PROTOCOL &&
+            event.manifest_sha256 === source.sha256 &&
+            event.runtime_id === source.runtime.runtime_id);
+      if (!matches) {
         this.finish(
           'failed',
           'The runtime result did not match its captured source.',
@@ -293,6 +372,7 @@ export class ExecutionController {
     this.clearTimers();
     const previous = this.bridge;
     this.bridge = null;
+    this.bridgeKind = null;
     this.runsOnBridge = 0;
     this.connection++;
     previous?.destroy();

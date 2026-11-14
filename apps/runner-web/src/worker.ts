@@ -40,11 +40,12 @@ self.onmessage = async (
     stdin: string[];
     input?: SharedArrayBuffer;
     runtime_cache?: unknown;
+    checks_source?: string;
   }>,
 ) => {
   if (started) return;
   started = true;
-  const { run_id, manifest, stdin, input } = event.data;
+  const { run_id, manifest, stdin, input, checks_source } = event.data;
   const send = (message: object) => self.postMessage({ run_id, ...message });
   const buffered = new WorkerOutput(
     (stream, text) => send({ type: 'output', stream, text }),
@@ -172,10 +173,18 @@ self.onmessage = async (
           )?.path;
     if (!entrypoint) throw new Error('The captured entrypoint is missing.');
     pyodide.globals.set('__entrypoint', `/project/${entrypoint}`);
+    if (checks_source !== undefined)
+      pyodide.globals.set('__code_along_checks_source', checks_source);
     startup = '';
     send({ type: 'ready' });
+    // Only this fixed program is selected here; exact learner checks travel as a Python global.
+    // Checks import/run project modules explicitly and never consume a source-file slot.
+    const entry =
+      checks_source === undefined
+        ? 'runpy.run_path(__entrypoint, run_name="__main__")'
+        : 'exec(compile(__code_along_checks_source, "<Code Along visible checks>", "exec"), {"__name__": "__main__", "__file__": "<Code Along visible checks>"})';
     const result = await pyodide.runPythonAsync(
-      'import sys, runpy\nsys.path.insert(0, "/project")\ntry:\n    runpy.run_path(__entrypoint, run_name="__main__")\nfinally:\n    for stream in (sys.stdout, sys.stderr):\n        try:\n            stream.flush()\n        except Exception:\n            pass',
+      `import sys, runpy\nsys.path.insert(0, "/project")\ntry:\n    ${entry}\nfinally:\n    for stream in (sys.stdout, sys.stderr):\n        try:\n            stream.flush()\n        except Exception:\n            pass`,
     );
     result?.destroy?.();
     output('stdout', stdout.decode());

@@ -118,7 +118,7 @@ export async function showFiles(page: Page) {
   if (await toggle.isVisible()) await toggle.click();
 }
 
-function projectSetupDiagnostics(page: Page) {
+export function projectSetupDiagnostics(page: Page) {
   const started = Date.now();
   const pending = new Map<Request, { m: string; r: string; at: number }>();
   const recent: {

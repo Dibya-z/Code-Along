@@ -8,13 +8,28 @@ import {
   type ProductRunnerCommand,
 } from '@code-along/contracts/execution/product-runner';
 import type { ProjectRunManifest } from '@code-along/contracts/execution/project';
+import {
+  PRACTICE_PROTOCOL,
+  PRACTICE_VERSION,
+  parsePracticeEvent,
+  parsePracticeReady,
+  type PracticeManifest,
+  type PracticeRunnerCommand,
+  type PracticeRunnerEvent,
+  type PracticeRunnerReady,
+} from '@code-along/contracts/execution/practice';
+
+export type ExecutionKind = 'product' | 'practice';
+export type ExecutionEvent = ProductRunnerEvent | PracticeRunnerEvent;
+export type ExecutionReady = ProductRunnerReady | PracticeRunnerReady;
 
 export interface RunnerBridge {
   start(
     runId: string,
     manifest: ProjectRunManifest,
     stdin: readonly string[],
-  ): Promise<ProductRunnerReady>;
+    practice?: PracticeManifest,
+  ): Promise<ExecutionReady>;
   input(text: string | null): void;
   cancel(): void;
   destroy(): void;
@@ -51,21 +66,31 @@ export class IframeRunnerBridge implements RunnerBridge {
   private readonly nonce = crypto.randomUUID();
   private runId = '';
   private closed = false;
-  private capability: ProductRunnerReady | undefined;
-  private connecting: Promise<ProductRunnerReady> | undefined;
+  private capability: ExecutionReady | undefined;
+  private connecting: Promise<ExecutionReady> | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private rejectReady: ((error: Error) => void) | undefined;
   constructor(
-    private readonly onEvent: (event: ProductRunnerEvent) => void,
+    private readonly onEvent: (event: ExecutionEvent) => void,
     private readonly onFault: (message: string) => void,
+    private readonly kind: ExecutionKind = 'product',
   ) {}
   async start(
     runId: string,
     manifest: ProjectRunManifest,
     stdin: readonly string[],
-  ): Promise<ProductRunnerReady> {
+    practice?: PracticeManifest,
+  ): Promise<ExecutionReady> {
     if (this.closed || this.runId)
       throw new Error('This Python runtime session is closed.');
+    if (
+      (this.kind === 'practice' &&
+        (!practice || practice.source !== manifest)) ||
+      (this.kind === 'product' && practice)
+    )
+      throw new Error(
+        'The Python connection does not match this captured run.',
+      );
     this.runId = runId;
     const capability = await this.connect();
     if (this.closed) throw new Error('This Python run was stopped.');
@@ -73,13 +98,32 @@ export class IframeRunnerBridge implements RunnerBridge {
       throw new Error(
         'Interactive input is unavailable. Choose input before Run instead.',
       );
-    this.send({ type: 'run', manifest, stdin });
+    if (this.kind === 'practice')
+      this.post({
+        protocol: PRACTICE_PROTOCOL,
+        version: PRACTICE_VERSION,
+        session_nonce: this.nonce,
+        run_id: this.runId,
+        type: 'run',
+        manifest: practice!,
+        stdin,
+      } satisfies PracticeRunnerCommand);
+    else
+      this.post({
+        protocol: RUNNER_PROTOCOL,
+        version: PRODUCT_RUNNER_VERSION,
+        session_nonce: this.nonce,
+        run_id: this.runId,
+        type: 'run',
+        manifest,
+        stdin,
+      } satisfies ProductRunnerCommand);
     return capability;
   }
-  private connect(): Promise<ProductRunnerReady> {
+  private connect(): Promise<ExecutionReady> {
     if (this.connecting) return this.connecting;
     const origin = configuredRunnerOrigin();
-    const ready = (this.connecting = new Promise<ProductRunnerReady>(
+    const ready = (this.connecting = new Promise<ExecutionReady>(
       (resolve, reject) => {
         this.rejectReady = reject;
         this.timer = setTimeout(
@@ -92,7 +136,10 @@ export class IframeRunnerBridge implements RunnerBridge {
         this.channel.port1.onmessage = (event: MessageEvent<unknown>) => {
           if (this.closed) return;
           if (!this.capability) {
-            const message = parseProductReady(event.data, this.nonce);
+            const message =
+              this.kind === 'practice'
+                ? parsePracticeReady(event.data, this.nonce)
+                : parseProductReady(event.data, this.nonce);
             if (!message) return;
             this.capability = message;
             clearTimeout(this.timer);
@@ -100,7 +147,10 @@ export class IframeRunnerBridge implements RunnerBridge {
             resolve(message);
             return;
           }
-          const message = parseProductEvent(event.data, this.nonce);
+          const message =
+            this.kind === 'practice'
+              ? parsePracticeEvent(event.data, this.nonce)
+              : parseProductEvent(event.data, this.nonce);
           if (message && message.run_id === this.runId) {
             if (message.type === 'terminal') this.runId = '';
             this.onEvent(message);
@@ -128,8 +178,12 @@ export class IframeRunnerBridge implements RunnerBridge {
       transferred = true;
       this.frame.contentWindow.postMessage(
         {
-          protocol: RUNNER_PROTOCOL,
-          version: PRODUCT_RUNNER_VERSION,
+          protocol:
+            this.kind === 'practice' ? PRACTICE_PROTOCOL : RUNNER_PROTOCOL,
+          version:
+            this.kind === 'practice'
+              ? PRACTICE_VERSION
+              : PRODUCT_RUNNER_VERSION,
           type: 'connect',
           session_nonce: this.nonce,
         },
@@ -143,22 +197,29 @@ export class IframeRunnerBridge implements RunnerBridge {
     document.body.append(this.frame);
     return ready;
   }
+  private post(message: ProductRunnerCommand | PracticeRunnerCommand) {
+    if (!this.closed && this.capability && this.runId)
+      this.channel.port1.postMessage(message);
+  }
   private send(
-    body:
-      | { type: 'run'; manifest: ProjectRunManifest; stdin: readonly string[] }
-      | { type: 'stdin'; text: string | null }
-      | { type: 'cancel' },
+    body: { type: 'stdin'; text: string | null } | { type: 'cancel' },
   ) {
-    if (!this.closed && this.capability && this.runId) {
-      const message: ProductRunnerCommand = {
+    if (this.kind === 'practice')
+      this.post({
+        protocol: PRACTICE_PROTOCOL,
+        version: PRACTICE_VERSION,
+        session_nonce: this.nonce,
+        run_id: this.runId,
+        ...body,
+      } satisfies PracticeRunnerCommand);
+    else
+      this.post({
         protocol: RUNNER_PROTOCOL,
         version: PRODUCT_RUNNER_VERSION,
         session_nonce: this.nonce,
         run_id: this.runId,
         ...body,
-      };
-      this.channel.port1.postMessage(message);
-    }
+      } satisfies ProductRunnerCommand);
   }
   input(text: string | null): void {
     this.send({ type: 'stdin', text });

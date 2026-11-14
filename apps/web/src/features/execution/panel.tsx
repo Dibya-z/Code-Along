@@ -13,6 +13,16 @@ import './styles.css';
 import { ConsoleView } from './console-view.tsx';
 import { PlotGallery } from './plot-gallery.tsx';
 import { createPortal } from 'react-dom';
+import {
+  checksCopyError,
+  workExecutionConflict,
+  type WorkExecutionContext,
+  type WorkPracticeInput,
+} from './practice.ts';
+export interface PracticeAction {
+  readonly input: WorkPracticeInput;
+  readonly target: HTMLElement | null;
+}
 const labels: Record<RunPhase, string> = {
   idle: 'Ready to run',
   capturing: 'Capturing project…',
@@ -47,16 +57,22 @@ export function ExecutionPanel({
   paused,
   toolbar,
   onRun,
+  task,
+  practice,
+  conflict,
 }: {
   workspace: EditorWorkspace;
   paused: boolean;
   toolbar?: HTMLElement | null;
   onRun?: () => void;
+  task?: WorkExecutionContext;
+  practice?: PracticeAction;
+  conflict?: string | null;
 }) {
   const [resource] = useState(() => ({
     model: new ExecutionController(
       workspace,
-      (event, fault) => new IframeRunnerBridge(event, fault),
+      (event, fault, kind) => new IframeRunnerBridge(event, fault, kind),
     ),
     leases: 0,
   }));
@@ -93,8 +109,15 @@ export function ExecutionPanel({
     ),
   );
   const defaultRuntime = workspace.defaultRuntime();
-  const profile = runtimeProfile(selectedRuntime || defaultRuntime?.runtime_id);
+  const profile = runtimeProfile(
+    task?.runtime.runtime_id || selectedRuntime || defaultRuntime?.runtime_id,
+  );
   const reviewed = profile && available.includes(profile);
+  const taskConflict =
+    conflict || (task ? workExecutionConflict(workspace, task) : null);
+  const checkError = practice
+    ? checksCopyError(practice.input.checks_source)
+    : null;
   useEffect(() => {
     resource.leases++;
     return () => {
@@ -109,19 +132,26 @@ export function ExecutionPanel({
       structure.files.length > 0 &&
       structure.files.every((file) => file.loaded);
   const manifest = snapshot.captured?.manifest;
+  const earlierChecks =
+    snapshot.practice &&
+    practice &&
+    (snapshot.practice.checks.source !== practice.input.checks_source ||
+      snapshot.practice.check_origin !== practice.input.check_origin);
+  const inputLines = () =>
+    mode === 'batch' && input ? input.replace(/\n$/, '').split('\n') : [];
   const controls = (
     <div className="execution-toolbar">
       <span className="execution-title">Python</span>
       <div className="actions">
         <Button
-          disabled={busy || !complete || !reviewed}
+          disabled={busy || !complete || !reviewed || Boolean(taskConflict)}
           onClick={() => {
             onRun?.();
-            const lines = input ? input.replace(/\n$/, '').split('\n') : [];
             void model.run(
-              mode === 'batch' ? lines : [],
-              profile?.identity,
+              inputLines(),
+              task?.runtime ?? profile?.identity,
               mode,
+              task,
             );
           }}
         >
@@ -140,13 +170,52 @@ export function ExecutionPanel({
   return (
     <section className="execution-panel" aria-label="Python execution">
       {toolbar ? createPortal(controls, toolbar) : controls}
+      {practice?.target &&
+        createPortal(
+          <div className="practice-action">
+            <Button
+              type="button"
+              disabled={
+                busy ||
+                !complete ||
+                !reviewed ||
+                Boolean(taskConflict || checkError)
+              }
+              onClick={() => {
+                if (
+                  busy ||
+                  !complete ||
+                  !reviewed ||
+                  taskConflict ||
+                  checkError
+                )
+                  return;
+                onRun?.();
+                void model.runChecks(practice.input, inputLines(), mode);
+              }}
+            >
+              Run visible checks
+            </Button>
+            <p className="muted">
+              Uses this task’s published Python environment and your current
+              code. Local practice only; this is not a grade.
+            </p>
+            {checkError && <p role="alert">{checkError}</p>}
+            {taskConflict && <p role="alert">{taskConflict}</p>}
+          </div>,
+          practice.target,
+        )}
       <h2 className="console-heading">Console</h2>
       <p className="execution-status" role="status">
         {snapshot.phase === 'idle' && !complete
           ? 'Loading project files…'
           : snapshot.phase === 'idle' && catalogue.isPending
             ? 'Checking runtimes…'
-            : labels[snapshot.phase]}
+            : snapshot.kind === 'practice' && snapshot.phase === 'succeeded'
+              ? 'Checks finished'
+              : snapshot.kind === 'practice' && snapshot.phase === 'failed'
+                ? 'Checks failed'
+                : labels[snapshot.phase]}
       </p>
       {(!online || paused) && (
         <Notice>
@@ -156,36 +225,33 @@ export function ExecutionPanel({
           connection again. Server access still needs verification.
         </Notice>
       )}
-      {manifest && (
+      {taskConflict && <Notice tone="error">{taskConflict}</Notice>}
+      {(manifest || snapshot.kind === 'practice') && (
         <p className="execution-provenance">
-          {manifest.source_kind === 'local_draft' && 'Local draft · '}
-          Source <code>{manifest.sha256.slice(0, 12)}</code> · Metadata v
-          {manifest.metadata_version} · Python {manifest.runtime.python_version}
-          {' · '}
-          {runtimeProfile(manifest.runtime.runtime_id)?.name}
-          {' · Profile '}
-          <code>{manifest.runtime.manifest_sha256.slice(0, 8)}</code>
-          {snapshot.earlierSource && <strong> · Earlier source</strong>}
+          {snapshot.kind === 'practice' && (
+            <span className="practice-scope">
+              Untrusted practice · No grade or submission.
+            </span>
+          )}
+          {manifest && (
+            <>
+              {manifest.source_kind === 'local_draft' && 'Local draft · '}
+              {runtimeProfile(manifest.runtime.runtime_id)?.name}
+              {' · Python '}
+              {manifest.runtime.python_version}
+              {snapshot.practice && (
+                <strong>
+                  {' · '}
+                  {snapshot.practice.check_origin === 'published'
+                    ? 'Published checks'
+                    : 'Practice copy'}
+                </strong>
+              )}
+              {snapshot.earlierSource && <strong> · Earlier source</strong>}
+              {earlierChecks && <strong> · Earlier checks</strong>}
+            </>
+          )}
         </p>
-      )}
-      {manifest && (
-        <details className="captured-source">
-          <summary>View captured source</summary>
-          <p>
-            This exact source produced this result. Editing here does not change
-            the capture.
-          </p>
-          {manifest.files.map((file) => (
-            <details key={file.file_id}>
-              <summary>{file.path}</summary>
-              <p>
-                Document {file.document_id} · Generation {file.generation} ·
-                SHA-256 <code>{file.sha256}</code>
-              </p>
-              <pre tabIndex={0}>{file.source}</pre>
-            </details>
-          ))}
-        </details>
       )}
       {snapshot.error && (
         <Notice tone="error">
@@ -223,6 +289,7 @@ export function ExecutionPanel({
               Send input
             </Button>
             <Button
+              type="button"
               variant="secondary"
               disabled={snapshot.phase !== 'waiting_for_input'}
               onClick={() => model.input(null)}
@@ -240,34 +307,118 @@ export function ExecutionPanel({
         onClear={() => model.clearOutput()}
       />
       <PlotGallery key={`plots:${snapshot.runId}`} plots={snapshot.plots} />
+      {manifest && (
+        <details className="captured-source">
+          <summary>View captured source</summary>
+          <p>
+            This exact source produced this result. Editing here does not change
+            the capture.
+          </p>
+          <p>
+            Source SHA-256 <code>{manifest.sha256}</code> · Metadata v
+            {manifest.metadata_version} · Runtime{' '}
+            <code>{manifest.runtime.runtime_id}</code>
+            {' · Profile SHA-256 '}
+            <code>{manifest.runtime.manifest_sha256}</code>
+          </p>
+          {manifest.files.map((file) => (
+            <details key={file.file_id}>
+              <summary>{file.path}</summary>
+              <p>
+                Document {file.document_id} · Generation {file.generation} ·
+                SHA-256 <code>{file.sha256}</code>
+              </p>
+              <pre tabIndex={0}>{file.source}</pre>
+            </details>
+          ))}
+        </details>
+      )}
+      {snapshot.practice && (
+        <details className="captured-checks">
+          <summary>View captured checks</summary>
+          <p>
+            This exact check text produced this practice result. Editing the
+            practice copy keeps this capture unchanged.
+          </p>
+          <pre tabIndex={0} aria-label="Captured visible Python checks">
+            <code>{snapshot.practice.checks.source}</code>
+          </pre>
+        </details>
+      )}
+      {snapshot.task && (
+        <details className="practice-provenance">
+          <summary>Task and runtime provenance</summary>
+          <dl>
+            <dt>Assignment version</dt>
+            <dd>{snapshot.task.assignment_version_id}</dd>
+            <dt>Published content SHA-256</dt>
+            <dd>
+              <code>{snapshot.task.assignment_content_sha256}</code>
+            </dd>
+            <dt>Helper release</dt>
+            <dd>{snapshot.task.helper_release.release_id}</dd>
+            <dt>Helper SHA-256</dt>
+            <dd>
+              <code>{snapshot.task.helper_release.source_sha256}</code>
+            </dd>
+            {snapshot.practice && (
+              <>
+                <dt>Practice manifest SHA-256</dt>
+                <dd>
+                  <code>{snapshot.practice.sha256}</code>
+                </dd>
+                <dt>Published checks SHA-256</dt>
+                <dd>
+                  <code>{snapshot.practice.published_checks_sha256}</code>
+                </dd>
+                <dt>Effective checks SHA-256</dt>
+                <dd>
+                  <code>{snapshot.practice.checks.sha256}</code>
+                </dd>
+              </>
+            )}
+          </dl>
+        </details>
+      )}
       <details className="run-settings">
         <summary>Run options</summary>
-        <label className="execution-input">
-          Python environment
-          <select
-            value={selectedRuntime}
-            onChange={(event) => setSelectedRuntime(event.target.value)}
-            disabled={busy}
-          >
-            <option value="">
-              Project default (
-              {runtimeProfile(defaultRuntime?.runtime_id)?.name ??
-                'unavailable'}
-              )
-            </option>
-            {available.map((option) => (
-              <option
-                key={option.identity.runtime_id}
-                value={option.identity.runtime_id}
-              >
-                {option.name}
+        {task ? (
+          <div className="execution-input">
+            <span>Task environment</span>
+            <p>{profile?.name ?? 'Published environment unavailable'}</p>
+            <span className="muted">
+              Code and visible checks use the environment in this work’s
+              published task.
+            </span>
+          </div>
+        ) : (
+          <label className="execution-input">
+            Python environment
+            <select
+              value={selectedRuntime}
+              onChange={(event) => setSelectedRuntime(event.target.value)}
+              disabled={busy}
+            >
+              <option value="">
+                Project default (
+                {runtimeProfile(defaultRuntime?.runtime_id)?.name ??
+                  'unavailable'}
+                )
               </option>
-            ))}
-          </select>
-          <span className="muted">
-            {profile?.description} This choice applies to your local run.
-          </span>
-        </label>
+              {available.map((option) => (
+                <option
+                  key={option.identity.runtime_id}
+                  value={option.identity.runtime_id}
+                >
+                  {option.name}
+                </option>
+              ))}
+            </select>
+            <span className="muted">
+              {profile?.description} This choice applies to your local run.
+            </span>
+          </label>
+        )}
         {catalogue.error && (
           <Notice tone="error">
             The reviewed runtime catalogue could not be checked.{' '}

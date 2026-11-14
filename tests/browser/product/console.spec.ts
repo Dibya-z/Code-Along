@@ -66,6 +66,9 @@ test('safe coalesced console, output paging, immutable source and interactive in
     .click();
   await expect(status).toHaveText('Run finished');
   await expect(output).toContainText('EOF received');
+  await expect(page.locator('.interactive-input [role="alert"]')).toHaveCount(
+    0,
+  );
   await editor.fill(
     'import time\nfor i in range(400):\n    print("reading", i, flush=True)\n    time.sleep(0.02)\n',
   );

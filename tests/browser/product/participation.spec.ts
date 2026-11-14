@@ -1019,6 +1019,10 @@ test('exact team consent and approval creates only its new shared work, while wi
     await sourceIs(peer.page, interactive);
     await pane(actor.page, 'Output');
     await disclosure(actor.page, 'Run options');
+    await expect(
+      actor.page.getByText('Task environment', { exact: true }).locator('..'),
+    ).toContainText('Python core');
+    await expect(actor.page.getByLabel('Python environment')).toHaveCount(0);
     await actor.page
       .getByLabel('Python input mode', { exact: true })
       .selectOption('interactive');
@@ -1027,6 +1031,9 @@ test('exact team consent and approval creates only its new shared work, while wi
       .click();
     const runStatus = actor.page.locator('.execution-status');
     await expect(runStatus).toHaveText('Waiting for input', { timeout: 40000 });
+    await expect(actor.page.locator('.practice-provenance')).toContainText(
+      f.version.id,
+    );
     const stdin = actor.page.getByLabel('Input for Python', { exact: true });
     await stdin.fill('River');
     const capture = await actor.page
@@ -1044,6 +1051,9 @@ test('exact team consent and approval creates only its new shared work, while wi
         exact: true,
       }),
     ).toContainText('Instructions pinned to A.');
+    await actor.page
+      .getByRole('button', { name: 'Reveal next hint', exact: true })
+      .click();
     await disclosure(actor.page, 'Hint 1: Read the source');
     await expect(
       actor.page.getByText('This hint belongs to A.', { exact: true }),

@@ -5,6 +5,7 @@ import {
   sourceBytes,
 } from '@code-along/contracts/execution';
 import { reviewedRuntime } from '@code-along/contracts/execution/profiles';
+import { verifyPublicChecksManifest } from '@code-along/contracts/execution/practice';
 import {
   REVISION_HELPERS,
   type RevisionManifest,
@@ -95,23 +96,7 @@ export async function verifyPublicChecks(
   checks: PublicChecks | null,
 ): Promise<void> {
   if (checks === null) return;
-  if (
-    Object.keys(checks).sort().join() !==
-      'language,protocol,sha256,source,source_sha256,version' ||
-    checks.protocol !== 'code-along.public-checks' ||
-    checks.version !== 1 ||
-    checks.language !== 'python' ||
-    !text(checks.source, 16384, true) ||
-    !digest.test(checks.sha256) ||
-    (await sha256(sourceBytes(checks.source))) !== checks.source_sha256 ||
-    (await hash([
-      'code-along.public-checks',
-      1,
-      'python',
-      checks.source_sha256,
-      checks.source,
-    ])) !== checks.sha256
-  )
+  if (!(await verifyPublicChecksManifest(checks)))
     throw new Error('The visible checks could not be verified.');
 }
 /** These checks supplement scoped API authority; they never grant access. */

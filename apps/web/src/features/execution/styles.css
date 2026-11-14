@@ -67,6 +67,7 @@
   color: var(--color-muted);
 }
 .execution-provenance {
+  margin-block: var(--space-3);
   overflow-wrap: anywhere;
 }
 .execution-provenance strong {
@@ -149,4 +150,31 @@
 .execution-scope {
   margin: 0;
   padding-block: var(--space-3);
+}
+.captured-checks,
+.practice-provenance {
+  padding: var(--space-4);
+  border-block-start: 1px solid var(--color-separator);
+  overflow-wrap: anywhere;
+}
+.practice-scope {
+  display: block;
+  font-size: var(--text-body);
+}
+.captured-checks pre {
+  max-height: 24rem;
+  max-width: 100%;
+  overflow: auto;
+  font: 1rem/1.5 var(--font-code);
+}
+.captured-checks > summary,
+.practice-provenance > summary {
+  cursor: pointer;
+  min-height: var(--target-min);
+  display: list-item;
+  align-content: center;
+}
+.practice-provenance dd {
+  margin-inline-start: 0;
+  overflow-wrap: anywhere;
 }

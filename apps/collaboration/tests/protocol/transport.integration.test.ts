@@ -222,17 +222,29 @@ it('synchronizes edits and deletions, while synced alone never means Saved', asy
   await connect(a);
   await connect(b);
   expect(a.tracker.saved).toBe(false);
-  a.doc.getText('source').insert(0, 'abc');
-  await until(() => b.doc.getText('source').toString() === 'abc');
+  a.doc.getText('source').insert(0, '\ufeffabc');
+  await until(() => b.doc.getText('source').toString() === '\ufeffabc');
   const first = save(a);
   expect((await reply(a, first)).type).toBe('checkpoint.receipt');
   expect(a.tracker.saved).toBe(true);
-  b.doc.getText('source').delete(1, 1);
-  await until(() => a.doc.getText('source').toString() === 'ac');
+  b.doc.getText('source').insert(2, '\ufeff');
+  b.doc.getText('source').delete(3, 1);
+  await until(() => a.doc.getText('source').toString() === '\ufeffa\ufeffc');
   expect(a.tracker.saved).toBe(false);
   const deletion = save(a);
   expect((await reply(a, deletion)).type).toBe('checkpoint.receipt');
   expect(a.tracker.saved).toBe(true);
+  const persisted = await new CheckpointStore(writer).load(a.ids);
+  const reloaded = new Y.Doc();
+  try {
+    Y.applyUpdate(reloaded, persisted.binary);
+    expect(reloaded.getText('source').toString()).toBe('\ufeffa\ufeffc');
+    expect(Buffer.from(reloaded.getText('source').toString(), 'utf8')).toEqual(
+      Buffer.from('\ufeffa\ufeffc', 'utf8'),
+    );
+  } finally {
+    reloaded.destroy();
+  }
   expect(b.replies).toEqual([]); // Receipts are point-to-point, not room broadcast.
 });
 it('merges concurrent peer edits and persists their combined state', async () => {
@@ -422,10 +434,11 @@ it('restores acknowledged binary source after SIGKILL and a fresh collaboration 
   const url = await childServer();
   a.socket.setConfiguration({ url });
   await connect(a);
-  a.doc.getText('source').insert(0, 'committed');
+  const source = '\ufeffcommitted\r\n';
+  a.doc.getText('source').insert(0, source);
   const r = save(a);
   expect((await reply(a, r)).type).toBe('checkpoint.receipt');
-  a.doc.getText('source').insert(9, 'unacknowledged');
+  a.doc.getText('source').insert(source.length, 'unacknowledged');
   await until(() => !a.provider.hasUnsyncedChanges);
   const killed = children[0]!;
   killed.kill('SIGKILL');
@@ -440,7 +453,10 @@ it('restores acknowledged binary source after SIGKILL and a fresh collaboration 
   const nextUrl = await childServer();
   fresh.socket.setConfiguration({ url: nextUrl });
   await connect(fresh);
-  expect(fresh.doc.getText('source').toString()).toBe('committed');
+  expect(fresh.doc.getText('source').toString()).toBe(source);
+  expect(Buffer.from(fresh.doc.getText('source').toString(), 'utf8')).toEqual(
+    Buffer.from(source, 'utf8'),
+  );
   const retry = r;
   save(fresh, retry);
   expect((await reply(fresh, retry)).type).toBe('checkpoint.receipt');

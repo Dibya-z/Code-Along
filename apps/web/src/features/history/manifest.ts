@@ -11,12 +11,10 @@ import {
 } from '@code-along/contracts/execution/profiles';
 import type { SourceArchive } from '../project-tools/archive.ts';
 import type { components } from '@code-along/api-client';
+import { REVIEWED_HELPER_RELEASE } from '@code-along/contracts/execution/practice';
 
-export const REVISION_HELPERS = Object.freeze({
-  release_id: 'code-along-python-helpers-v1',
-  source_sha256:
-    '4b1ccdc64d339bad3c96154b465214f94e414b8b230cd50e59a478ca7fce51b1',
-} satisfies components['schemas']['RevisionHelper']);
+export const REVISION_HELPERS =
+  REVIEWED_HELPER_RELEASE satisfies components['schemas']['RevisionHelper'];
 type PublicManifest = components['schemas']['RevisionManifest'];
 export type RevisionManifest = Readonly<
   Omit<PublicManifest, 'version' | 'runtime' | 'helper_release' | 'files'>
