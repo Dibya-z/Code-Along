@@ -2,6 +2,7 @@ import os
 
 from config.accounts import account_settings
 from config.environment import load_environment
+from config.production import production_settings
 from config.services import service_settings
 
 from .base import *  # noqa: F403
@@ -17,11 +18,10 @@ CSRF_COOKIE_NAME = "__Host-codealong_csrf"
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_SSL_REDIRECT = True
-# Deployment-domain/HSTS policy is finalized with the proxy in M1.2.
-SECURE_HSTS_SECONDS = 0
-EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
 globals().update(service_settings(os.environ))
 globals().update(account_settings(os.environ, production=True))
+globals().update(production_settings(os.environ))
+DATABASES["default"]["OPTIONS"]["sslrootcert"] = os.environ["CODE_ALONG_DB_SSLROOTCERT"]
 
 REST_FRAMEWORK = {
     **BASE_REST_FRAMEWORK,

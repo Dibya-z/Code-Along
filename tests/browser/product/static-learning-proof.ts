@@ -27,6 +27,7 @@ export async function watchStaticLearning(
     learningOpened: 0,
     invalidFrames: 0,
     subscriptions: 0,
+    acknowledgements: 0,
   };
   const active = new Set<WebSocket>();
   const cleanups: (() => void)[] = [];
@@ -78,6 +79,7 @@ export async function watchStaticLearning(
         parsed.value.audience !== expected.audience
       )
         counts.invalidFrames++;
+      else if (parsed.value.type === 'subscribed') counts.acknowledgements++;
     };
     value.on('close', close);
     value.on('framesent', sent);
@@ -108,6 +110,9 @@ export async function assertStaticLearning(
   await expect.poll(() => proof.active.size).toBe(1);
   expect(proof.counts.learningOpened).toBeGreaterThanOrEqual(1);
   expect(proof.counts.subscriptions).toBeGreaterThanOrEqual(1);
+  await expect
+    .poll(() => proof.counts.acknowledgements)
+    .toBeGreaterThanOrEqual(1);
   expect({
     source: proof.counts.source,
     work: proof.counts.work,

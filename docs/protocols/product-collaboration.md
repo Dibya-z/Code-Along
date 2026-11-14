@@ -1,6 +1,6 @@
 # Product collaboration v1
 
-Implementation and verification are in progress under M3. The [checkpoint wire protocol](collaboration-checkpoints.md) remains v1; this document describes the product admission and service boundaries around it. The M0 proof server and `checkpoint_proof` tables remain independent disposable fixtures.
+Implementation and acceptance evidence are recorded in [M3 validation](../architecture/m3-validation.md); current MVP regression status is in [MVP readiness](../operations/mvp-readiness.md). The [checkpoint wire protocol](collaboration-checkpoints.md) remains v1; this document describes the product admission and service boundaries around it. The M0 proof server and `checkpoint_proof` tables remain independent disposable fixtures.
 
 ## Authority and transport
 
@@ -52,6 +52,8 @@ After admission/load, Node sends a server-only `code-along.presence` v1 `presenc
 
 Storage failure/backpressure prevents further accepted writes and surfaces a persistent unsaved state with recovery/export. A stale generation, removed file or revoked permission cannot resurrect metadata. Reconnect obtains fresh per-document tickets before reconciling canonical pending updates. UI status distinguishes connectivity, sync readiness and durable save coverage.
 
+Ticket-admission 429 responses with a valid bounded Retry-After (1–86400 seconds) defer new ticket requests and socket authentication until the server deadline. Queued callbacks, manual Reconnect and online recovery cannot bypass that wait. Missing/invalid timing retains the ordinary reconnect interval. Unsaved Yjs buffers and document/session identities remain intact; no receipt-based Saved claim is made while admission is pending. Permanent authorization/generation denials still block writes, and ordinary product mutations are never replayed by this admission recovery.
+
 Editor write readiness is per document. An unrelated file joining the room must not toggle an already admitted editor read only or steal its focus. The active binding still requires current scope/identity, actual canonical StepTwo, a loaded file and a healthy writable checkpoint phase; global revocation/pause and generation guards remain authoritative. A local checkpoint encoding/resource error locks the affected document. The aggregate Saved label remains conservative across every shared file, including one still connecting.
 
 Canonical device recovery uses `origin: "m3-canonical"` and is explicitly distinguished from legacy `origin: "m2-local"` recovery. Legacy binary history forks into a fresh source-only local draft; it is never applied to the canonical room. Same-generation canonical recovery still requires fresh authorization and explicit recovery handling. Every prospective merged file is validated in a throwaway document before any live file is changed. An older canonical record is merged as CRDT history and cannot replace newer canonical text by plaintext assignment. See [local recovery](local-recovery.md).
@@ -62,4 +64,4 @@ Django's fixed authenticated control request to `/internal/v1/captures/` supplie
 
 The revision manifest is independently versioned as `code-along.revision` v1. It binds exact paths/source/file/document/generation identities, entrypoint, metadata version, reviewed runtime and `helper_release` (`release_id` and actual bundled Python-helper source SHA-256). Both sides verify file and canonical manifest digests. Changing the helper requires a reviewed release-identity update; an old source/profile digest alone cannot identify changed application helpers.
 
-Named revisions and expiring/revocable snapshot/live sharing have passed their API/browser gates; see [history and sharing](history-and-sharing.md). Versioned product events/outbox and durable chat remain the next M3 unit. Their final contracts, validation and availability are recorded when their implementation gates pass; the private capture surface alone does not complete those features.
+Named revisions and expiring/revocable snapshot/live sharing have passed their API/browser gates; see [history and sharing](history-and-sharing.md). Versioned product events/outbox and durable chat are implemented; see [their contract](project-events-and-chat.md) and the M3 validation record. The private capture surface alone grants none of their permissions.

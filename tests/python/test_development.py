@@ -6,8 +6,19 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import yaml
 
 from tools.dev import development as module
+
+
+def test_api_aliases_share_one_project_scoped_image_and_build_definition():
+    configuration = yaml.safe_load((module.ROOT / "infra/compose.yaml").read_text())
+    services = configuration["services"]
+    names = ("api", "migrate", "collaboration-role", "jobs", "scheduler")
+    assert {services[name].get("image") for name in names} == {
+        "${COMPOSE_PROJECT_NAME:-code-along-dev}-api:development"
+    }
+    assert all(services[name]["build"] == services["api"]["build"] for name in names)
 
 
 def lima_fixture(root: Path) -> module.Engine:
@@ -113,7 +124,7 @@ def test_lima_shutdown_runs_even_when_docker_stop_fails(tmp_path, monkeypatch):
     assert calls == [[str(engine.lima), "stop", "code-along"]]
 
 
-@pytest.mark.parametrize("failure", ["", "build", "readiness"])
+@pytest.mark.parametrize("failure", ["", "build", "readiness", "stop_request"])
 def test_controller_shuts_down_on_stop_request_or_failure(
     tmp_path, monkeypatch, failure
 ):
@@ -127,7 +138,8 @@ def test_controller_shuts_down_on_stop_request_or_failure(
             calls.append((arguments, kwargs))
             if failure == "build":
                 raise module.DevelopmentError("injected build failure")
-            (tmp_path / ".runtime/development.stop").touch()
+            if arguments[0] == "up" or failure == "stop_request":
+                (tmp_path / ".runtime/development.stop").touch()
 
         def stop(self):
             calls.append("stop")
@@ -139,12 +151,25 @@ def test_controller_shuts_down_on_stop_request_or_failure(
             raise module.DevelopmentError("injected readiness failure")
 
     monkeypatch.setattr(module, "wait_ready", readiness)
-    if failure:
+    if failure in {"build", "readiness"}:
         with pytest.raises(module.DevelopmentError, match="injected"):
             module.dev(FakeEngine())
     else:
         module.dev(FakeEngine())
-    assert calls[0] == (["up", "--build", "-d"], {"start": True})
+    assert calls[0] == (
+        ["build", "api"],
+        {"start": True},
+    )
+    if failure not in {"build", "stop_request"}:
+        assert [arguments for arguments, _ in calls[:-1]] == [
+            ["build", "api"],
+            ["build", "collaboration"],
+            ["build", "proxy"],
+            ["build", "web-dev"],
+            ["up", "--no-build", "-d"],
+        ]
+    else:
+        assert len(calls) == 2  # First build only, then ordinary cleanup.
     assert calls[-1] == "stop"
     assert signal.getsignal(signal.SIGTERM) == previous
     assert not (tmp_path / ".runtime/development.stop").exists()
@@ -237,7 +262,7 @@ def test_foreground_controller_cleans_up_on_terminal_signals(tmp_path, stop_sign
     stopped = tmp_path / "stopped.txt"
     script = "\n".join(
         [
-            "import sys; from pathlib import Path",
+            "import os, sys; from pathlib import Path",
             "from tools.dev import development as module",
             "root = Path(sys.argv[1])",
             "module.initialize = lambda: None",
@@ -247,13 +272,15 @@ def test_foreground_controller_cleans_up_on_terminal_signals(tmp_path, stop_sign
             "    def compose(self, arguments, **kwargs):",
             "        (root / 'ready.txt').touch()",
             "        return 'api\\ndb\\nredis\\nproxy\\nweb-dev\\ncollaboration\\njobs\\nscheduler'",
-            "    def stop(self): (root / 'stopped.txt').touch()",
+            "    def stop(self):",
+            "        os.kill(os.getpid(), int(sys.argv[2]))",
+            "        (root / 'stopped.txt').touch()",
             "module.dev(Engine())",
         ]
     )
     root = Path(__file__).resolve().parents[2]
     child = subprocess.Popen(
-        [sys.executable, "-c", script, str(tmp_path)],
+        [sys.executable, "-c", script, str(tmp_path), str(int(stop_signal))],
         cwd=root,
         env={**os.environ, "PYTHONPATH": str(root)},
         stdout=subprocess.DEVNULL,

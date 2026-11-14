@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { QueryObserver } from '@tanstack/react-query';
 import { queryClient } from '../../app/providers.tsx';
 import { getIdentity, replaceSession, safeDestination } from './session.ts';
 
@@ -58,6 +59,52 @@ it.each([401, 403])(
     await expect(getIdentity()).resolves.toBeNull();
   },
 );
+it('keeps a cold throttled account unavailable until one explicit fresh check succeeds, without changing the route or session', async () => {
+  const replace = page();
+  let complete!: (response: Response) => void;
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(
+      new Response('{"detail":"Request was throttled."}', {
+        status: 429,
+        headers: { 'Content-Type': 'application/json', 'Retry-After': '1' },
+      }),
+    )
+    .mockImplementationOnce(
+      () => new Promise<Response>((resolve) => (complete = resolve)),
+    );
+  vi.stubGlobal('fetch', fetch);
+  const observer = new QueryObserver(queryClient, {
+    queryKey: ['me'],
+    queryFn: ({ signal }) => getIdentity(signal),
+  });
+  const stop = observer.subscribe(() => {});
+  try {
+    await vi.waitFor(() =>
+      expect(observer.getCurrentResult().error).toMatchObject({ status: 429 }),
+    );
+    expect(observer.getCurrentResult().data).toBeUndefined();
+    expect(fetch).toHaveBeenCalledOnce();
+    const retry = observer.refetch();
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(observer.getCurrentResult().isFetching).toBe(true);
+    expect(observer.getCurrentResult().data).toBeUndefined();
+    complete(
+      new Response('{"id":"verified-account","display_name":"River"}', {
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    const checked = await retry;
+    expect(checked.error).toBeNull();
+    expect(checked.data?.id).toBe('verified-account');
+    expect(replace).not.toHaveBeenCalled();
+    expect(fetch.mock.calls.every(([path]) => path === '/api/v1/me/')).toBe(
+      true,
+    );
+  } finally {
+    stop();
+  }
+});
 it('aborts an active account query and clears scoped caches before replacement', async () => {
   const replace = page(),
     signal = pendingIdentity();

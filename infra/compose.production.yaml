@@ -1,0 +1,269 @@
+name: code-along-production
+
+# Standalone Linux profile; never combine with development Compose profiles.
+# PostgreSQL 18 is externally managed/backed up and verified with its mounted CA.
+x-api: &api
+  image: code-along-api:${CODE_ALONG_RELEASE:?Set an immutable release tag}
+  build:
+    context: ..
+    dockerfile: infra/docker/api.Dockerfile
+  environment: &api-env
+    DJANGO_SETTINGS_MODULE: config.settings.production
+    CODE_ALONG_DEBUG: 'false'
+    CODE_ALONG_SECRET_KEY: ${CODE_ALONG_SECRET_KEY:?Set production credentials}
+    CODE_ALONG_ALLOWED_HOSTS: ${CODE_ALONG_ALLOWED_HOSTS:?Set app hostname and api}
+    CODE_ALONG_APP_ORIGIN: ${CODE_ALONG_APP_ORIGIN:?Set the canonical app HTTPS origin}
+    CODE_ALONG_RUNNER_ORIGIN: ${CODE_ALONG_RUNNER_ORIGIN:?Set a separate runner site}
+    CODE_ALONG_DB_NAME: ${CODE_ALONG_DB_NAME:?Set the production database}
+    CODE_ALONG_DB_USER: ${CODE_ALONG_DB_USER:?Set the production database role}
+    CODE_ALONG_DB_PASSWORD: ${CODE_ALONG_DB_PASSWORD:?Set production credentials}
+    CODE_ALONG_DB_HOST: ${CODE_ALONG_DB_HOST:?Set the verified database hostname}
+    CODE_ALONG_DB_PORT: '${CODE_ALONG_DB_PORT:-5432}'
+    CODE_ALONG_DB_SSLMODE: verify-full
+    CODE_ALONG_DB_SSLROOTCERT: /run/certs/postgres-ca.pem
+    CODE_ALONG_REDIS_URL: redis://redis:6379/0
+    CODE_ALONG_CELERY_BROKER_URL: redis://redis:6379/2
+    CODE_ALONG_TRUST_PROXY: 'true'
+    CODE_ALONG_SMTP_HOST: ${CODE_ALONG_SMTP_HOST:?Set the authenticated SMTP host}
+    CODE_ALONG_SMTP_PORT: '${CODE_ALONG_SMTP_PORT:-587}'
+    CODE_ALONG_SMTP_USER: ${CODE_ALONG_SMTP_USER:?Set production mail credentials}
+    CODE_ALONG_SMTP_PASSWORD: ${CODE_ALONG_SMTP_PASSWORD:?Set production mail credentials}
+    CODE_ALONG_FROM_EMAIL: ${CODE_ALONG_FROM_EMAIL:?Set the verified sender mailbox}
+    CODE_ALONG_COLLABORATION_SECRET: ${CODE_ALONG_COLLABORATION_SECRET:?Set distinct production secrets}
+    CODE_ALONG_COLLABORATION_CONTROL_SECRET: ${CODE_ALONG_COLLABORATION_CONTROL_SECRET:?Set distinct production secrets}
+    CODE_ALONG_COLLABORATION_CONTROL_URL: http://collaboration:1234
+  volumes:
+    - type: bind
+      source: ${CODE_ALONG_DB_CA_FILE:?Set an existing PostgreSQL CA-file path}
+      target: /run/certs/postgres-ca.pem
+      read_only: true
+      bind: { create_host_path: false }
+  networks: [backend, egress]
+  read_only: true
+  tmpfs: ['/tmp:size=32m,mode=1777']
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  pids_limit: 64
+  mem_limit: 768m
+  cpus: 1
+  stop_grace_period: 30s
+  depends_on:
+    redis: { condition: service_healthy }
+
+services:
+  redis:
+    image: redis:8.4.5-alpine@sha256:bd4a0d37e7cd830117ffec9329052b4a1887afa060c265e1768f82b177ff6f43
+    user: redis
+    command:
+      [
+        redis-server,
+        --save,
+        '',
+        --appendonly,
+        'no',
+        --maxmemory,
+        256mb,
+        --maxmemory-policy,
+        noeviction,
+      ]
+    networks: [backend]
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    pids_limit: 32
+    read_only: true
+    tmpfs: ['/data:size=1m,mode=1777']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    healthcheck:
+      { test: [CMD, redis-cli, ping], interval: 5s, timeout: 3s, retries: 12 }
+
+  migrate:
+    <<: *api
+    command: [/app/.venv/bin/python, manage.py, migrate, --noinput]
+
+  collaboration-role:
+    <<: *api
+    command: [/app/.venv/bin/python, manage.py, provision_collaboration_role]
+    environment:
+      <<: *api-env
+      CODE_ALONG_COLLABORATION_DB_USER: code_along_collaboration
+      CODE_ALONG_COLLABORATION_DB_PASSWORD: ${CODE_ALONG_COLLABORATION_DB_PASSWORD:?Set the restricted writer password}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  api:
+    <<: *api
+    restart: unless-stopped
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test:
+        - CMD
+        - /app/.venv/bin/python
+        - -c
+        - "import os,urllib.request; from urllib.parse import urlsplit; r=urllib.request.Request('http://127.0.0.1:8000/health/ready/',headers={'Host':urlsplit(os.environ['CODE_ALONG_APP_ORIGIN']).netloc}); urllib.request.urlopen(r,timeout=2)"
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  jobs:
+    <<: *api
+    command:
+      [
+        /app/.venv/bin/celery,
+        -A,
+        'config.celery:app',
+        worker,
+        --pool=solo,
+        --concurrency=1,
+        --loglevel=WARNING,
+        --without-gossip,
+        --without-mingle,
+      ]
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    pids_limit: 32
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  scheduler:
+    <<: *api
+    command:
+      [
+        /app/.venv/bin/celery,
+        -A,
+        'config.celery:app',
+        beat,
+        --loglevel=WARNING,
+        --schedule=/tmp/code-along-beat,
+      ]
+    restart: unless-stopped
+    mem_limit: 192m
+    cpus: 0.25
+    pids_limit: 32
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  # Exactly one writer; drain and stop it before starting a replacement.
+  collaboration:
+    image: code-along-collaboration:${CODE_ALONG_RELEASE:?Set an immutable release tag}
+    build:
+      context: ..
+      dockerfile: infra/docker/collaboration.Dockerfile
+    environment:
+      NODE_OPTIONS: --max-old-space-size=256
+      CODE_ALONG_APP_ORIGIN: ${CODE_ALONG_APP_ORIGIN:?Set the app HTTPS origin}
+      CODE_ALONG_COLLABORATION_HOST: 0.0.0.0
+      CODE_ALONG_COLLABORATION_PORT: '1234'
+      CODE_ALONG_COLLABORATION_API_URL: http://api:8000
+      CODE_ALONG_SESSION_COOKIE_NAME: __Host-codealong_session
+      CODE_ALONG_COLLABORATION_SECRET: ${CODE_ALONG_COLLABORATION_SECRET:?Set distinct production secrets}
+      CODE_ALONG_COLLABORATION_CONTROL_SECRET: ${CODE_ALONG_COLLABORATION_CONTROL_SECRET:?Set distinct production secrets}
+      PGHOST: ${CODE_ALONG_DB_HOST:?Set the verified database hostname}
+      PGPORT: '${CODE_ALONG_DB_PORT:-5432}'
+      PGDATABASE: ${CODE_ALONG_DB_NAME:?Set the production database}
+      PGUSER: code_along_collaboration
+      PGPASSWORD: ${CODE_ALONG_COLLABORATION_DB_PASSWORD:?Set the restricted writer password}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: /run/certs/postgres-ca.pem
+    volumes:
+      - type: bind
+        source: ${CODE_ALONG_DB_CA_FILE:?Set an existing PostgreSQL CA-file path}
+        target: /run/certs/postgres-ca.pem
+        read_only: true
+        bind: { create_host_path: false }
+    networks: [backend, egress]
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 64
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    stop_grace_period: 45s
+    depends_on:
+      api: { condition: service_healthy }
+      collaboration-role: { condition: service_completed_successfully }
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:1234/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  proxy:
+    image: code-along-proxy:${CODE_ALONG_RELEASE:?Set an immutable release tag}
+    build:
+      context: ..
+      dockerfile: infra/docker/assets.Dockerfile
+    entrypoint: [/bin/sh, /etc/code-along/production-start.sh]
+    command: [nginx, -g, 'daemon off;']
+    environment:
+      APP_ORIGIN: ${CODE_ALONG_APP_ORIGIN:?Set the app HTTPS origin}
+      RUNNER_ORIGIN: ${CODE_ALONG_RUNNER_ORIGIN:?Set a separate runner site}
+    ports: ['80:8080', '443:8443']
+    volumes:
+      - type: bind
+        source: ./proxy/production-start.sh
+        target: /etc/code-along/production-start.sh
+        read_only: true
+        bind: { create_host_path: false }
+      - type: bind
+        source: ./proxy/production.conf.template
+        target: /etc/code-along/production.conf.template
+        read_only: true
+        bind: { create_host_path: false }
+      - type: bind
+        source: ${CODE_ALONG_APP_TLS_DIR:?Set an existing app certificate directory}
+        target: /certs/app
+        read_only: true
+        bind: { create_host_path: false }
+      - type: bind
+        source: ${CODE_ALONG_RUNNER_TLS_DIR:?Set an existing runner certificate directory}
+        target: /certs/runner
+        read_only: true
+        bind: { create_host_path: false }
+    networks: [backend, ingress]
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      [
+        '/tmp:size=16m,mode=1777',
+        '/var/cache/nginx:size=16m',
+        '/var/run:size=1m',
+        '/etc/nginx/conf.d:size=1m',
+      ]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 32
+    stop_grace_period: 20s
+    depends_on:
+      api: { condition: service_healthy }
+      collaboration: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          CMD-SHELL,
+          'wget --quiet --no-check-certificate --header="Host: $${APP_ORIGIN#https://}" --output-document=/dev/null https://127.0.0.1:8443/health/ready/',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+networks:
+  backend: { internal: true }
+  egress:
+  ingress:

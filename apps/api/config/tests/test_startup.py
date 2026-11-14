@@ -36,6 +36,24 @@ def child_environment() -> dict[str, str]:
 
 
 def inspect_settings(env: dict[str, str], *, development: bool) -> dict[str, object]:
+    if not development:
+        env = {
+            **env,
+            "CODE_ALONG_ALLOWED_HOSTS": "learn.example.com,api",
+            "CODE_ALONG_APP_ORIGIN": "https://learn.example.com",
+            "CODE_ALONG_RUNNER_ORIGIN": "https://python.example.net",
+            "CODE_ALONG_TRUST_PROXY": "true",
+            "CODE_ALONG_DB_SSLROOTCERT": "/run/certs/postgres-ca.pem",
+            "CODE_ALONG_REDIS_URL": "redis://redis:6379/0",
+            "CODE_ALONG_CELERY_BROKER_URL": "redis://redis:6379/2",
+            "CODE_ALONG_COLLABORATION_SECRET": secrets.token_urlsafe(48),
+            "CODE_ALONG_COLLABORATION_CONTROL_SECRET": secrets.token_urlsafe(48),
+            "CODE_ALONG_COLLABORATION_CONTROL_URL": "http://collaboration:1234",
+            "CODE_ALONG_SMTP_HOST": "smtp.example.com",
+            "CODE_ALONG_SMTP_USER": "test-smtp-user",
+            "CODE_ALONG_SMTP_PASSWORD": secrets.token_urlsafe(32),
+            "CODE_ALONG_FROM_EMAIL": "Code Along <noreply@example.com>",
+        }
     env = {
         **env,
         "DJANGO_SETTINGS_MODULE": f"config.settings.{'development' if development else 'production'}",
@@ -62,7 +80,7 @@ print(json.dumps({name:getattr(s,name) for name in [
     return cast(dict[str, object], json.loads(result.stdout))
 
 
-def test_production_uses_host_only_secure_cookies_and_no_implicit_proxy_trust() -> None:
+def test_production_uses_host_only_secure_cookies_and_explicit_private_proxy() -> None:
     s = inspect_settings(child_environment(), development=False)
     assert s["AUTH_USER_MODEL"] == "accounts.User"
     assert s["ASGI_APPLICATION"] == "config.asgi.application"
@@ -73,8 +91,13 @@ def test_production_uses_host_only_secure_cookies_and_no_implicit_proxy_trust() 
     assert s["SESSION_COOKIE_HTTPONLY"] is True
     assert s["SESSION_COOKIE_DOMAIN"] is None and s["CSRF_COOKIE_DOMAIN"] is None
     assert s["CSRF_TRUSTED_ORIGINS"] == []
-    assert s["SECURE_PROXY_SSL_HEADER"] is None
-    assert s["CHANNEL_LAYERS"] == {}
+    assert s["SECURE_PROXY_SSL_HEADER"] == ["HTTP_X_FORWARDED_PROTO", "https"]
+    assert s["CHANNEL_LAYERS"] == {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": ["redis://redis:6379/0"]},
+        }
+    }
     assert s["EMAIL_BACKEND"] == "django.core.mail.backends.smtp.EmailBackend"
 
 

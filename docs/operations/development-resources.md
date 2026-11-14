@@ -39,3 +39,11 @@ uv run --locked --offline python tools/ci/check_changes.py --check-docs
 ```
 
 Application/security/protocol changes still run the full pinned CI pipeline. A source bundle must pass before a later prose-only handoff can use the fast path. Commits and pushes are grouped around meaningful verified functionality rather than every small edit.
+
+## MVP resource correction — 15 November 2026
+
+The owner explicitly approved reviewed obsolete build-cache removal. Thirteen exact private immutable records from obsolete frontend/API install families were removed after live per-record checks, then guest free blocks were discarded. All ten images, ten containers, three volumes and 132 other cache records were unchanged. Host free space rose from about 4.84GiB to 6.30GiB; no source, database/mail, profile, certificate or current useful install cache was removed.
+
+Concurrent image exports still exhausted the monitored headroom on the next attempt. Development now builds image groups sequentially. This workstation's existing stopped Lima configuration was reduced from 4GiB to 3GiB memory, preserving its previous file privately and changing no other configuration bytes. The normal startup subsequently reached readiness above the unchanged 3.5GiB floor, with all 19 live preservation checks passing. This is a measured workstation correction, not a production capacity claim. The frontend Dockerfile installs from workspace manifests before copying source, so later source edits can reuse dependencies.
+
+A final tooling-configuration edit invalidated the API dependency layer, and exporting five service aliases together caused another monitored stop. The aliases now share one project-scoped API image, built once by the controller before the other image groups. Actual Compose expansion keeps primary/CI image names distinct; all five live API/migration/job containers use the same image ID. A short idle-guest discard recovered about 0.66GiB of already-free blocks without deleting files/cache/images/containers/volumes. Host free space later rebounded further without additional deletion; do not attribute that entire change to discard. Final startup/build/smoke and all 19 live preservation checks pass from 5.279GiB, with a 4.200GiB minimum. Normal shutdown leaves the VM stopped and all eight checked ports closed.

@@ -346,9 +346,12 @@ async function createWork(
   name: string,
   team: boolean,
 ) {
-  await task(actor.page, assignmentId, 'my-work');
-  await refreshMine(actor);
-  const dialog = await reviewWork(actor.page, name, team);
+  await test.step('Open My work and refresh current eligibility', async () => {
+    await task(actor.page, assignmentId, 'my-work');
+    await refreshMine(actor);
+  });
+  const dialog = await test.step('Review the exact work creation', () =>
+    reviewWork(actor.page, name, team));
   if (team) {
     await expect(dialog).toContainText(
       'This does not share any existing project.',
@@ -360,19 +363,26 @@ async function createWork(
         .filter({ hasText: actor.name }),
     ).toContainText('Project owner');
   } else await expect(dialog).toContainText('new private project');
-  const response = actor.page.waitForResponse(
-    (value) =>
-      value.request().method() === 'POST' &&
-      new URL(value.url()).pathname ===
-        `/api/v1/assignments/${assignmentId}/works/`,
-  );
-  await dialog
-    .getByRole('button', {
-      name: team ? 'Create team work' : 'Start individual work',
-      exact: true,
-    })
-    .click();
-  const receipt = await response;
+  const receipt =
+    await test.step('Confirm work creation and receive its actual POST reply', async () => {
+      // Observe both operations together, so a failed click cannot leave an
+      // unhandled response waiter to obscure the original action failure.
+      const [response] = await Promise.all([
+        actor.page.waitForResponse(
+          (value) =>
+            value.request().method() === 'POST' &&
+            new URL(value.url()).pathname ===
+              `/api/v1/assignments/${assignmentId}/works/`,
+        ),
+        dialog
+          .getByRole('button', {
+            name: team ? 'Create team work' : 'Start individual work',
+            exact: true,
+          })
+          .click(),
+      ]);
+      return response;
+    });
   expect(receipt.status()).toBe(201);
   const work = (await receipt.json()) as Work;
   const confirmation = actor.page
@@ -381,12 +391,14 @@ async function createWork(
   await expect(
     confirmation.getByRole('link', { name: 'Continue work', exact: true }),
   ).toBeVisible();
-  await confirmation
-    .getByRole('link', { name: 'Continue work', exact: true })
-    .click();
-  await expect(actor.page).toHaveURL(
-    new RegExp(`/assignments/${assignmentId}/works/${work.id}(?:#.*)?$`),
-  );
+  await test.step('Continue to the confirmed work route', async () => {
+    await confirmation
+      .getByRole('link', { name: 'Continue work', exact: true })
+      .click();
+    await expect(actor.page).toHaveURL(
+      new RegExp(`/assignments/${assignmentId}/works/${work.id}(?:#.*)?$`),
+    );
+  });
   return work;
 }
 const editor = (page: Page) =>
@@ -880,8 +892,7 @@ test('exact team consent and approval creates only its new shared work, while wi
   }
   const pending = new Set<Promise<void>>();
   const disposers: (() => void)[] = [];
-  for (const [index, currentPage] of [page, actor.page, peer.page].entries()) {
-    const role = ['teacher', 'actor', 'peer'][index]!;
+  function watchPage(currentPage: Page, role: string) {
     const ids = new WeakMap<import('@playwright/test').Request, number>();
     let sequence = 0;
     const append = (value: Record<string, unknown>) => {
@@ -914,21 +925,23 @@ test('exact team consent and approval creates only its new shared work, while wi
       const rest = path.slice(base.length);
       return rest === 'participation/team-consent/'
         ? 'consent'
-        : rest === 'teams/'
-          ? 'teams'
-          : /^teams\/[^/]+\/$/.test(rest)
-            ? 'team-detail'
-            : rest === 'participations/'
-              ? 'roster'
-              : rest === 'participation/'
-                ? 'participation'
-                : rest === 'learning-head/'
-                  ? 'head'
-                  : rest.startsWith('works/')
-                    ? 'work'
-                    : rest === ''
-                      ? 'summary'
-                      : 'other-learning';
+        : rest === 'participation/withdraw/'
+          ? 'withdraw'
+          : rest === 'teams/'
+            ? 'teams'
+            : /^teams\/[^/]+\/$/.test(rest)
+              ? 'team-detail'
+              : rest === 'participations/'
+                ? 'roster'
+                : rest === 'participation/'
+                  ? 'participation'
+                  : rest === 'learning-head/'
+                    ? 'head'
+                    : rest.startsWith('works/')
+                      ? 'work'
+                      : rest === ''
+                        ? 'summary'
+                        : 'other-learning';
     };
     const onRequest = (request: import('@playwright/test').Request) => {
       const kind = route(request.url());
@@ -1020,6 +1033,8 @@ test('exact team consent and approval creates only its new shared work, while wi
       currentPage.off('requestfailed', onFailed);
     });
   }
+  for (const [index, currentPage] of [page, actor.page, peer.page].entries())
+    watchPage(currentPage, ['teacher', 'actor', 'peer'][index]!);
   try {
     for (const learner of f.actors) {
       await offer(page, f.assignmentId, learner);
@@ -1157,6 +1172,15 @@ test('exact team consent and approval creates only its new shared work, while wi
     if (remainingSetupWindow > 0)
       await page.waitForTimeout(remainingSetupWindow);
     phase = 'actor-work';
+    await info.attach('team-before-first-work', {
+      body: JSON.stringify({
+        phase,
+        elapsedMs: Date.now() - began,
+        receipts,
+        events,
+      }),
+      contentType: 'application/json',
+    });
     const work = await createWork(
       actor,
       f.assignmentId,
@@ -1388,6 +1412,7 @@ test('exact team consent and approval creates only its new shared work, while wi
     expect(originalEditor).not.toBeNull();
     phase = 'withdrawal';
     const withdrawal = await actor.context.newPage();
+    watchPage(withdrawal, 'withdrawal');
     try {
       await task(withdrawal, f.assignmentId, 'my-work');
       await withdrawal
@@ -1400,17 +1425,58 @@ test('exact team consent and approval creates only its new shared work, while wi
       await expect(dialog).toContainText(
         'Existing projects keep their owner and sharing',
       );
-      await dialog
-        .getByRole('button', {
-          name: 'Confirm participation withdrawal',
-          exact: true,
-        })
-        .click();
+      const [receipt] = await Promise.all([
+        withdrawal.waitForResponse(
+          (response) =>
+            response.request().method() === 'POST' &&
+            new URL(response.url()).pathname ===
+              `/api/v1/assignments/${f.assignmentId}/participation/withdraw/`,
+        ),
+        dialog
+          .getByRole('button', {
+            name: 'Confirm participation withdrawal',
+            exact: true,
+          })
+          .click(),
+      ]);
+      expect(receipt.status()).toBe(200);
+      expect(((await receipt.json()) as Participation).state).toBe('withdrawn');
       await expect(
         withdrawal
           .getByRole('region', { name: 'My participation', exact: true })
           .locator('.badge'),
       ).toHaveText('Withdrawn');
+    } catch (error) {
+      const state = await withdrawal
+        .evaluate(() => ({
+          visibility: document.visibilityState,
+          focused: document.hasFocus(),
+          activeTag: document.activeElement?.tagName ?? null,
+          dialog: Boolean(document.querySelector('[role="dialog"]')),
+          confirmDisabled:
+            [...document.querySelectorAll('button')].find(
+              (button) =>
+                button.textContent === 'Confirm participation withdrawal',
+            )?.disabled ?? null,
+          alerts: [...document.querySelectorAll('[role="alert"]')].map(
+            (element) =>
+              /throttl/i.test(element.textContent ?? '') ? 'quota' : 'other',
+          ),
+        }))
+        .catch(() => ({ closed: true }));
+      const detail = {
+        state,
+        events: events.filter((event) => event['role'] === 'withdrawal'),
+      };
+      await info
+        .attach('withdrawal-original-failure', {
+          body: JSON.stringify(detail),
+          contentType: 'application/json',
+        })
+        .catch(() => undefined);
+      if (error instanceof Error)
+        error.message += `\nWithdrawal evidence: ${JSON.stringify(detail).slice(0, 1800)}`;
+      throw error;
     } finally {
       await withdrawal.close();
     }
@@ -1526,10 +1592,166 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
   page,
   browser,
   browserName,
-}) => {
+}, info) => {
   test.setTimeout(150000);
   const f = await fixture(page, browser, browserName, 'individual', ['River']);
   const actor = f.actors[0]!;
+  let phase = 'work-A',
+    primary: unknown;
+  const began = Date.now();
+  const reads: {
+    ms: number;
+    phase: string;
+    event: string;
+    route: string;
+    status?: number;
+    retryAfter?: number | null;
+  }[] = [];
+  const route = (url: string) => {
+    const path = new URL(url).pathname;
+    if (path === '/api/v1/me/') return 'me';
+    if (/^\/api\/v1\/projects\/[^/]+\/$/.test(path)) return 'source-metadata';
+    if (/^\/api\/v1\/projects\/[^/]+\/files\/(?:[^/]+\/)?$/.test(path))
+      return 'source-files';
+    if (/^\/api\/v1\/projects\/[^/]+\/documents\/[^/]+\/ticket\/$/.test(path))
+      return 'source-ticket';
+    if (path.startsWith(`/api/v1/assignments/${f.assignmentId}/works/`))
+      return 'work';
+    if (path.startsWith(`/api/v1/assignments/${f.assignmentId}/versions/`))
+      return 'version';
+    return null;
+  };
+  const append = (value: Omit<(typeof reads)[number], 'ms' | 'phase'>) => {
+    reads.push({ ms: Date.now() - began, phase, ...value });
+    if (reads.length > 32) reads.shift();
+  };
+  const request = (value: import('@playwright/test').Request) => {
+    const kind = route(value.url());
+    if (kind) append({ event: 'request', route: kind });
+  };
+  let quota: {
+    at: number;
+    seconds: number;
+    route: string;
+    pathname: string;
+  } | null = null;
+  const response = (value: import('@playwright/test').Response) => {
+    const kind = route(value.url());
+    if (!kind) return;
+    const seconds = Number(value.headers()['retry-after']);
+    if (
+      value.status() === 429 &&
+      Number.isInteger(seconds) &&
+      seconds >= 1 &&
+      seconds <= 60
+    )
+      quota = {
+        at: Date.now(),
+        seconds,
+        route: kind,
+        pathname: new URL(actor.page.url()).pathname,
+      };
+    append({
+      event: 'response',
+      route: kind,
+      status: value.status(),
+      retryAfter:
+        Number.isInteger(seconds) && seconds >= 1 && seconds <= 60
+          ? seconds
+          : null,
+    });
+  };
+  actor.page.on('request', request);
+  actor.page.on('response', response);
+  async function enteredSource(work: Work, expected: string, since: number) {
+    const throttled = actor.page
+      .getByRole('alert')
+      .filter({
+        hasText:
+          /Request was throttled|Too many attempts\. Please try again later\.|The server asked collaboration to wait before reconnecting\./,
+      })
+      .first();
+    await expect
+      .poll(
+        async () =>
+          (await editor(actor.page).isVisible()) ||
+          (await throttled.isVisible()),
+        {
+          timeout: 20000,
+          message:
+            'Source entry must show main.py or the actual throttled-read alert',
+        },
+      )
+      .toBe(true);
+    if (!(await editor(actor.page).isVisible())) {
+      const observed = quota;
+      expect(
+        Boolean(
+          observed &&
+          observed.at >= since &&
+          observed.pathname ===
+            `/assignments/${f.assignmentId}/works/${work.id}` &&
+          [
+            'work',
+            'version',
+            'me',
+            'source-metadata',
+            'source-files',
+            'source-ticket',
+          ].includes(observed.route),
+        ),
+        'Only an actual current-entry 429 permits one read-only recheck',
+      ).toBe(true);
+      if (!observed) throw new Error('Missing current-entry quota evidence');
+      info.annotations.push({
+        type: 'observed-quota',
+        description: `${phase}: respected Retry-After ${observed.seconds}s before one explicit source read recheck`,
+      });
+      await actor.page.waitForTimeout(
+        Math.max(0, observed.at + observed.seconds * 1000 - Date.now()) + 2000,
+      );
+      if (!(await editor(actor.page).isVisible())) {
+        const refresh = actor.page.getByRole('button', {
+          name: 'Refresh work access',
+          exact: true,
+        });
+        if (await refresh.isVisible()) {
+          await expect(refresh).toBeEnabled();
+          await refresh.click();
+          await expect(refresh).toBeEnabled();
+          const retryFile = actor.page.getByRole('button', {
+            name: 'Retry file',
+            exact: true,
+          });
+          if (await retryFile.isVisible()) await retryFile.click();
+          const reconnect = actor.page.getByRole('button', {
+            name: /^(Recheck access|Reconnect)$/,
+          });
+          if (
+            !(await editor(actor.page).isVisible()) &&
+            (await reconnect.isVisible())
+          )
+            await reconnect.click();
+        } else {
+          // A failed initial /me read stops above WorkSource. Retry only that
+          // actual account read; private Work remains hidden until it succeeds.
+          expect(
+            observed.route,
+            'Only the account quota gate uses account retry',
+          ).toBe('me');
+          await expect(actor.page.locator('.editor-workbench')).toHaveCount(0);
+          await expect(throttled).toBeVisible();
+          const retryAccount = actor.page.getByRole('button', {
+            name: 'Retry account check',
+            exact: true,
+          });
+          await expect(retryAccount).toBeEnabled();
+          await retryAccount.click();
+        }
+      }
+    }
+    await sourceIs(actor.page, expected);
+  }
   try {
     await offer(page, f.assignmentId, actor);
     await accept(actor, f.assignmentId);
@@ -1541,6 +1763,7 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
       actor.page,
       `/api/v1/projects/${a.project!.id}/files/`,
     );
+    phase = 'publish-B';
     const draft = await get<{ revision: number }>(
       page,
       `/api/v1/assignments/${f.assignmentId}/draft/`,
@@ -1566,6 +1789,7 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
       f.ownerSecurity,
     );
     expect(bVersion.id).not.toBe(f.version.id);
+    phase = 'retained-A';
     await actor.page
       .getByRole('button', { name: 'Refresh work access', exact: true })
       .click();
@@ -1589,6 +1813,8 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
     expect(continued.assignment_version_id).toBe(f.version.id);
     expect(continued.state).toBe('active');
     expect(continued.can_continue).toBe(true);
+    phase = 'create-B';
+    const bEntryStarted = Date.now();
     const b = await createWork(
       actor,
       f.assignmentId,
@@ -1608,9 +1834,12 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
       ).toBe(false);
       expect(file.generation).toBe(1);
     }
-    await sourceIs(actor.page, f.original);
+    phase = 'fresh-B-source';
+    await enteredSource(b, f.original, bEntryStarted);
+    phase = 'reopen-A-source';
+    const aEntryStarted = Date.now();
     await actor.page.goto(`/assignments/${f.assignmentId}/works/${a.id}`);
-    await sourceIs(actor.page, changed);
+    await enteredSource(a, changed, aEntryStarted);
     expect(
       (
         await get<PageOf<Work>>(
@@ -1621,8 +1850,52 @@ test('publishing B leaves A work pinned and edited source intact, while explicit
         .map((work) => work.id)
         .sort(),
     ).toEqual([a.id, b.id].sort());
+  } catch (error) {
+    primary = error;
+    const state = await actor.page
+      .evaluate(() => ({
+        route: /\/works\//.test(location.pathname) ? 'work' : 'assignment',
+        workbench: Boolean(document.querySelector('.editor-workbench')),
+        editors: document.querySelectorAll('[aria-label^="Python source for"]')
+          .length,
+        panes: ['Task', 'Code', 'Output'].map((name) => ({
+          name,
+          pressed:
+            [
+              ...document.querySelectorAll(
+                'nav[aria-label="Workbench panes"] button',
+              ),
+            ]
+              .find((element) => element.textContent === name)
+              ?.getAttribute('aria-pressed') ?? null,
+        })),
+        alerts: [...document.querySelectorAll('[role="alert"]')].map(
+          (element) =>
+            /throttl/i.test(element.textContent ?? '')
+              ? 'quota'
+              : /cancel/i.test(element.textContent ?? '')
+                ? 'cancelled'
+                : 'other',
+        ),
+      }))
+      .catch(() => ({ closed: true }));
+    const detail = { phase, state, reads };
+    await info
+      .attach('published-B-original-failure', {
+        body: JSON.stringify(detail),
+        contentType: 'application/json',
+      })
+      .catch(() => undefined);
+    // Keep bounded source-free evidence in public assertion annotations too.
+    if (error instanceof Error)
+      error.message += `\nWork phase evidence: ${JSON.stringify(detail).slice(0, 1800)}`;
+    throw error;
   } finally {
-    await f.close();
+    actor.page.off('request', request);
+    actor.page.off('response', response);
+    await f.close().catch((error: unknown) => {
+      if (primary === undefined) throw error;
+    });
   }
 });
 

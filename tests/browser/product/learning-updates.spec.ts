@@ -345,8 +345,38 @@ test('learning HTTP heads repair final dropped markers and newer H2 stays submit
     );
     await f.learner.bringToFront();
     await f.learner.evaluate(() => window.dispatchEvent(new Event('focus')));
-    const refreshedResponse = await (await refreshed).response();
+    let refreshedResponse = await (await refreshed).response();
     expect(refreshedResponse).not.toBeNull();
+    if (refreshedResponse!.status() === 429) {
+      // This is one safe-read checkpoint, not a mutation retry. Honor only
+      // the actual response's bounded delay; any other status still fails.
+      const observedAt = Date.now();
+      const rawDelay = refreshedResponse!.headers()['retry-after'] ?? '';
+      const seconds = /^[0-9]{1,2}$/.test(rawDelay) ? Number(rawDelay) : 0;
+      expect(
+        seconds,
+        'Actual progress 429 must supply Retry-After 1..60s',
+      ).toBeGreaterThanOrEqual(1);
+      expect(seconds).toBeLessThanOrEqual(60);
+      info.annotations.push({
+        type: 'observed-quota',
+        description: `Post-correction progress: respected Retry-After ${seconds}s before one explicit read-only refresh`,
+      });
+      await f.learner.waitForTimeout(
+        Math.max(0, observedAt + seconds * 1000 - Date.now()) + 2000,
+      );
+      const replacement = f.learner.waitForRequest(
+        (r) =>
+          new URL(r.url()).pathname ===
+            `/api/v1/assignments/${f.assignmentId}/progress/` &&
+          r.method() === 'GET',
+      );
+      await progress
+        .getByRole('button', { name: 'Refresh my progress', exact: true })
+        .click();
+      refreshedResponse = await (await replacement).response();
+      expect(refreshedResponse).not.toBeNull();
+    }
     expect(refreshedResponse!.status()).toBe(200);
     const refreshedProgress = (await refreshedResponse!.json()) as Progress;
     expect(refreshedProgress.latest_submission?.id).toBe(second.id);

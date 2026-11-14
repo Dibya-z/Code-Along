@@ -1,8 +1,64 @@
 import { QueryClient, QueryObserver } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { VisibleLearningViews, refreshVisibleQuery } from './registry.ts';
+import { LearningObserver } from './observer.ts';
 afterEach(() => vi.useRealTimers());
 describe('visible learning read registry', () => {
+  it('keeps remaining anchored views current when a panel closes, while additions and focus still require fresh reads', async () => {
+    vi.useFakeTimers();
+    const first = vi.fn(async () => {}),
+      second = vi.fn(async () => {});
+    const registry = new VisibleLearningViews(
+      () => observer.viewsChanged(),
+      () => observer.focus(),
+    );
+    const observer = new LearningObserver(
+      {
+        accountId: 'account',
+        assignmentId: 'assignment',
+        audience: 'participant',
+      },
+      () => true,
+      {
+        authorize: async () => {},
+        head: async () => '7',
+        refresh: (signal) => registry.refresh(signal),
+        connect: () => () => {},
+      },
+    );
+    const flush = async () => {
+      for (let count = 0; count < 32; count++) await Promise.resolve();
+    };
+    registry.register('participation', first);
+    try {
+      observer.start(true);
+      await flush();
+      expect(first).toHaveBeenCalledOnce();
+      const close = registry.register('published progress', second);
+      await flush();
+      expect(first).toHaveBeenCalledTimes(2);
+      expect(second).toHaveBeenCalledOnce();
+      expect(observer.getSnapshot()).toMatchObject({
+        phase: 'current',
+        anchor: '7',
+      });
+      close();
+      await flush();
+      expect(first).toHaveBeenCalledTimes(2);
+      expect(second).toHaveBeenCalledOnce();
+      observer.focus();
+      await flush();
+      expect(first).toHaveBeenCalledTimes(3);
+      expect(second).toHaveBeenCalledOnce();
+      expect(observer.getSnapshot()).toMatchObject({
+        phase: 'current',
+        anchor: '7',
+      });
+    } finally {
+      observer.destroy();
+      registry.destroy();
+    }
+  });
   it('refreshes only registered reads and rejects any failed visible read instead of confirming stale data', async () => {
     const changed = vi.fn(),
       visible = vi.fn(async () => {}),
@@ -20,7 +76,7 @@ describe('visible learning read registry', () => {
     ).rejects.toThrow('REST503');
     remove();
     registry.destroy();
-    expect(changed).toHaveBeenCalledTimes(3);
+    expect(changed).toHaveBeenCalledTimes(2);
   });
   it('bounds registrations and a stale disposer cannot remove its replacement', async () => {
     const registry = new VisibleLearningViews(vi.fn(), vi.fn());
@@ -34,6 +90,22 @@ describe('visible learning read registry', () => {
     );
     await registry.refresh(new AbortController().signal);
     expect(replacement).toHaveBeenCalledOnce();
+    registry.destroy();
+  });
+  it('requires a fresh read when removing the latest registration restores another model for the same ID', async () => {
+    const changed = vi.fn(),
+      first = vi.fn(async () => {}),
+      latest = vi.fn(async () => {});
+    const registry = new VisibleLearningViews(changed, vi.fn());
+    const removeFirst = registry.register('same', first);
+    const removeLatest = registry.register('same', latest);
+    removeLatest();
+    expect(changed).toHaveBeenCalledTimes(3);
+    await registry.refresh(new AbortController().signal);
+    expect(first).toHaveBeenCalledOnce();
+    expect(latest).not.toHaveBeenCalled();
+    removeFirst();
+    expect(changed).toHaveBeenCalledTimes(3);
     registry.destroy();
   });
   it('a known offer/deadline schedules one authoritative read and a past expiry does not spin', async () => {

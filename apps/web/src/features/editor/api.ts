@@ -1,4 +1,26 @@
 import { productApi } from '../../api/product.ts';
+import type { FileMetadata } from './model/document.ts';
+
+export function editorSourceQuery(
+  accountId: string,
+  projectId: string,
+  file: FileMetadata,
+) {
+  return {
+    queryKey: [
+      'editor-source',
+      accountId,
+      projectId,
+      file.id,
+      file.document_id,
+      file.generation,
+      file.initial_sha256,
+    ],
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      productApi.file(projectId, file.id, signal),
+    staleTime: Infinity,
+  };
+}
 
 /** Read across the existing endpoints without mixing two metadata/ACL revisions. */
 export async function loadEditorProject(

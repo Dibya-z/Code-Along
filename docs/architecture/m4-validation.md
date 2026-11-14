@@ -1,6 +1,6 @@
 # M4 validation record
 
-Status: **In Progress**. The owner authorized the UI clarity work and complete approved M4 after the M3 handoff, including coherent verified commits and pushes. This record distinguishes implemented evidence from pending work; the [tracker](../../IMPLEMENTATION_PROGRESS.md) is the task/commit ledger. M5, deployment, merges, architecture changes and OS certificate-trust changes remain outside this authorization.
+Status: **In Progress**. The learning features and final local MVP acceptance are verified; exact-source Linux CI remains open. The owner's 15 November MVP instruction now permits essential reliability and production/recovery preparation, superseding earlier M4-only limits. Every new commit requires approval; pushes and deployment require separate explicit permission. The [MVP readiness record](../operations/mvp-readiness.md) contains current results, including successful normal startup and all 19 live preservation checks. The historical investigation below retains earlier failures and the authority that applied at each stage; the [tracker](../../IMPLEMENTATION_PROGRESS.md) is the task/commit ledger.
 
 ## UI clarity before learning screens
 

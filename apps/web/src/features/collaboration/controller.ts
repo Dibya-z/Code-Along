@@ -40,6 +40,8 @@ export interface CollaborationStatus {
   readonly offlineEditable: boolean;
 }
 const uuid = /^[0-9a-f]{8}-[0-9a-f-]{27}$/;
+const ADMISSION_WAIT =
+  'The server asked collaboration to wait before reconnecting.';
 /** Reconnect uses full Y.Doc sync; obsolete auth/CLOSE/update frames must never queue. */
 class ProjectSocket extends HocuspocusProviderWebsocket {
   override send(message: unknown): void {
@@ -109,6 +111,7 @@ export class ProjectCollaboration {
   private blocked = false;
   private connected = false;
   private paused = false;
+  private admissionNotBefore = 0;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private unsubscribe: (() => void) | undefined;
   private status: CollaborationStatus = Object.freeze({
@@ -241,6 +244,10 @@ export class ProjectCollaboration {
         // Attach after Hocuspocus records the open event; attach then starts fresh auth once.
         queueMicrotask(() => {
           if (this.closed || this.blocked || this.paused) return;
+          if (Date.now() < this.admissionNotBefore) {
+            this.reconnect(ADMISSION_WAIT);
+            return;
+          }
           for (const binding of this.bindings.values())
             if (!binding.attached) {
               binding.provider.attach();
@@ -260,9 +267,11 @@ export class ProjectCollaboration {
         else
           this.publish({
             error:
-              event.code === 1013
-                ? 'Collaboration is temporarily unavailable. Your code remains in this tab.'
-                : '',
+              !this.blocked && Date.now() < this.admissionNotBefore
+                ? ADMISSION_WAIT
+                : event.code === 1013
+                  ? 'Collaboration is temporarily unavailable. Your code remains in this tab.'
+                  : '',
           });
       },
     });
@@ -378,6 +387,15 @@ export class ProjectCollaboration {
           name: `${file.metadata.document_id}:${file.metadata.generation}`,
           document: file.doc,
           token: async () => {
+            if (
+              this.closed ||
+              this.blocked ||
+              this.paused ||
+              abort.signal.aborted ||
+              this.workspace.file(file.metadata.id) !== file ||
+              Date.now() < this.admissionNotBefore
+            )
+              throw new Error('Collaboration admission is unavailable.');
             try {
               const grant = await this.ticket(
                 this.workspace.projectId,
@@ -390,11 +408,26 @@ export class ProjectCollaboration {
                 this.closed ||
                 this.blocked ||
                 abort.signal.aborted ||
+                Date.now() < this.admissionNotBefore ||
                 this.workspace.file(file.metadata.id) !== file
               )
                 throw new Error('Collaboration session ended.');
               return grant.ticket;
             } catch (error) {
+              const seconds =
+                error instanceof ApiError && error.status === 429
+                  ? error.retryAfterSeconds
+                  : undefined;
+              if (
+                typeof seconds === 'number' &&
+                Number.isInteger(seconds) &&
+                seconds >= 1 &&
+                seconds <= 86400
+              )
+                this.admissionNotBefore = Math.max(
+                  this.admissionNotBefore,
+                  Date.now() + seconds * 1000,
+                );
               if (
                 error instanceof ApiError &&
                 [401, 403, 404, 409].includes(error.status)
@@ -542,11 +575,17 @@ export class ProjectCollaboration {
     if (this.closed || this.blocked) return;
     this.detachForReconnect();
     this.socket?.disconnect();
-    this.publish({ error });
+    const remaining = this.admissionNotBefore - Date.now();
+    this.publish({ error: remaining > 0 ? ADMISSION_WAIT : error });
     clearTimeout(this.retryTimer);
-    this.retryTimer = setTimeout(() => {
-      if (!this.closed && !this.blocked) void this.socket?.connect();
-    }, 1500);
+    this.retryTimer = setTimeout(
+      () => {
+        if (this.closed || this.blocked || this.paused) return;
+        if (Date.now() < this.admissionNotBefore) this.reconnect(error);
+        else void this.socket?.connect();
+      },
+      remaining > 0 ? remaining : 1500,
+    );
   }
   retry = (): void => {
     if (this.closed || this.paused) return;

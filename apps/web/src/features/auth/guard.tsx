@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Notice } from '@code-along/design-system';
+import { Button, Notice } from '@code-along/design-system';
 import { Failure } from '../../api/feedback.tsx';
 import { useIdentity, safeDestination } from './session.ts';
 export function SignedIn({ children }: { children: ReactNode }) {
@@ -16,6 +16,16 @@ export function SignedIn({ children }: { children: ReactNode }) {
     return (
       <div className="page">
         <Failure error={identity.error} />
+        <Button
+          type="button"
+          variant="secondary"
+          busy={identity.isFetching}
+          onClick={() => {
+            void identity.refetch();
+          }}
+        >
+          Retry account check
+        </Button>
       </div>
     );
   if (!identity.data)

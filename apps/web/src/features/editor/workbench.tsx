@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { Button, Notice } from '@code-along/design-system';
-import { productApi } from '../../api/product.ts';
+import { editorSourceQuery } from './api.ts';
 import type {
   LiveEditorProject,
   OrdinaryEditorProject,
@@ -302,19 +302,9 @@ function ScopedWorkbench({
     return () => window.removeEventListener('keydown', escape);
   }, [following]);
   const sources = useQueries({
-    queries: (local || capability ? [] : files).map((file) => ({
-      queryKey: [
-        'editor-source',
-        accountId,
-        project.id,
-        file.id,
-        file.document_id,
-        file.generation,
-        file.initial_sha256,
-      ],
-      queryFn: () => productApi.file(project.id, file.id),
-      staleTime: Infinity,
-    })),
+    queries: (local || capability ? [] : files).map((file) =>
+      editorSourceQuery(accountId, project.id, file),
+    ),
   });
   const sourceSignature = sources
     .map(

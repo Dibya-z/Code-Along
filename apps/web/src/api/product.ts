@@ -97,10 +97,11 @@ export const productApi = {
         ...(signal ? { signal } : {}),
       }),
     ),
-  file: (project_id: string, file_id: string) =>
+  file: (project_id: string, file_id: string, signal?: AbortSignal) =>
     result(
       client().GET('/api/v1/projects/{project_id}/files/{file_id}/', {
         params: { path: { project_id, file_id } },
+        ...(signal ? { signal } : {}),
       }),
     ),
 };

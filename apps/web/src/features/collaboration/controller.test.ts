@@ -427,7 +427,79 @@ describe('project transport lifecycle', () => {
       f.close();
     }
   });
-  it.each([403, 409])(
+  it('honors a ticket429 deadline across queued document tokens, manual retries and offline/online without losing unsaved source', async () => {
+    const f = await setup(false, 2);
+    try {
+      await f.admit();
+      f.workspace
+        .file(id(3))!
+        .replace('print("retained unconfirmed source")\n');
+      const session = vi.mocked(documentTicket).mock.calls[0]![3];
+      vi.mocked(documentTicket).mockRejectedValueOnce(
+        new ApiError(429, {}, 17),
+      );
+      await expect(f.provider.options.token()).rejects.toThrow('admission');
+      f.provider.options.onAuthenticationFailed();
+      const waiting =
+        'The server asked collaboration to wait before reconnecting.';
+      expect(f.model.getSnapshot().error).toBe(waiting);
+      f.socket.options.onClose({ event: { code: 1000, reason: '' } });
+      expect(f.model.getSnapshot().error).toBe(waiting);
+      await expect(f.providers[1]!.options.token()).rejects.toThrow(
+        'admission',
+      );
+      expect(documentTicket).toHaveBeenCalledTimes(3);
+      f.model.retry();
+      window.dispatchEvent(new Event('offline'));
+      window.dispatchEvent(new Event('online'));
+      // A raw open/auth callback already queued before disconnect cannot bypass the wait.
+      f.socket.open();
+      await Promise.resolve();
+      expect(f.providers.every((provider) => !provider.attached)).toBe(true);
+      await vi.advanceTimersByTimeAsync(16999);
+      expect(f.socket.attempts).toHaveBeenCalledOnce();
+      await expect(f.provider.options.token()).rejects.toThrow('admission');
+      expect(documentTicket).toHaveBeenCalledTimes(3);
+      expect(f.model.getSnapshot().save).not.toBe('saved');
+      expect(f.model.canEdit(id(3))).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(f.socket.attempts).toHaveBeenCalledTimes(2);
+      f.socket.open();
+      await Promise.resolve();
+      await f.admit();
+      expect(documentTicket).toHaveBeenCalledTimes(5);
+      expect(f.model.getSnapshot().error).toBe('');
+      expect(vi.mocked(documentTicket).mock.calls[3]![3]).toBe(session);
+      expect(
+        f.workspace
+          .snapshotInput()
+          .files.find((file) => file.path === 'main.py')?.source,
+      ).toBe('print("retained unconfirmed source")\n');
+      expect(f.model.getSnapshot().save).not.toBe('saved');
+    } finally {
+      f.close();
+    }
+  });
+  it.each([undefined, 0, -1, 1.5, Infinity, NaN, 86401])(
+    'keeps the bounded ordinary reconnect when ticket429 timing is invalid or absent (%s)',
+    async (seconds) => {
+      const f = await setup();
+      try {
+        vi.mocked(documentTicket).mockRejectedValueOnce(
+          new ApiError(429, {}, seconds),
+        );
+        await expect(f.provider.options.token()).rejects.toThrow('admission');
+        f.provider.options.onAuthenticationFailed();
+        await vi.advanceTimersByTimeAsync(1499);
+        expect(f.socket.attempts).toHaveBeenCalledOnce();
+        await vi.advanceTimersByTimeAsync(1);
+        expect(f.socket.attempts).toHaveBeenCalledTimes(2);
+      } finally {
+        f.close();
+      }
+    },
+  );
+  it.each([401, 403, 404, 409])(
     'stops automatic retries when a fresh ticket reports revoked access or generation (%s)',
     async (status) => {
       const f = await setup();

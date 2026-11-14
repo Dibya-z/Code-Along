@@ -1,0 +1,142 @@
+server_tokens off;
+access_log off;
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_session_tickets off;
+server {
+  listen 8080 default_server;
+  server_name _;
+  return 421;
+}
+server {
+  listen 8080;
+  server_name ${APP_HOST};
+  return 308 ${APP_ORIGIN}$request_uri;
+}
+server {
+  listen 8080;
+  server_name ${RUNNER_HOST};
+  return 308 ${RUNNER_ORIGIN}$request_uri;
+}
+server {
+  listen 8443 ssl default_server;
+  server_name _;
+  ssl_certificate /certs/app/fullchain.pem;
+  ssl_certificate_key /certs/app/privkey.pem;
+  return 421;
+}
+server {
+  listen 8443 ssl;
+  server_name ${APP_HOST};
+  ssl_certificate /certs/app/fullchain.pem;
+  ssl_certificate_key /certs/app/privkey.pem;
+  client_max_body_size 2m;
+  # Server rewrite runs before body-limit location selection. Only this exact
+  # POST receives the larger escaped-source budget; every other API stays 2m.
+  if ($request_method = POST) {
+    rewrite "^(/api/v1/assignments/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/works/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/submissions/)$" /_code_along_submission$1 last;
+  }
+  location ^~ /_code_along_submission/ {
+    internal;
+    client_max_body_size 6356992;
+    rewrite "^/_code_along_submission(/api/v1/assignments/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/works/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/submissions/)$" $1 break;
+    proxy_pass http://api:8000;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Host "";
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+  root /srv/web;
+  proxy_hide_header Strict-Transport-Security;
+  add_header Strict-Transport-Security 'max-age=3600' always;
+  add_header X-Content-Type-Options nosniff always;
+  add_header Referrer-Policy same-origin always;
+  add_header Cross-Origin-Opener-Policy same-origin always;
+  add_header Cross-Origin-Embedder-Policy require-corp always;
+  add_header Permissions-Policy 'cross-origin-isolated=(self "${RUNNER_ORIGIN}"), camera=(), microphone=()' always;
+  include /etc/nginx/conf.d/app/csp.conf;
+  location ^~ /internal/ { return 404; }
+  location = /collab {
+    proxy_pass http://collaboration:1234;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Host "";
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_read_timeout 45s;
+    proxy_send_timeout 10s;
+  }
+  location = /events {
+    proxy_pass http://api:8000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Host "";
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_read_timeout 45s;
+    proxy_send_timeout 10s;
+  }
+  location = /events/learning {
+    proxy_pass http://api:8000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Host "";
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_read_timeout 45s;
+    proxy_send_timeout 10s;
+  }
+  location /api/ {
+    proxy_pass http://api:8000;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Host "";
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+  location /health/ {
+    proxy_pass http://api:8000;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Host "";
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+  include /etc/nginx/conf.d/app/content.conf;
+}
+server {
+  listen 8443 ssl;
+  server_name ${RUNNER_HOST};
+  ssl_certificate /certs/runner/fullchain.pem;
+  ssl_certificate_key /certs/runner/privkey.pem;
+  root /srv/runner;
+  add_header Strict-Transport-Security 'max-age=3600' always;
+  add_header Cross-Origin-Opener-Policy same-origin always;
+  add_header Cross-Origin-Embedder-Policy require-corp always;
+  add_header Cross-Origin-Resource-Policy cross-origin always;
+  add_header Permissions-Policy 'cross-origin-isolated=(self), camera=(), microphone=()' always;
+  add_header X-Content-Type-Options nosniff always;
+  add_header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; worker-src 'self'; frame-ancestors ${APP_ORIGIN}; base-uri 'none'; form-action 'none'" always;
+  location ~ ^/assets/worker-[A-Za-z0-9_-]+\.js$ {
+    expires 1y;
+    add_header Strict-Transport-Security 'max-age=3600' always;
+    add_header Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'none'" always;
+    add_header Cross-Origin-Embedder-Policy require-corp always;
+    add_header Cross-Origin-Resource-Policy cross-origin always;
+    add_header X-Content-Type-Options nosniff always;
+    try_files $uri =404;
+  }
+  location /api/ { return 404; }
+  location /runtime-manifests/ { expires 1y; try_files $uri =404; }
+  location /runtime/v2/ { expires 1y; try_files $uri =404; }
+  location /runtime/ { try_files $uri =404; }
+  location /assets/ { try_files $uri =404; }
+  location = / {
+    root /tmp;
+    try_files /code-along-runner-index.html =404;
+  }
+  location / { return 404; }
+}

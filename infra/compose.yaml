@@ -1,5 +1,6 @@
 name: code-along-dev
 x-api: &api
+  image: ${COMPOSE_PROJECT_NAME:-code-along-dev}-api:development
   build:
     context: ..
     dockerfile: infra/docker/api.Dockerfile

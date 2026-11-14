@@ -3,6 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { SCIENTIFIC_RUNTIME } from '@code-along/contracts/execution/profiles';
 import {
+  watchStaticLearning,
+  assertStaticLearning,
+} from './static-learning-proof.ts';
+import {
   finishedRun,
   openProjectSection,
   openRecovery,
@@ -533,17 +537,19 @@ test('co-teacher reuses only this assignment published starter without private s
     f.workspaceId,
     'instructor',
   );
+  let learningProof: Awaited<ReturnType<typeof watchStaticLearning>> | null =
+    null;
   try {
-    const privatePaths: string[] = [],
-      sockets: string[] = [];
+    learningProof = await watchStaticLearning(peer.page, {
+      assignmentId: seeded.assignment.id,
+      audience: 'teaching',
+    });
+    const privatePaths: string[] = [];
     peer.page.on('request', (request) => {
       const path = new URL(request.url()).pathname;
       if (path.startsWith('/api/v1/projects/') || path.endsWith('/projects/'))
         privatePaths.push(path);
     });
-    peer.page.on('websocket', (socket) =>
-      sockets.push(new URL(socket.url()).pathname),
-    );
     await peer.page.goto(`/assignments/${seeded.assignment.id}#draft`);
     await expect(
       peer.page.getByText('Published starter — version 1', { exact: true }),
@@ -616,7 +622,11 @@ test('co-teacher reuses only this assignment published starter without private s
     ).toBeVisible();
     await publish(peer.page);
     expect(privatePaths).toEqual([]);
-    expect(sockets).toEqual([]);
+    await assertStaticLearning(learningProof);
+    await expect(peer.page.locator('.editor-workbench')).toHaveCount(0);
+    await expect(
+      peer.page.locator('iframe[title="Isolated Python runtime"]'),
+    ).toHaveCount(0);
     await task(peer.page, 'Overview');
     await peer.page
       .getByRole('button', { name: 'View frozen starter', exact: true })
@@ -624,7 +634,12 @@ test('co-teacher reuses only this assignment published starter without private s
     const exported = await frozenExport(peer.page);
     expect(exported.files[0]?.source).toBe(f.original);
     expect(privatePaths).toEqual([]);
-    expect(sockets).toEqual([]);
+    await assertStaticLearning(learningProof);
+    await expect(peer.page.locator('.editor-workbench')).toHaveCount(0);
+    await expect(
+      peer.page.locator('iframe[title="Isolated Python runtime"]'),
+    ).toHaveCount(0);
+    learningProof.dispose();
     const assignment = await get<Assignment>(
       peer.page,
       `/api/v1/assignments/${seeded.assignment.id}/`,
@@ -672,6 +687,7 @@ test('co-teacher reuses only this assignment published starter without private s
     );
     expect(wrongStarter.status()).toBe(404);
   } finally {
+    learningProof?.dispose();
     await peer.context.close();
   }
 });

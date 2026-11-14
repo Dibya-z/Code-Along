@@ -26,7 +26,14 @@ Manual instructor feedback is implemented on **View submitted code → Review th
 
 Derived progress and [private learning updates](docs/protocols/learning-updates.md) are implemented and locally verified. Learners see progress in **My work**, a pinned Work's **Task → Your progress**, and the submitted-code progress disclosure. Teachers use **Progress** to choose a published version and review each learner's latest submission and manual assessment. Historical assessment stays separate from current participation/submission availability. Updates refresh visible learning records while retaining open source, running Python, chosen code and private drafts. See [learning progress](docs/protocols/learning-progress.md).
 
-M4 remains In Progress until normal primary startup/preservation and exact-source Linux CI pass. The latest primary-stack build stopped safely at the storage floor before readiness; local feature/browser verification does not replace that setup gate. Nothing is deployed. Current results and remaining checks are in the [M4 validation record](docs/architecture/m4-validation.md).
+M4 remains In Progress pending exact-source Linux CI. Final local verification passes 16 targeted Chromium/WebKit journeys, normal primary startup, the rebuilt frontend and all 19 live preservation checks. Nothing is deployed. Current results are in [MVP readiness](docs/operations/mvp-readiness.md); earlier results and failure history remain in the [M4 validation record](docs/architecture/m4-validation.md).
+
+The current MVP work closes these acceptance failures and prepares the existing
+stack for deployment. A standalone production profile, environment template and
+private backup tooling pass their local preparation checks; they have not been deployed.
+See [MVP readiness](docs/operations/mvp-readiness.md) for tested changes/blockers
+and [production preparation](docs/operations/production.md) for required operator
+inputs, build, mail/TLS and recovery instructions.
 
 Open **https://127.0.0.1:8443** after starting the [local development stack](docs/operations/development-stack.md). This workstation uses the project-owned Lima VM; that guide includes its exact commands. Development verification/reset emails stay in a private local mail store, described in the [account guide](docs/operations/authentication.md).
 

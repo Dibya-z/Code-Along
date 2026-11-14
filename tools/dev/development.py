@@ -275,7 +275,8 @@ def dev(engine: Engine) -> None:
         stop_request = engine.root / ".runtime/development.stop"
         stop_request.unlink(missing_ok=True)
         previous = {
-            item: signal.getsignal(item) for item in (signal.SIGTERM, signal.SIGHUP)
+            item: signal.getsignal(item)
+            for item in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
         }
 
         def interrupt(_signum: int, _frame: object) -> None:
@@ -286,7 +287,18 @@ def dev(engine: Engine) -> None:
         for item in previous:
             signal.signal(item, interrupt)
         try:
-            engine.compose(["up", "--build", "-d"], start=True)
+            # Export each image once on constrained workstations. API aliases
+            # share api's project-scoped image, including migrations and jobs.
+            for services in (
+                ["api"],
+                ["collaboration"],
+                ["proxy"],
+                ["web-dev"],
+            ):
+                engine.compose(["build", *services], start=True)
+                if stop_request.exists():
+                    return
+            engine.compose(["up", "--no-build", "-d"], start=True)
             wait_ready(engine)
             print(f"\nCode Along: {app_origin(engine.root)}", flush=True)
             print(

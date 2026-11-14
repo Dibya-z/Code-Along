@@ -61,10 +61,14 @@ export class VisibleLearningViews {
     this.scheduleExpiry();
     this.changed();
     return () => {
+      const previous = [...entries].at(-1);
       if (!entries.delete(entry)) return;
       if (entries.size === 0) this.reads.delete(id);
       this.scheduleExpiry();
-      this.changed();
+      // Removing a view leaves a subset of the reads already covered by the
+      // current head. Restoring a different callback for the same ID still
+      // requires a fresh read of that model.
+      if (entries.size && previous === entry) this.changed();
     };
   }
   async refresh(signal: AbortSignal) {
