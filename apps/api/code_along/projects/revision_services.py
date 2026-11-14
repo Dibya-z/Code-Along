@@ -236,6 +236,11 @@ def create_revision(
                 for file in manifest["files"]
             ]
         )
+        from code_along.events.services import emit_project_event
+
+        emit_project_event(
+            project, "revision.created", {"revision_id": str(revision.id)}
+        )
         return revision, True
 
 
@@ -328,4 +333,7 @@ def copy_revision(
             initial_sha256=source_file["sha256"],
         )
         CollaborationDocument.objects.create(project=copied, file=file)
+    from code_along.events.services import project_changed
+
+    project_changed(copied)
     return copied

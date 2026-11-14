@@ -377,9 +377,10 @@ def send_invalidation(lease_ids: list[str]) -> None:
                 "/internal/v1/invalidations/", payload, maximum=1024, timeout=0.25
             )
         except ControlUnavailable:
-            pass  # Leases still expire fail-closed; outbox retries are a later M3 bundle.
+            pass  # The durable private outbox retries; leases also expire fail-closed.
 
 
+@transaction.atomic
 def revoke_leases(
     *,
     project_id: uuid.UUID | None = None,
@@ -412,3 +413,6 @@ def revoke_leases(
     if ids:
         query.update(revoked_at=timezone.now())
         transaction.on_commit(lambda: send_invalidation(ids))
+    from code_along.events.services import enqueue_invalidation
+
+    enqueue_invalidation(ids, session_key=session_key)

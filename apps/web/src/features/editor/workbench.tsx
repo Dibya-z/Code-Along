@@ -393,10 +393,7 @@ function ScopedWorkbench({
                 !paused &&
                 (!collaboration ||
                   collaboration.offlineEditable ||
-                  (collaboration.phase === 'connected' &&
-                    !['connecting', 'read_only', 'error'].includes(
-                      collaboration.save,
-                    )))
+                  resource.collaboration?.canEdit(selectedId) === true)
               }
               followClientId={following}
               onStopFollowing={() => setFollowing(null)}

@@ -122,13 +122,37 @@ export class ProjectCollaboration {
   private editingStatus: Pick<
     CollaborationStatus,
     'phase' | 'save' | 'offlineEditable'
-  > = { phase: 'connecting', save: 'connecting', offlineEditable: false };
+  > & { readonly writableFiles: readonly string[] } = {
+    phase: 'connecting',
+    save: 'connecting',
+    offlineEditable: false,
+    writableFiles: [],
+  };
   constructor(
     readonly workspace: EditorWorkspace,
     private readonly ticket: TicketLoader = documentTicket,
   ) {}
   getSnapshot = (): CollaborationStatus => this.status;
   getEditingSnapshot = () => this.editingStatus;
+  canEdit(fileId: string): boolean {
+    const binding = this.bindings.get(fileId);
+    return Boolean(
+      !this.closed &&
+      !this.blocked &&
+      !this.paused &&
+      this.connected &&
+      this.workspace.getSnapshot().writable &&
+      binding?.authenticated &&
+      binding.synced &&
+      binding.writable &&
+      binding.attached &&
+      binding.file.loaded &&
+      ['pending', 'saving', 'saved'].includes(
+        binding.checkpoint.getSnapshot().phase,
+      ) &&
+      this.workspace.file(fileId) === binding.file,
+    );
+  }
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -168,7 +192,13 @@ export class ProjectCollaboration {
         ),
       ...update,
     };
+    const writableFiles = [...this.bindings.keys()]
+      .filter((id) => this.canEdit(id))
+      .sort();
+    const sameFiles =
+      writableFiles.join('|') === this.editingStatus.writableFiles.join('|');
     if (
+      sameFiles &&
       Object.keys(next).every(
         (key) =>
           next[key as keyof CollaborationStatus] ===
@@ -180,12 +210,14 @@ export class ProjectCollaboration {
     if (
       next.phase !== this.editingStatus.phase ||
       next.save !== this.editingStatus.save ||
-      next.offlineEditable !== this.editingStatus.offlineEditable
+      next.offlineEditable !== this.editingStatus.offlineEditable ||
+      !sameFiles
     )
       this.editingStatus = Object.freeze({
         phase: next.phase,
         save: next.save,
         offlineEditable: next.offlineEditable,
+        writableFiles: Object.freeze(writableFiles),
       });
     for (const listener of this.listeners) listener();
   }

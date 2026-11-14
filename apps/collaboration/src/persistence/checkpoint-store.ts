@@ -157,6 +157,16 @@ export class CheckpointStore {
         }
       }
       if (error instanceof CheckpointStoreError) throw error;
+      if (
+        this.product &&
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === '54000' &&
+        'constraint' in error &&
+        error.constraint === 'checkpoint_receipt_capacity'
+      )
+        throw new CheckpointStoreError('resource_limit');
       throw new CheckpointStoreError('storage_unavailable');
     } finally {
       if (client) {

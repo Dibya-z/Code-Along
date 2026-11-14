@@ -31,7 +31,7 @@ server {
     proxy_read_timeout 45s;
     proxy_send_timeout 10s;
   }
-  location /events/ {
+  location = /events {
     proxy_pass http://api:8000;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
@@ -39,6 +39,7 @@ server {
     proxy_set_header Host $http_host;
     proxy_set_header X-Forwarded-Proto https;
     proxy_read_timeout 45s;
+    proxy_send_timeout 10s;
   }
   location /api/ {
     proxy_pass http://api:8000;

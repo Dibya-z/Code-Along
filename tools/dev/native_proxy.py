@@ -59,7 +59,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path.startswith("/internal/"):
             self.send_error(404)
             return
-        if path == "/collab" or path.startswith("/events/"):
+        if path in {"/collab", "/events"}:
             if runner or self.path != path:
                 self.send_error(404)
                 return

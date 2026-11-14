@@ -1,6 +1,216 @@
 {
   "components": {
     "schemas": {
+      "AccessData": {
+        "properties": {
+          "project_acl_version": {
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "type": "string"
+          },
+          "workspace_acl_version": {
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "type": "string"
+          }
+        },
+        "required": ["project_acl_version", "workspace_acl_version"],
+        "type": "object"
+      },
+      "AccessEvent": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AccessData"
+          },
+          "event_type": {
+            "$ref": "#/components/schemas/AccessEventEventTypeEnum"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "protocol": {
+            "pattern": "^code-along\\.events$",
+            "type": "string"
+          },
+          "sequence": {
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TypeEnum"
+          },
+          "version": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "event_type",
+          "id",
+          "occurred_at",
+          "project_id",
+          "protocol",
+          "sequence",
+          "type",
+          "version"
+        ],
+        "type": "object"
+      },
+      "AccessEventEventTypeEnum": {
+        "description": "* `project.access.changed` - project.access.changed",
+        "enum": ["project.access.changed"],
+        "type": "string"
+      },
+      "ChatData": {
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/ChatMessageOutput"
+          }
+        },
+        "required": ["message"],
+        "type": "object"
+      },
+      "ChatEvent": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ChatData"
+          },
+          "event_type": {
+            "$ref": "#/components/schemas/ChatEventEventTypeEnum"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "protocol": {
+            "pattern": "^code-along\\.events$",
+            "type": "string"
+          },
+          "sequence": {
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TypeEnum"
+          },
+          "version": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "event_type",
+          "id",
+          "occurred_at",
+          "project_id",
+          "protocol",
+          "sequence",
+          "type",
+          "version"
+        ],
+        "type": "object"
+      },
+      "ChatEventEventTypeEnum": {
+        "description": "* `chat.message.created` - chat.message.created",
+        "enum": ["chat.message.created"],
+        "type": "string"
+      },
+      "ChatMessageOutput": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/RevisionAuthor"
+          },
+          "body": {
+            "type": ["string", "null"]
+          },
+          "client_message_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sequence": {
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "author",
+          "body",
+          "client_message_id",
+          "created_at",
+          "deleted",
+          "id",
+          "project_id",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "ChatPage": {
+        "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "head_sequence": {
+            "pattern": "^(0|[1-9][0-9]{0,18})$",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageOutput"
+            },
+            "type": "array"
+          },
+          "next_after": {
+            "pattern": "^(0|[1-9][0-9]{0,18})$",
+            "type": "string"
+          },
+          "next_before": {
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "type": ["string", "null"]
+          }
+        },
+        "required": [
+          "has_more",
+          "head_sequence",
+          "items",
+          "next_after",
+          "next_before"
+        ],
+        "type": "object"
+      },
       "CopyRevisionBodyRequest": {
         "properties": {
           "name": {
@@ -121,6 +331,34 @@
           }
         },
         "required": ["detail"],
+        "type": "object"
+      },
+      "EventPage": {
+        "properties": {
+          "head_sequence": {
+            "pattern": "^(0|[1-9][0-9]{0,18})$",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectEvent"
+            },
+            "type": "array"
+          },
+          "next_after": {
+            "pattern": "^(0|[1-9][0-9]{0,18})$",
+            "type": "string"
+          },
+          "refresh_required": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "head_sequence",
+          "items",
+          "next_after",
+          "refresh_required"
+        ],
         "type": "object"
       },
       "FileBodyRequest": {
@@ -522,6 +760,88 @@
         "required": ["count", "items"],
         "type": "object"
       },
+      "MessageBodyRequest": {
+        "properties": {
+          "body": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          },
+          "client_message_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": ["body", "client_message_id"],
+        "type": "object"
+      },
+      "MetadataData": {
+        "properties": {
+          "metadata_version": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": ["metadata_version"],
+        "type": "object"
+      },
+      "MetadataEvent": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MetadataData"
+          },
+          "event_type": {
+            "$ref": "#/components/schemas/MetadataEventEventTypeEnum"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "protocol": {
+            "pattern": "^code-along\\.events$",
+            "type": "string"
+          },
+          "sequence": {
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TypeEnum"
+          },
+          "version": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "event_type",
+          "id",
+          "occurred_at",
+          "project_id",
+          "protocol",
+          "sequence",
+          "type",
+          "version"
+        ],
+        "type": "object"
+      },
+      "MetadataEventEventTypeEnum": {
+        "description": "* `project.changed` - project.changed",
+        "enum": ["project.changed"],
+        "type": "string"
+      },
       "ProjectBodyRequest": {
         "properties": {
           "archived": {
@@ -545,6 +865,31 @@
         },
         "required": ["expected_version"],
         "type": "object"
+      },
+      "ProjectEvent": {
+        "discriminator": {
+          "mapping": {
+            "chat.message.created": "#/components/schemas/ChatEvent",
+            "project.access.changed": "#/components/schemas/AccessEvent",
+            "project.changed": "#/components/schemas/MetadataEvent",
+            "revision.created": "#/components/schemas/RevisionEvent"
+          },
+          "propertyName": "event_type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MetadataEvent"
+          },
+          {
+            "$ref": "#/components/schemas/AccessEvent"
+          },
+          {
+            "$ref": "#/components/schemas/RevisionEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ChatEvent"
+          }
+        ]
       },
       "ProjectGrantRole": {
         "description": "* `editor` - editor\n* `viewer` - viewer",
@@ -759,6 +1104,16 @@
         "required": ["display_name", "id"],
         "type": "object"
       },
+      "RevisionData": {
+        "properties": {
+          "revision_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": ["revision_id"],
+        "type": "object"
+      },
       "RevisionDetail": {
         "properties": {
           "author": {
@@ -809,6 +1164,61 @@
           "provenance"
         ],
         "type": "object"
+      },
+      "RevisionEvent": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RevisionData"
+          },
+          "event_type": {
+            "$ref": "#/components/schemas/RevisionEventEventTypeEnum"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "protocol": {
+            "pattern": "^code-along\\.events$",
+            "type": "string"
+          },
+          "sequence": {
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TypeEnum"
+          },
+          "version": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "event_type",
+          "id",
+          "occurred_at",
+          "project_id",
+          "protocol",
+          "sequence",
+          "type",
+          "version"
+        ],
+        "type": "object"
+      },
+      "RevisionEventEventTypeEnum": {
+        "description": "* `revision.created` - revision.created",
+        "enum": ["revision.created"],
+        "type": "string"
       },
       "RevisionHelper": {
         "properties": {
@@ -1296,6 +1706,11 @@
         },
         "required": ["token"],
         "type": "object"
+      },
+      "TypeEnum": {
+        "description": "* `event` - event",
+        "enum": ["event"],
+        "type": "string"
       },
       "WorkspaceAssignableRole": {
         "description": "* `instructor` - instructor\n* `learner` - learner",
@@ -1887,6 +2302,135 @@
         "tags": ["projects"]
       }
     },
+    "/api/v1/projects/{project_id}/chat/messages/": {
+      "get": {
+        "operationId": "list_chat_messages",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "minLength": 1,
+              "pattern": "^(0|[1-9][0-9]{0,18})$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "minLength": 1,
+              "pattern": "^(0|[1-9][0-9]{0,18})$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatPage"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["projects"]
+      },
+      "post": {
+        "operationId": "create_chat_message",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageBodyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "No response body"
+          },
+          "403": {
+            "description": "No response body"
+          },
+          "404": {
+            "description": "No response body"
+          },
+          "409": {
+            "description": "No response body"
+          },
+          "429": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["projects"]
+      }
+    },
     "/api/v1/projects/{project_id}/documents/{document_id}/ticket/": {
       "post": {
         "operationId": "create_collaboration_ticket",
@@ -1977,6 +2521,60 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["projects"]
+      }
+    },
+    "/api/v1/projects/{project_id}/events/": {
+      "get": {
+        "operationId": "list_project_events",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "default": "0",
+              "minLength": 1,
+              "pattern": "^(0|[1-9][0-9]{0,18})$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
                 }
               }
             },

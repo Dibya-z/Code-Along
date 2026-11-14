@@ -84,6 +84,22 @@ export interface paths {
     patch: operations['update_project'];
     trace?: never;
   };
+  '/api/v1/projects/{project_id}/chat/messages/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_chat_messages'];
+    put?: never;
+    post: operations['create_chat_message'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/projects/{project_id}/documents/{document_id}/ticket/': {
     parameters: {
       query?: never;
@@ -94,6 +110,22 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['create_collaboration_ticket'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/projects/{project_id}/events/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_project_events'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -456,6 +488,80 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    AccessData: {
+      project_acl_version: string;
+      workspace_acl_version: string;
+    };
+    AccessEvent: {
+      data: components['schemas']['AccessData'];
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event_type: 'project.access.changed';
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      occurred_at: string;
+      /** Format: uuid */
+      project_id: string;
+      protocol: string;
+      sequence: string;
+      type: components['schemas']['TypeEnum'];
+      version: number;
+    };
+    /**
+     * @description * `project.access.changed` - project.access.changed
+     * @enum {string}
+     */
+    AccessEventEventTypeEnum: 'project.access.changed';
+    ChatData: {
+      message: components['schemas']['ChatMessageOutput'];
+    };
+    ChatEvent: {
+      data: components['schemas']['ChatData'];
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event_type: 'chat.message.created';
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      occurred_at: string;
+      /** Format: uuid */
+      project_id: string;
+      protocol: string;
+      sequence: string;
+      type: components['schemas']['TypeEnum'];
+      version: number;
+    };
+    /**
+     * @description * `chat.message.created` - chat.message.created
+     * @enum {string}
+     */
+    ChatEventEventTypeEnum: 'chat.message.created';
+    ChatMessageOutput: {
+      author: components['schemas']['RevisionAuthor'];
+      body: string | null;
+      /** Format: uuid */
+      client_message_id: string;
+      /** Format: date-time */
+      created_at: string;
+      deleted: boolean;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      project_id: string;
+      sequence: string;
+    };
+    ChatPage: {
+      has_more: boolean;
+      head_sequence: string;
+      items: components['schemas']['ChatMessageOutput'][];
+      next_after: string;
+      next_before: string | null;
+    };
     CopyRevisionBodyRequest: {
       name: string;
     };
@@ -497,6 +603,12 @@ export interface components {
     EngineEnum: 'pyodide';
     ErrorOutput: {
       detail: string;
+    };
+    EventPage: {
+      head_sequence: string;
+      items: components['schemas']['ProjectEvent'][];
+      next_after: string;
+      refresh_required: boolean;
     };
     FileBodyRequest: {
       /** Format: int64 */
@@ -648,6 +760,38 @@ export interface components {
       count: number;
       items: components['schemas']['MemberOutput'][];
     };
+    MessageBodyRequest: {
+      body: string;
+      /** Format: uuid */
+      client_message_id: string;
+    };
+    MetadataData: {
+      /** Format: int64 */
+      metadata_version: number;
+    };
+    MetadataEvent: {
+      data: components['schemas']['MetadataData'];
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event_type: 'project.changed';
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      occurred_at: string;
+      /** Format: uuid */
+      project_id: string;
+      protocol: string;
+      sequence: string;
+      type: components['schemas']['TypeEnum'];
+      version: number;
+    };
+    /**
+     * @description * `project.changed` - project.changed
+     * @enum {string}
+     */
+    MetadataEventEventTypeEnum: 'project.changed';
     ProjectBodyRequest: {
       archived?: boolean;
       /** Format: uuid */
@@ -656,6 +800,11 @@ export interface components {
       expected_version: number;
       name?: string;
     };
+    ProjectEvent:
+      | components['schemas']['MetadataEvent']
+      | components['schemas']['AccessEvent']
+      | components['schemas']['RevisionEvent']
+      | components['schemas']['ChatEvent'];
     /**
      * @description * `editor` - editor
      *     * `viewer` - viewer
@@ -739,6 +888,10 @@ export interface components {
       /** Format: uuid */
       id: string;
     };
+    RevisionData: {
+      /** Format: uuid */
+      revision_id: string;
+    };
     RevisionDetail: {
       author: components['schemas']['RevisionAuthor'];
       /** Format: date-time */
@@ -754,6 +907,29 @@ export interface components {
       project_id: string;
       provenance: components['schemas']['ProvenanceEnum'];
     };
+    RevisionEvent: {
+      data: components['schemas']['RevisionData'];
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event_type: 'revision.created';
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      occurred_at: string;
+      /** Format: uuid */
+      project_id: string;
+      protocol: string;
+      sequence: string;
+      type: components['schemas']['TypeEnum'];
+      version: number;
+    };
+    /**
+     * @description * `revision.created` - revision.created
+     * @enum {string}
+     */
+    RevisionEventEventTypeEnum: 'revision.created';
     RevisionHelper: {
       release_id: components['schemas']['ReleaseIdEnum'];
       source_sha256: string;
@@ -913,6 +1089,11 @@ export interface components {
     TokenBodyRequest: {
       token: string;
     };
+    /**
+     * @description * `event` - event
+     * @enum {string}
+     */
+    TypeEnum: 'event';
     /**
      * @description * `instructor` - instructor
      *     * `learner` - learner
@@ -1340,6 +1521,99 @@ export interface operations {
       };
     };
   };
+  list_chat_messages: {
+    parameters: {
+      query?: {
+        after?: string;
+        before?: string;
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        project_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChatPage'];
+        };
+      };
+    };
+  };
+  create_chat_message: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        project_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MessageBodyRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChatMessageOutput'];
+        };
+      };
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChatMessageOutput'];
+        };
+      };
+      /** @description No response body */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   create_collaboration_ticket: {
     parameters: {
       query?: never;
@@ -1404,6 +1678,30 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  list_project_events: {
+    parameters: {
+      query?: {
+        after?: string;
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        project_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['EventPage'];
         };
       };
     };

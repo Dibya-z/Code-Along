@@ -15,19 +15,29 @@ from tools.dev.postgres_cluster import PostgresTestError, main, postgres_cluster
 pytestmark = pytest.mark.postgres
 
 
-def test_real_postgres18_is_private_and_keeps_durability_settings(monkeypatch):
+@pytest.mark.parametrize("connection_budget", [None, 32])
+def test_real_postgres18_is_private_and_keeps_durability_settings(
+    monkeypatch, connection_budget
+):
     monkeypatch.setenv("PGHOST", "must-not-connect.example.invalid")
     monkeypatch.setenv("PGDATABASE", "must_not_touch")
     monkeypatch.setenv("PGPASSWORD", "fixture_only_not_a_real_password")
-    with postgres_cluster() as cluster:
+    options = (
+        {} if connection_budget is None else {"max_connections": connection_budget}
+    )
+    with postgres_cluster(**options) as cluster:
         settings = cluster.sql(
             "SELECT current_setting('server_version_num'), "
             "current_setting('listen_addresses'), current_setting('fsync'), "
             "current_setting('synchronous_commit'), "
-            "current_setting('full_page_writes'), current_user"
+            "current_setting('full_page_writes'), current_user, "
+            "current_setting('max_connections')"
         ).split("|")
         assert 180000 <= int(settings[0]) < 190000
-        assert settings[1:] == ["", "on", "on", "on", "code_along_test"]
+        assert settings[1:-1] == ["", "on", "on", "on", "code_along_test"]
+        assert settings[-1] == str(
+            10 if connection_budget is None else connection_budget
+        )
         assert cluster.directory.stat().st_mode & 0o777 == 0o700
         assert cluster.socket_directory.stat().st_mode & 0o777 == 0o700
         assert (cluster.socket_directory / ".s.PGSQL.5432").exists()

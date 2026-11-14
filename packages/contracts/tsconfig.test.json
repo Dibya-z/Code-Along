@@ -6,6 +6,7 @@
   "include": [
     "collaboration/**/*.ts",
     "execution/**/*.ts",
+    "events/**/*.ts",
     "tests/**/*.test.ts"
   ]
 }

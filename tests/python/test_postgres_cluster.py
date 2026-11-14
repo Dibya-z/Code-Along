@@ -91,6 +91,13 @@ def test_rejects_timeout_before_starting_a_cluster(timeout):
             pytest.fail("Must not enter an invalid cluster context")
 
 
+@pytest.mark.parametrize("budget", [0, -1, 1, 3, 65, True, 1.5, "32"])
+def test_rejects_invalid_connection_budget_before_starting_a_cluster(budget):
+    with pytest.raises(PostgresTestError, match="Connection budget"):
+        with postgres_cluster(max_connections=budget):
+            pytest.fail("Must not enter an invalid cluster context")
+
+
 def test_cli_requires_a_command_without_starting_a_cluster():
     with pytest.raises(SystemExit) as result:
         main([])

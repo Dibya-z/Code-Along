@@ -32,6 +32,7 @@ class Project(models.Model):
     )
     metadata_version = models.PositiveBigIntegerField(default=1)
     acl_version = models.PositiveBigIntegerField(default=1)
+    event_sequence = models.PositiveBigIntegerField(default=0)
     archived_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

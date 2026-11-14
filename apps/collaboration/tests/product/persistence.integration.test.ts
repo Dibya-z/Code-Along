@@ -23,7 +23,59 @@ import { CheckpointStoreError } from '../../src/persistence/binary-state.ts';
 let admin: Pool,
   writer: Pool,
   store: ProductCheckpointStore,
-  scope: DocumentScope;
+  scope: DocumentScope,
+  scopeWithoutState: DocumentScope;
+const root = fileURLToPath(new URL('../../../../', import.meta.url));
+
+async function fillReceipts(count: number): Promise<void> {
+  await admin.query(
+    `INSERT INTO collaboration_checkpointreceipt
+     (document_id,generation,client_session_id,checkpoint_id,observed_counter,
+      request_sha256,durable_revision,state_sha256)
+     SELECT $1,$2,gen_random_uuid(),gen_random_uuid(),n,repeat('0',64),1,repeat('0',64)
+     FROM generate_series(1,$3::integer) n`,
+    [scope.document_id, scope.generation, count],
+  );
+}
+
+async function receiptCount(): Promise<number> {
+  return (
+    await admin.query<{ count: number }>(
+      'SELECT count(*)::int AS count FROM collaboration_checkpointreceipt WHERE document_id=$1',
+      [scope.document_id],
+    )
+  ).rows[0]!.count;
+}
+
+function pruneReceipts(): void {
+  // The owner invokes the actual Django retention service. The Node role gains
+  // no cleanup privilege, and fixture failures never print driver/source data.
+  const code = String.raw`
+import os,sys
+sys.path.insert(0, 'apps/api')
+os.environ['DJANGO_SETTINGS_MODULE']='config.settings.test'
+from django.conf import settings
+settings.DATABASES['default'].update(NAME='postgres',USER='code_along_test',PASSWORD='',HOST=os.environ['PGHOST'],PORT=5432,CONN_MAX_AGE=0,OPTIONS={'connect_timeout':2,'sslmode':'disable'})
+import django
+django.setup()
+from django.db import connections
+from code_along.collaboration.retention import prune_checkpoint_receipts
+try:
+    prune_checkpoint_receipts(apply=True)
+finally:
+    connections.close_all()
+`;
+  try {
+    execFileSync(`${root}.venv/bin/python`, ['-c', code], {
+      cwd: root,
+      timeout: 15_000,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: process.env,
+    });
+  } catch {
+    throw new Error('django_product_retention_failed');
+  }
+}
 function state(source: string): Uint8Array {
   const doc = new Y.Doc();
   try {
@@ -69,7 +121,6 @@ beforeAll(async () => {
     ((await stat(host)).mode & 0o777) !== 0o700
   )
     throw new Error('owned_postgres_harness_required');
-  const root = fileURLToPath(new URL('../../../../', import.meta.url));
   let fixture: { documents: DocumentScope[] };
   try {
     const output = execFileSync(
@@ -96,6 +147,7 @@ beforeAll(async () => {
     throw new Error('django_product_fixture_failed');
   }
   scope = fixture.documents[0]!;
+  scopeWithoutState = fixture.documents[1]!;
   const config = {
     host,
     port: 5432,
@@ -129,9 +181,29 @@ describe('Django-schema restricted product persistence', () => {
       'SELECT initial_source FROM projects_projectfile',
       'CREATE TABLE public.product_forbidden (x int)',
       'DELETE FROM collaboration_documentstate',
+      'DELETE FROM collaboration_checkpointreceipt',
+      'TRUNCATE collaboration_checkpointreceipt',
+      'ALTER TABLE collaboration_checkpointreceipt DISABLE TRIGGER ALL',
       `UPDATE projects_collaborationdocument SET generation=generation`,
     ])
       await expect(writer.query(sql)).rejects.toMatchObject({ code: '42501' });
+    await expect(
+      writer.query(
+        `INSERT INTO collaboration_checkpointreceipt
+         (document_id,generation,client_session_id,checkpoint_id,observed_counter,
+          request_sha256,durable_revision,state_sha256)
+         VALUES ($1,$2,$3,$4,1,repeat('0',64),1,repeat('0',64))`,
+        [
+          scopeWithoutState.document_id,
+          scopeWithoutState.generation,
+          randomUUID(),
+          randomUUID(),
+        ],
+      ),
+    ).rejects.toMatchObject({
+      code: '23503',
+      constraint: 'checkpoint_receipt_document_state',
+    });
     await store.initialize(scope, state('starter'));
     const row = (
       await admin.query(
@@ -200,6 +272,185 @@ describe('Django-schema restricted product persistence', () => {
     } finally {
       doc.destroy();
     }
+  });
+  it('keeps duplicates valid at the receipt cap, then merges a pruned full-state retry without resurrecting deleted source', async () => {
+    const base = await store.initialize(scope, state('remove me')),
+      deleted = new Y.Doc(),
+      current = new Y.Doc();
+    try {
+      Y.applyUpdate(deleted, base.binary);
+      deleted.getText('source').delete(0, 9);
+      const frame = checkpoint(Y.encodeStateAsUpdate(deleted)),
+        first = await store.saveCheckpoint(frame),
+        originalId = (
+          await admin.query<{ id: string }>(
+            'SELECT id::text FROM collaboration_checkpointreceipt WHERE checkpoint_id=$1',
+            [first.checkpoint_id],
+          )
+        ).rows[0]!.id;
+      await fillReceipts(4095);
+      expect(await receiptCount()).toBe(4096);
+      // A receipt describes one prior commit. It does not restore that commit's
+      // historical plaintext when a duplicate request is acknowledged.
+      Y.applyUpdate(current, (await store.load(scope)).binary);
+      current.getText('source').insert(0, 'current');
+      const before = await store.saveState(
+        scope,
+        Y.encodeStateAsUpdate(current),
+      );
+      expect(await store.saveCheckpoint(frame)).toEqual(first);
+      expect(text((await store.load(scope)).binary)).toBe('current');
+      current.getText('source').insert(0, 'must roll back: ');
+      await expect(
+        store.saveCheckpoint(checkpoint(Y.encodeStateAsUpdate(current))),
+      ).rejects.toMatchObject({
+        code: 'resource_limit',
+        message: 'resource_limit',
+      });
+      expect(await store.load(scope)).toEqual(before);
+      expect(await receiptCount()).toBe(4096);
+      await admin.query(
+        "UPDATE collaboration_checkpointreceipt SET recorded_at=clock_timestamp()-interval '26 hours' WHERE document_id=$1",
+        [scope.document_id],
+      );
+      await admin.query(
+        "UPDATE collaboration_checkpointreceipt SET recorded_at=clock_timestamp()-interval '27 hours' WHERE id=$1",
+        [originalId],
+      );
+      pruneReceipts();
+      expect(await receiptCount()).toBe(4096 - 512);
+      expect(
+        (
+          await admin.query(
+            'SELECT id FROM collaboration_checkpointreceipt WHERE id=$1',
+            [originalId],
+          )
+        ).rowCount,
+      ).toBe(0);
+      expect(await store.load(scope)).toEqual(before);
+      const retry = await store.saveCheckpoint(frame);
+      expect(retry.checkpoint_id).toBe(first.checkpoint_id);
+      expect(BigInt(retry.durable_revision)).toBeGreaterThan(
+        BigInt(before.durable_revision),
+      );
+      expect(retry).not.toEqual(first);
+      const newId = (
+        await admin.query<{ id: string }>(
+          'SELECT id::text FROM collaboration_checkpointreceipt WHERE checkpoint_id=$1',
+          [retry.checkpoint_id],
+        )
+      ).rows[0]!.id;
+      expect(newId).not.toBe(originalId);
+      expect(await receiptCount()).toBe(4096 - 512 + 1);
+      expect(retry.state_sha256).toBe((await store.load(scope)).state_sha256);
+      // Reintroducing a stale pre-deletion update cannot resurrect its Yjs IDs.
+      await store.saveState(scope, base.binary);
+      expect(text((await store.load(scope)).binary)).toBe('current');
+    } finally {
+      deleted.destroy();
+      current.destroy();
+    }
+  });
+  it('enforces the actual receipt cap across concurrent restricted-role inserts and TEMP shadowing', async () => {
+    const base = await store.initialize(scope, state('base'));
+    await fillReceipts(4095);
+    const outcomes = await Promise.allSettled(
+      Array.from({ length: 4 }, () =>
+        writer.query(
+          `INSERT INTO collaboration_checkpointreceipt
+         (document_id,generation,client_session_id,checkpoint_id,observed_counter,
+          request_sha256,durable_revision,state_sha256)
+         VALUES ($1,$2,$3,$4,1,$5,1,$5)`,
+          [
+            scope.document_id,
+            scope.generation,
+            randomUUID(),
+            randomUUID(),
+            base.state_sha256,
+          ],
+        ),
+      ),
+    );
+    expect(
+      outcomes.filter((outcome) => outcome.status === 'fulfilled'),
+    ).toHaveLength(1);
+    const failures = outcomes.filter(
+      (outcome) => outcome.status === 'rejected',
+    );
+    expect(failures).toHaveLength(3);
+    for (const failure of failures)
+      expect(failure.reason).toMatchObject({
+        code: '54000',
+        constraint: 'checkpoint_receipt_capacity',
+      });
+    expect(await receiptCount()).toBe(4096);
+    const adversary = await writer.connect();
+    try {
+      const temporary = (
+        await adversary.query<{ allowed: boolean }>(
+          "SELECT has_database_privilege(current_database(), 'TEMP') AS allowed",
+        )
+      ).rows[0]!.allowed;
+      // Prove this owned fixture actually exercises the adversary; no extra
+      // permission is granted to manufacture TEMP availability.
+      expect(temporary).toBe(true);
+      if (temporary) {
+        await adversary.query(
+          `CREATE TEMP TABLE collaboration_documentstate (document_id uuid PRIMARY KEY);
+           CREATE TEMP TABLE collaboration_checkpointreceipt (document_id uuid)`,
+        );
+        await adversary.query(
+          'INSERT INTO pg_temp.collaboration_documentstate VALUES ($1)',
+          [scope.document_id],
+        );
+        expect(
+          (
+            await adversary.query<{ count: number }>(
+              'SELECT count(*)::int AS count FROM pg_temp.collaboration_checkpointreceipt',
+            )
+          ).rows[0]!.count,
+        ).toBe(0);
+        await expect(
+          adversary.query(
+            `INSERT INTO public.collaboration_checkpointreceipt
+             (document_id,generation,client_session_id,checkpoint_id,observed_counter,
+              request_sha256,durable_revision,state_sha256)
+             VALUES ($1,$2,$3,$4,1,$5,1,$5)`,
+            [
+              scope.document_id,
+              scope.generation,
+              randomUUID(),
+              randomUUID(),
+              base.state_sha256,
+            ],
+          ),
+        ).rejects.toMatchObject({
+          code: '54000',
+          constraint: 'checkpoint_receipt_capacity',
+        });
+      }
+    } finally {
+      // Discard this owned session so its TEMP objects cannot shadow later tests.
+      adversary.release(true);
+    }
+    expect(await receiptCount()).toBe(4096);
+    const blocked = await Promise.allSettled(
+      Array.from({ length: 4 }, () =>
+        new ProductCheckpointStore(writer).saveCheckpoint(
+          checkpoint(base.binary),
+        ),
+      ),
+    );
+    expect(
+      blocked.every(
+        (outcome) =>
+          outcome.status === 'rejected' &&
+          outcome.reason instanceof CheckpointStoreError &&
+          outcome.reason.code === 'resource_limit',
+      ),
+    ).toBe(true);
+    expect(await store.load(scope)).toEqual(base);
+    expect(await receiptCount()).toBe(4096);
   });
   it('merges stale writers across independent queues through CAS without losing deletion history', async () => {
     const base = await store.initialize(scope, state('base')),
@@ -281,26 +532,39 @@ describe('Django-schema restricted product persistence', () => {
     // A saturated queue recovers after failed writes settle.
     await expect(store.saveState(scope, state('valid'))).resolves.toBeDefined();
   });
-  it('rolls back source and receipt together on an insert/commit failure without leaking driver data', async () => {
-    await store.initialize(scope, state('base'));
-    await admin.query(
-      `CREATE FUNCTION public.product_fail_receipt() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'PRIVATE_DRIVER_DETAIL'; END $$; CREATE CONSTRAINT TRIGGER product_fail_receipt AFTER INSERT ON collaboration_checkpointreceipt DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.product_fail_receipt()`,
-    );
-    await expect(
-      store.saveCheckpoint(checkpoint(state('uncommitted'))),
-    ).rejects.toMatchObject({
-      code: 'storage_unavailable',
-      message: 'storage_unavailable',
-    });
-    expect(text((await store.load(scope)).binary)).toBe('base');
-    expect(
-      (
-        await admin.query(
-          'SELECT count(*)::int AS count FROM collaboration_checkpointreceipt',
-        )
-      ).rows[0]?.count,
-    ).toBe(0);
-  });
+  it.each([
+    ['generic driver failure', ''],
+    [
+      'unrelated capacity constraint',
+      " USING ERRCODE='54000',CONSTRAINT='unrelated_capacity'",
+    ],
+    [
+      'capacity name with another code',
+      " USING ERRCODE='P0001',CONSTRAINT='checkpoint_receipt_capacity'",
+    ],
+  ])(
+    'rolls back source and receipt on an insert/commit failure without leaking driver data (%s)',
+    async (_label, detail) => {
+      await store.initialize(scope, state('base'));
+      await admin.query(
+        `CREATE FUNCTION public.product_fail_receipt() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'PRIVATE_DRIVER_DETAIL'${detail}; END $$; CREATE CONSTRAINT TRIGGER product_fail_receipt AFTER INSERT ON collaboration_checkpointreceipt DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.product_fail_receipt()`,
+      );
+      await expect(
+        store.saveCheckpoint(checkpoint(state('uncommitted'))),
+      ).rejects.toMatchObject({
+        code: 'storage_unavailable',
+        message: 'storage_unavailable',
+      });
+      expect(text((await store.load(scope)).binary)).toBe('base');
+      expect(
+        (
+          await admin.query(
+            'SELECT count(*)::int AS count FROM collaboration_checkpointreceipt',
+          )
+        ).rows[0]?.count,
+      ).toBe(0);
+    },
+  );
   it('rejects deleted/mismatched product metadata and checksum corruption', async () => {
     await store.initialize(scope, state('base'));
     await expect(

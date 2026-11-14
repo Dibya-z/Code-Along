@@ -1,0 +1,70 @@
+.discussion-panel {
+  min-width: 0;
+  border-block: 1px solid var(--color-separator);
+  padding-block: var(--space-6);
+}
+.discussion-status {
+  color: var(--color-muted);
+}
+.discussion-panel:focus,
+.discussion-messages:focus {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+.discussion-messages {
+  list-style: none;
+  padding: 0;
+  margin-block: var(--space-4) var(--space-6);
+  max-height: 30rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.discussion-messages > li {
+  padding-block: var(--space-4);
+  border-bottom: 1px solid var(--color-separator);
+}
+.discussion-message-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+.discussion-message-head strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.discussion-message-head time,
+.discussion-message-head > span,
+.discussion-delivery {
+  color: var(--color-muted);
+  font-size: var(--text-meta);
+}
+.discussion-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-block: var(--space-2);
+}
+.discussion-panel .form-stack {
+  min-width: 0;
+}
+.discussion-panel textarea {
+  font-family: var(--font-ui);
+}
+.discussion-panel .form-stack p {
+  margin-block: 0;
+}
+.discussion-pending {
+  border-inline-start: 3px solid var(--color-border);
+  padding-inline-start: var(--space-3);
+}
+.discussion-unread {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+.discussion-unread p {
+  margin-block: 0;
+}

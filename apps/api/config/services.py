@@ -6,6 +6,8 @@ from urllib.parse import urlsplit
 from code_along.collaboration.config import collaboration_settings
 from django.core.exceptions import ImproperlyConfigured
 
+from .jobs import job_settings
+
 
 def service_settings(environ: Mapping[str, str]) -> dict[str, object]:
     trust = environ.get("CODE_ALONG_TRUST_PROXY", "false")
@@ -18,6 +20,7 @@ def service_settings(environ: Mapping[str, str]) -> dict[str, object]:
         "REDIS_CONNECTION_SECRET": None,
     }
     result.update(collaboration_settings(environ))
+    result.update(job_settings(environ))
     value = environ.get("CODE_ALONG_REDIS_URL", "")
     if value:
         try:

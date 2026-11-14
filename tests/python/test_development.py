@@ -152,6 +152,48 @@ def test_controller_shuts_down_on_stop_request_or_failure(
         pass
 
 
+@pytest.mark.parametrize("missing", ["collaboration", "jobs", "scheduler"])
+def test_controller_stops_owned_stack_when_a_background_service_exits(
+    tmp_path, monkeypatch, missing
+):
+    stopped = []
+    ticks = iter([0, 6])
+
+    class FakeEngine:
+        root = tmp_path
+
+        def compose(self, arguments, **kwargs):
+            if arguments[0] == "ps":
+                services = {
+                    "api",
+                    "db",
+                    "redis",
+                    "proxy",
+                    "web-dev",
+                    "collaboration",
+                    "jobs",
+                    "scheduler",
+                }
+                return "\n".join(sorted(services - {missing}))
+            return ""
+
+        def stop(self):
+            stopped.append(True)
+
+    monkeypatch.setattr(module, "initialize", lambda: None)
+    monkeypatch.setattr(module, "wait_ready", lambda engine: None)
+    monkeypatch.setattr(
+        module,
+        "time",
+        SimpleNamespace(monotonic=lambda: next(ticks), sleep=lambda _: None),
+    )
+    with pytest.raises(module.DevelopmentError, match="service exited"):
+        module.dev(FakeEngine())
+    assert stopped == [True]
+    with module.controller_lock(tmp_path):
+        pass
+
+
 def test_mail_requires_explicit_latest_and_ignores_unsafe_filenames(tmp_path, capsys):
     calls = []
 
@@ -204,7 +246,7 @@ def test_foreground_controller_cleans_up_on_terminal_signals(tmp_path, stop_sign
             "    def __init__(self): self.root = root",
             "    def compose(self, arguments, **kwargs):",
             "        (root / 'ready.txt').touch()",
-            "        return 'api\\ndb\\nredis\\nproxy\\nweb-dev'",
+            "        return 'api\\ndb\\nredis\\nproxy\\nweb-dev\\ncollaboration\\njobs\\nscheduler'",
             "    def stop(self): (root / 'stopped.txt').touch()",
             "module.dev(Engine())",
         ]

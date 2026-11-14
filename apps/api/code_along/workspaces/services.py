@@ -30,6 +30,9 @@ def bump_acl(workspace: Workspace) -> None:
     from code_along.collaboration.services import revoke_leases
 
     revoke_leases(workspace_id=workspace.id)
+    from code_along.events.services import workspace_access_changed
+
+    workspace_access_changed(workspace.id)
 
 
 @transaction.atomic
@@ -60,6 +63,9 @@ def update_workspace(
     from code_along.collaboration.services import revoke_leases
 
     revoke_leases(workspace_id=workspace.id)
+    from code_along.events.services import workspace_access_changed
+
+    workspace_access_changed(workspace.id)
     return workspace
 
 

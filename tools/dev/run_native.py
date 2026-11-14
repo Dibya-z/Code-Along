@@ -56,7 +56,10 @@ def main() -> None:
         signal.signal(sig, stop)
     try:
         with ExitStack() as stack:
-            cluster = stack.enter_context(postgres_cluster())
+            # The full application adds Node's restricted pool, event authority
+            # and notification jobs to concurrent HTTP requests. Ordinary
+            # database tests retain the harness's smaller ten-connection budget.
+            cluster = stack.enter_context(postgres_cluster(max_connections=32))
             stack.callback(cleanup)
             socket = cluster.directory / "redis.sock"
             log = stack.enter_context((cluster.directory / "native.log").open("wb"))
@@ -94,6 +97,7 @@ def main() -> None:
                 CODE_ALONG_DB_PASSWORD="",
                 CODE_ALONG_DB_HOST=str(cluster.socket_directory),
                 CODE_ALONG_REDIS_URL=f"unix://{socket}",
+                CODE_ALONG_CELERY_BROKER_URL=f"redis+socket://{socket}?virtual_host=2",
                 CODE_ALONG_TRUST_PROXY="true",
                 CODE_ALONG_HTTPS_PORT=https_port,
                 CODE_ALONG_APP_ORIGIN=f"https://127.0.0.1:{https_port}",
@@ -141,6 +145,38 @@ def main() -> None:
             )
             if provision.returncode:
                 raise RuntimeError("Owned collaboration role setup failed")
+            jobs_env = {**env, "PYTHONPATH": str(ROOT / "apps/api")}
+            # Keep scheduler and solo worker as direct owned children. Celery's
+            # embedded beat forks a child which a forced parent stop can orphan.
+            spawn(
+                [
+                    sys.executable,
+                    "-m",
+                    "celery",
+                    "-A",
+                    "config.celery:app",
+                    "worker",
+                    "--pool=solo",
+                    "--concurrency=1",
+                    "--loglevel=WARNING",
+                    "--without-gossip",
+                    "--without-mingle",
+                ],
+                jobs_env,
+            )
+            spawn(
+                [
+                    sys.executable,
+                    "-m",
+                    "celery",
+                    "-A",
+                    "config.celery:app",
+                    "beat",
+                    "--loglevel=WARNING",
+                    f"--schedule={cluster.directory / 'celerybeat'}",
+                ],
+                jobs_env,
+            )
             api_port = env["CODE_ALONG_NATIVE_API_PORT"] = os.environ.get(
                 "CODE_ALONG_NATIVE_API_PORT", "18000"
             )

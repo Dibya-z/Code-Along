@@ -54,12 +54,12 @@ files = ["apps/api/config", "apps/api/code_along", "apps/api/manage.py", "apps/a
 exclude = ["/migrations/"]
 strict = true
 # Only these upstream APIs lack callable annotations; own code remains strict.
-untyped_calls_exclude = ["asgiref.testing", "channels.routing.ProtocolTypeRouter"]
+untyped_calls_exclude = ["asgiref.testing", "channels.routing.ProtocolTypeRouter", "celery", "kombu.entity.Queue"]
 
 [tool.django-stubs]
 django_settings_module = "config.settings.test"
 strict_settings = true
 
 [[tool.mypy.overrides]]
-module = ["channels.*", "allauth.*"]
+module = ["channels.*", "allauth.*", "celery.*", "kombu.*"]
 follow_untyped_imports = true

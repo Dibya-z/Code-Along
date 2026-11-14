@@ -13,6 +13,7 @@ x-api: &api
     CODE_ALONG_DB_PASSWORD: ${CODE_ALONG_DB_PASSWORD:?Generate .env first}
     CODE_ALONG_DB_HOST: db
     CODE_ALONG_REDIS_URL: redis://redis:6379/0
+    CODE_ALONG_CELERY_BROKER_URL: redis://redis:6379/2
     CODE_ALONG_TRUST_PROXY: 'true'
     CODE_ALONG_APP_ORIGIN: https://127.0.0.1:${CODE_ALONG_HTTPS_PORT:-8443}
     CODE_ALONG_MAIL_DIR: /app/dev-mail
@@ -74,6 +75,54 @@ services:
       CODE_ALONG_COLLABORATION_DB_PASSWORD: ${CODE_ALONG_COLLABORATION_DB_PASSWORD:?Run npm run dev first}
     depends_on:
       migrate: { condition: service_completed_successfully }
+  jobs:
+    <<: *api
+    volumes: []
+    command:
+      [
+        /app/.venv/bin/celery,
+        -A,
+        'config.celery:app',
+        worker,
+        --pool=solo,
+        --concurrency=1,
+        --loglevel=WARNING,
+        --without-gossip,
+        --without-mingle,
+      ]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    mem_limit: 384m
+    cpus: 0.5
+    pids_limit: 32
+    read_only: true
+    tmpfs: ['/tmp:size=16m,mode=1777']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    stop_grace_period: 25s
+  scheduler:
+    <<: *api
+    volumes: []
+    command:
+      [
+        /app/.venv/bin/celery,
+        -A,
+        'config.celery:app',
+        beat,
+        --loglevel=WARNING,
+        --schedule=/tmp/code-along-beat,
+      ]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    mem_limit: 192m
+    cpus: 0.25
+    pids_limit: 32
+    read_only: true
+    tmpfs: ['/tmp:size=16m,mode=1777']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
   collaboration:
     build:
       context: ..

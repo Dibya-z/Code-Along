@@ -59,9 +59,11 @@ async function setup(
     ttl?: number;
     renew?: AdmissionClient['renew'];
     store?: MemoryStore;
+    now?: () => number;
   } = {},
 ) {
-  const grants = new Map<string, Grant>(),
+  const now = options.now ?? (() => performance.now()),
+    grants = new Map<string, Grant>(),
     store = options.store ?? new MemoryStore();
   const consume = vi.fn<AdmissionClient['consume']>(async (input) => {
     expect(input.cookie).toBe(cookie);
@@ -69,7 +71,7 @@ async function setup(
     const value = grants.get(input.ticket);
     if (!value) throw new AdmissionError('unauthorized');
     grants.delete(input.ticket);
-    return { grant: value, started: performance.now() };
+    return { grant: value, started: now() };
   });
   const server = createProductServer({
     store,
@@ -77,13 +79,14 @@ async function setup(
       consume,
       renew:
         options.renew ??
-        (async (lease) => ({ grant: lease.grant, started: performance.now() })),
+        (async (lease) => ({ grant: lease.grant, started: now() })),
     },
     appOrigin,
     sessionCookieName: 'codealong_session',
     controlSecret: 'c'.repeat(40),
     port: 0,
     debounce: 20,
+    now,
   });
   servers.push(server);
   await server.listen();
@@ -242,25 +245,37 @@ describe('product collaboration transport', () => {
     }
   });
   it('expires idle subscribers fail closed when renewal is unavailable', async () => {
+    let clock = 0;
+    const renew = vi.fn<AdmissionClient['renew']>(async () => {
+      throw new AdmissionError('unavailable');
+    });
     const f = await setup({
+        now: () => clock,
         ttl: 180,
-        renew: async () => {
-          throw new AdmissionError('unavailable');
-        },
+        renew,
       }),
       c = f.client();
     await f.connect(c);
+    expect(c.doc.getText('source').toString()).toBe('print("starter")\n');
+    const expired = once(c.socket.webSocket as unknown as WebSocket, 'close');
+    clock = 61;
+    await until(() => renew.mock.calls.length === 1);
+    clock = 180;
     await until(() => f.server.hocuspocus.getConnectionsCount() === 0);
+    const [closeCode] = await expired;
+    expect(closeCode).toBe(4401);
     expect(f.store.source()).toBe('print("starter")\n');
   });
   it('rechecks lease after an explicit checkpoint waits, returning no receipt after expiry', async () => {
-    let resolve: () => void = () => undefined;
+    let resolve: () => void = () => undefined,
+      clock = 0;
     const held = new Promise<void>((done) => {
         resolve = done;
       }),
       store = new MemoryStore();
     const f = await setup({
         store,
+        now: () => clock,
         ttl: 180,
         renew: async () => {
           throw new AdmissionError('unavailable');
@@ -268,24 +283,39 @@ describe('product collaboration transport', () => {
       }),
       c = f.client();
     await f.connect(c);
+    expect(c.doc.getText('source').toString()).toBe('print("starter")\n');
     store.beforeSave = () => held;
+    const checkpoint = vi.spyOn(store, 'saveCheckpoint');
     c.doc.getText('source').insert(0, 'later');
     const tracker = new CheckpointClient(c.doc, {
       document_id: documentId,
       generation: 1,
       client_session_id: c.grant.client_session_id,
     });
-    c.provider.sendStateless(JSON.stringify(tracker.capture(randomUUID())));
-    await until(() => f.server.hocuspocus.getConnectionsCount() === 0);
-    resolve();
-    await new Promise<void>((done) => setTimeout(done, 30));
-    expect(
-      c.replies.some(
-        (reply) => JSON.parse(reply).type === 'checkpoint.receipt',
-      ),
-    ).toBe(false);
-    expect(f.store.source()).toBe('print("starter")\n');
-    tracker.destroy();
+    try {
+      c.provider.sendStateless(JSON.stringify(tracker.capture(randomUUID())));
+      // The explicit checkpoint must actually reach its held storage operation
+      // before its lease advances; an early admission failure proves nothing.
+      await until(() => checkpoint.mock.calls.length === 1);
+      const expired = once(c.socket.webSocket as unknown as WebSocket, 'close');
+      clock = 180;
+      await until(() => f.server.hocuspocus.getConnectionsCount() === 0);
+      const [closeCode] = await expired;
+      expect(closeCode).toBe(4401);
+      resolve();
+      await expect(checkpoint.mock.results[0]!.value).rejects.toMatchObject({
+        code: 'unauthorized',
+      });
+      expect(
+        c.replies.some(
+          (reply) => JSON.parse(reply).type === 'checkpoint.receipt',
+        ),
+      ).toBe(false);
+      expect(f.store.source()).toBe('print("starter")\n');
+    } finally {
+      resolve();
+      tracker.destroy();
+    }
   });
   it('requires exact upgrade path, Origin and actual session cookie', async () => {
     const f = await setup();
@@ -586,32 +616,55 @@ it('applies a bounded128-lease invalidation batch to all documents on the target
       ?.getConnectionsCount() ?? 0,
   ).toBe(0);
 });
-it('cannot revive a shorter admitted lease with a renewal response received after its original deadline', async () => {
-  let release = () => undefined as void,
-    renewing = false;
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const f = await setup({
-      renew: async (lease) => {
-        renewing = true;
-        await held;
-        return {
-          grant: { ...lease.grant, ttl_ms: 30_000 },
-          started: performance.now(),
-        };
-      },
-    }),
-    c = f.client();
-  c.grant.ttl_ms = 180;
-  await f.connect(c);
-  const expired = once(c.socket.webSocket as unknown as WebSocket, 'close');
-  await until(() => renewing);
-  await until(() => f.server.hocuspocus.getConnectionsCount() === 0);
-  const [closeCode] = await expired;
-  expect(closeCode).toBe(4401);
-  release();
-  await new Promise<void>((resolve) => setTimeout(resolve, 25));
-  expect(f.server.hocuspocus.getConnectionsCount()).toBe(0);
-  expect(f.store.source()).toBe('print("starter")\n');
-});
+it.each(['before sweep', 'after sweep'] as const)(
+  'cannot revive a shorter admitted lease with a late renewal response (%s)',
+  async (timing) => {
+    let release = () => undefined as void,
+      renewing = false,
+      returned = false,
+      returnedWhileActive = false,
+      clock = 0;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const f = await setup({
+        now: () => clock,
+        renew: async (lease) => {
+          const started = clock;
+          renewing = true;
+          await held;
+          returnedWhileActive = lease.active;
+          returned = true;
+          return {
+            grant: { ...lease.grant, ttl_ms: 30_000 },
+            started,
+          };
+        },
+      }),
+      c = f.client();
+    c.grant.ttl_ms = 180;
+    try {
+      // Initial admission and the canonical sync are independent of host speed.
+      await f.connect(c);
+      expect(c.doc.getText('source').toString()).toBe('print("starter")\n');
+      const expired = once(c.socket.webSocket as unknown as WebSocket, 'close');
+      clock = 61;
+      await until(() => renewing);
+      expect(f.server.hocuspocus.getConnectionsCount()).toBe(1);
+      clock = 181;
+      if (timing === 'after sweep')
+        await until(() => f.server.hocuspocus.getConnectionsCount() === 0);
+      // In the active case, resolving in this same turn runs the renewal
+      // microtask before another timer sweep can observe the advanced clock.
+      release();
+      await until(() => returned);
+      await until(() => f.server.hocuspocus.getConnectionsCount() === 0);
+      const [closeCode] = await expired;
+      expect(closeCode).toBe(4401);
+      expect(returnedWhileActive).toBe(timing === 'before sweep');
+      expect(f.store.source()).toBe('print("starter")\n');
+    } finally {
+      release();
+    }
+  },
+);

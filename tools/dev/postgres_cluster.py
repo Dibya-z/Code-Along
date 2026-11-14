@@ -202,11 +202,16 @@ def _default_sigterm_cleanup() -> Iterator[None]:
 
 @contextmanager
 def postgres_cluster(
-    directory: Path | None = None, *, startup_timeout: float = 15
+    directory: Path | None = None,
+    *,
+    startup_timeout: float = 15,
+    max_connections: int = 10,
 ) -> Iterator[PostgresCluster]:
     """Create, use and stop one owned cluster, including on test exceptions."""
     if not math.isfinite(startup_timeout) or startup_timeout <= 0:
         raise PostgresTestError("Startup timeout must be positive and finite.")
+    if type(max_connections) is not int or not 4 <= max_connections <= 64:
+        raise PostgresTestError("Connection budget must be an integer from 4 to 64.")
     binaries = find_postgres_binaries(directory)
     # A short path avoids the Unix socket pathname limit on macOS. mkdtemp
     # creates the directory atomically with private owner-only permissions.
@@ -261,7 +266,7 @@ def postgres_cluster(
                     "-c",
                     "shared_buffers=16MB",
                     "-c",
-                    "max_connections=10",
+                    f"max_connections={max_connections}",
                     "-c",
                     "fsync=on",
                     "-c",

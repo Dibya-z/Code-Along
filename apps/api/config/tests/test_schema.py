@@ -27,7 +27,10 @@ def test_schema_requires_authentication_and_metadata_preconditions() -> None:
         for method, operation in methods.items():
             if method not in {"get", "post", "put", "patch", "delete"}:
                 continue
-            if path != "/api/v1/csrf/":
+            if path == "/api/v1/shares/resolve/":
+                # Unbound snapshot capabilities can resolve anonymously.
+                assert operation["security"] == [{"cookieAuth": []}, {}]
+            elif path != "/api/v1/csrf/":
                 assert operation["security"] == [{"cookieAuth": []}]
     for name in [
         "ProjectBodyRequest",

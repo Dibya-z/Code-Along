@@ -314,7 +314,16 @@ def dev(engine: Engine) -> None:
                             ["ps", "--status", "running", "--services"], capture=True
                         ).splitlines()
                     )
-                    if not {"api", "db", "redis", "proxy", "web-dev"}.issubset(active):
+                    if not {
+                        "api",
+                        "db",
+                        "redis",
+                        "proxy",
+                        "web-dev",
+                        "collaboration",
+                        "jobs",
+                        "scheduler",
+                    }.issubset(active):
                         raise DevelopmentError(
                             "A development service exited. Run npm run status and inspect its logs before restarting."
                         )

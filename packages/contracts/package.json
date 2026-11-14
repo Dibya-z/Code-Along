@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./events": "./events/index.ts",
     "./collaboration": "./collaboration/checkpoints.ts",
     "./collaboration/presence": "./collaboration/presence.ts",
     "./execution": "./execution/runner.ts",

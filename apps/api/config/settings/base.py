@@ -18,6 +18,8 @@ INSTALLED_APPS = [
     "code_along.workspaces.apps.WorkspacesConfig",
     "code_along.projects.apps.ProjectsConfig",
     "code_along.collaboration.apps.CollaborationConfig",
+    "code_along.events.apps.EventsConfig",
+    "code_along.chat.apps.ChatConfig",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -81,6 +83,7 @@ REDIS_CONNECTION_SECRET: str | None = None
 COLLABORATION_SECRET = ""
 COLLABORATION_CONTROL_SECRET = ""
 COLLABORATION_CONTROL_URL = ""
+CELERY_BROKER_URL: str | None = None
 
 TEMPLATES = [
     {

@@ -64,6 +64,8 @@ The idempotency key is `(document_id, generation, client_session_id, checkpoint_
 
 After receipt retention expires, treat the retry as an unacknowledged full-state request: validate/merge it and issue a fresh committed receipt. Never infer Saved or lost work from a missing receipt. Preserve provenance needed by retained submissions when pruning records. Old receipt metadata cannot reconstruct old document bytes: named revisions must separately freeze/copy payloads.
 
+The M3 product policy targets 2048 recent receipts/document, expires unreferenced receipts after 24 hours and enforces a database insertion capacity of 4096. Bounded Django maintenance preserves canonical binary and referenced provenance; the Node role cannot prune. Capacity errors stop accepted writes with recovery/export, while an existing duplicate can still return its original receipt. See [product retention](product-collaboration.md#bounded-receipt-retention). M0 proof tables remain independent fixtures.
+
 The client permits one immutable in-flight checkpoint per document session. Later edits increase the counter and stay pending for the next checkpoint; do not mutate the in-flight payload. This bounds client bookkeeping and avoids reordered receipts falsely advancing save status. Coalesce changes and bound queues/retries; outages have no finite durability-delay guarantee. A validated receipt may cover older work while current work remains Saving.
 
 ## Compatibility and verification scope

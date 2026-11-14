@@ -201,6 +201,38 @@ afterEach(() => {
 });
 
 describe('project transport lifecycle', () => {
+  it('keeps a strictly synced admitted file editable while another document still awaits initial sync', async () => {
+    const f = await setup(false, 2);
+    const main = f.providers.find(
+      (provider) => provider.options.document === f.workspace.file(id(3))!.doc,
+    )!;
+    main.options.onAuthenticated({ scope: 'read-write' });
+    main.initialize();
+    expect(f.model.getSnapshot().save).toBe('connecting');
+    expect(f.model.canEdit(id(3))).toBe(true);
+    expect(f.model.canEdit(id(13))).toBe(false);
+    expect(f.model.getEditingSnapshot().writableFiles).toEqual([id(3)]);
+    const before = f.model.getEditingSnapshot();
+    f.provider.options.onAwarenessChange();
+    expect(f.model.getEditingSnapshot()).toBe(before);
+    f.socket.options.onClose({ event: { code: 4403, reason: 'unauthorized' } });
+    expect(f.model.canEdit(id(3))).toBe(false);
+    f.close();
+  });
+  it('stops editing the document whose checkpoint binary budget fails even while its grant remains live', async () => {
+    const f = await setup(false, 2);
+    await f.admit();
+    expect(f.model.canEdit(id(3))).toBe(true);
+    f.workspace
+      .file(id(3))!
+      .doc.getMap('codec-budget-fixture')
+      .set('bytes', 'x'.repeat(1024 * 1024));
+    vi.advanceTimersByTime(500);
+    expect(f.model.getSnapshot().save).toBe('error');
+    expect(f.model.canEdit(id(3))).toBe(false);
+    expect(f.model.canEdit(id(13))).toBe(true);
+    f.close();
+  });
   it('uses only the capability admission closure for initial sync and fresh reconnect tickets', async () => {
     const ticket = vi.fn<typeof documentTicket>(async () => ({
       ticket: 'capability-ticket',

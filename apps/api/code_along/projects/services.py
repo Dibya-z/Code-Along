@@ -61,6 +61,9 @@ def bump_metadata(project: Project) -> None:
         raise ValidationError({"detail": "Project metadata revision limit reached."})
     project.metadata_version += 1
     project.save(update_fields=["metadata_version", "updated_at"])
+    from code_along.events.services import project_changed
+
+    project_changed(project)
 
 
 def require_editable(project: Project) -> None:
@@ -112,6 +115,9 @@ def create_project(
         initial_sha256=digest,
     )
     CollaborationDocument.objects.create(project=project, file=file)
+    from code_along.events.services import project_changed
+
+    project_changed(project)
     return project
 
 
@@ -262,6 +268,9 @@ def set_grant(user: User, project_id: uuid.UUID, user_id: uuid.UUID, role: str) 
     from code_along.collaboration.services import revoke_leases
 
     revoke_leases(project_id=project.id, user_id=user_id)
+    from code_along.events.services import project_access_changed
+
+    project_access_changed(project)
 
 
 @transaction.atomic
@@ -280,6 +289,9 @@ def revoke_grant(user: User, project_id: uuid.UUID, user_id: uuid.UUID) -> None:
     from code_along.collaboration.services import revoke_leases
 
     revoke_leases(project_id=project.id, user_id=user_id)
+    from code_along.events.services import project_access_changed
+
+    project_access_changed(project)
 
 
 @transaction.atomic
@@ -311,6 +323,9 @@ def transfer_project(
     from code_along.collaboration.services import revoke_leases
 
     revoke_leases(project_id=project.id)
+    from code_along.events.services import project_access_changed
+
+    project_access_changed(project)
     return project
 
 

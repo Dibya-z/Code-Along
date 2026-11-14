@@ -1,8 +1,13 @@
 from django.urls import path
 
+from code_along.chat.api import MessageListView
+from code_along.events.api import ProjectEventListView
+
 from . import api, revision_api, share_api, sharing
 
 urlpatterns = [
+    path("<uuid:project_id>/events/", ProjectEventListView.as_view()),
+    path("<uuid:project_id>/chat/messages/", MessageListView.as_view()),
     path("<uuid:project_id>/revisions/", revision_api.RevisionListView.as_view()),
     path(
         "<uuid:project_id>/revisions/<uuid:revision_id>/",

@@ -1,7 +1,9 @@
 import asyncio
+from unittest.mock import patch
 
 import pytest
 from asgiref.testing import ApplicationCommunicator
+from django.conf import settings
 from django.test import Client, RequestFactory
 
 from config.asgi import application
@@ -58,7 +60,7 @@ def test_generic_server_error_contains_no_traceback() -> None:
     assert response.content == b'{"error": "internal_error"}'
 
 
-def test_asgi_serves_http_and_denies_unimplemented_websockets() -> None:
+def test_asgi_serves_http_and_denies_invalid_websocket_boundaries() -> None:
     async def check() -> None:
         http = ApplicationCommunicator(
             application,
@@ -80,15 +82,61 @@ def test_asgi_serves_http_and_denies_unimplemented_websockets() -> None:
         body = await http.receive_output(timeout=2)
         assert body["body"] == b'{"status": "ok"}'
         await http.wait(timeout=2)
-        websocket = ApplicationCommunicator(
-            application, {"type": "websocket", "path": "/events/"}
-        )
-        await websocket.send_input({"type": "websocket.connect"})
-        assert await websocket.receive_output(timeout=2) == {
-            "type": "websocket.close",
-            "code": 4404,
-            "reason": "not_implemented",
-        }
-        await websocket.wait(timeout=2)
+        for path, headers, query in [
+            ("/events/", [(b"origin", b"https://testserver")], b""),
+            ("/unknown", [(b"origin", b"https://testserver")], b""),
+            ("/events", [], b""),
+            ("/events", [(b"origin", b"https://attacker.invalid")], b""),
+            ("/events", [(b"origin", b"https://testserver")] * 2, b""),
+            ("/events", [(b"origin", b"https://testserver")], b"token=forbidden"),
+        ]:
+            websocket = ApplicationCommunicator(
+                application,
+                {
+                    "type": "websocket",
+                    "path": path,
+                    "headers": headers,
+                    "query_string": query,
+                },
+            )
+            await websocket.send_input({"type": "websocket.connect"})
+            assert await websocket.receive_output(timeout=2) == {
+                "type": "websocket.close",
+                "code": 4403,
+                "reason": "unauthorized",
+            }
+            await websocket.wait(timeout=2)
 
     asyncio.run(check())
+
+
+def test_event_authority_outage_is_bounded_inside_consumer_before_database_auth() -> (
+    None
+):
+    async def check() -> None:
+        websocket = ApplicationCommunicator(
+            application,
+            {
+                "type": "websocket",
+                "path": "/events",
+                "query_string": b"",
+                "headers": [
+                    (b"origin", b"https://testserver"),
+                    (b"cookie", f"{settings.SESSION_COOKIE_NAME}={'a' * 32}".encode()),
+                ],
+            },
+        )
+        await websocket.send_input({"type": "websocket.connect"})
+        assert await websocket.receive_output(timeout=3) == {
+            "type": "websocket.close",
+            "code": 4401,
+            "reason": "authorization_unavailable",
+        }
+        await websocket.send_input({"type": "websocket.disconnect", "code": 1000})
+        await websocket.wait(timeout=3)
+
+    # pytest denies every DB access here: the standard session wrapper must not perform auth first.
+    with patch(
+        "code_along.events.consumer.authority", side_effect=RuntimeError("offline")
+    ):
+        asyncio.run(check())

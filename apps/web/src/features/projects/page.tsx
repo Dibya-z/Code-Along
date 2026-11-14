@@ -13,6 +13,7 @@ import type { ProjectFile } from './types.ts';
 import { ProjectSharing } from './sharing.tsx';
 import { ProjectHistory } from '../history/panel.tsx';
 import { ProjectShares } from '../shares/management.tsx';
+import { ProjectDiscussion } from '../discussion/panel.tsx';
 export function ProjectPage() {
   return (
     <SignedIn>
@@ -146,6 +147,9 @@ function ProjectDetails() {
           </p>
         </div>
         <div className="actions">
+          <a className="button secondary" href="#discussion">
+            Discussion
+          </a>
           <span className="badge">
             {project.archived ? 'Archived' : 'Shared workbench'}
           </span>
@@ -300,6 +304,11 @@ function ProjectDetails() {
             </div>
           )
         }
+      />
+      <ProjectDiscussion
+        project={project}
+        accountId={identity.data.id}
+        paused={Boolean(query.error)}
       />
       <ProjectHistory
         project={project}

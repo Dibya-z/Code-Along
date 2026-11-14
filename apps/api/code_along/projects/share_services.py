@@ -76,6 +76,9 @@ def create_share(
         token_digest=hashlib.sha256(token.encode("ascii")).hexdigest(),
         expires_at=timezone.now() + timedelta(hours=expires_hours),
     )
+    from code_along.events.services import project_access_changed
+
+    project_access_changed(project)
     return share, token
 
 
@@ -88,6 +91,9 @@ def revoke_share(user: User, project_id: uuid.UUID, share_id: uuid.UUID) -> None
         share.revoked_at = timezone.now()
         share.save(update_fields=["revoked_at"])
         revoke_leases(share_grant_id=share.id)
+        from code_along.events.services import project_access_changed
+
+        project_access_changed(project)
 
 
 @transaction.atomic
