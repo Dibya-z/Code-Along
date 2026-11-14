@@ -37,6 +37,59 @@ async function settledFocus(page: Page) {
     };
   });
 }
+async function codeGeometry(page: Page, breakdown = false) {
+  return page.evaluate((includeBreakdown) => {
+    const box = (selector: string) => {
+      const bounds = document.querySelector(selector)?.getBoundingClientRect();
+      return bounds
+        ? {
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height,
+          }
+        : null;
+    };
+    return {
+      width: innerWidth,
+      height: innerHeight,
+      scrollX,
+      scrollY,
+      visualHeight: visualViewport?.height,
+      visualOffset: visualViewport?.offsetTop,
+      firstLine: box('.cm-line'),
+      editor: box('.cm-editor'),
+      command: box('.project-command-bar'),
+      focus: {
+        tag: document.activeElement?.tagName,
+        id: document.activeElement?.id,
+      },
+      ...(includeBreakdown
+        ? {
+            chrome: Object.fromEntries(
+              Object.entries({
+                sidebar: '.sidebar',
+                topbar: '.topbar',
+                heading: '.project-heading',
+                sections: '.project-section-nav',
+                recovery: '.local-recovery',
+                controls: '.workbench-controls',
+                options: '.editor-options',
+              }).map(([name, selector]) => [
+                name,
+                box(selector)?.height ?? null,
+              ]),
+            ),
+            bodyFont: {
+              size: getComputedStyle(document.body).fontSize,
+              lineHeight: getComputedStyle(document.body).lineHeight,
+              family: getComputedStyle(document.body).fontFamily.slice(0, 80),
+            },
+          }
+        : {}),
+    };
+  }, breakdown);
+}
 
 test('project tasks retain source, undo, a waiting run and discussion draft while controls stay reachable', async ({
   page,
@@ -86,12 +139,18 @@ test('project tasks retain source, undo, a waiting run and discussion draft whil
   ]) {
     await page.setViewportSize({ width: width!, height: height! });
     await page.evaluate(() => window.scrollTo(0, 0));
+    await settledFocus(page);
     const line = page.locator('.cm-line').first();
     const y = (await line.boundingBox())!.y;
     mobileStarts.push({ width: width!, y });
     test.info().annotations.push({
       type: 'default-code-position',
       description: `${width}x${height}: ${y}px`,
+    });
+    const before = await codeGeometry(page, true);
+    test.info().annotations.push({
+      type: 'code-before-screenshot',
+      description: JSON.stringify(before),
     });
     expect(
       await page.evaluate(
@@ -102,7 +161,20 @@ test('project tasks retain source, undo, a waiting run and discussion draft whil
       path: test.info().outputPath(`tasks-${width}.png`),
       fullPage: true,
     });
-    await expect(line).toBeInViewport();
+    const after = await codeGeometry(page);
+    test.info().annotations.push({
+      type: 'code-after-screenshot',
+      description: JSON.stringify(after),
+    });
+    await settledFocus(page);
+    const settled = await codeGeometry(page);
+    test.info().annotations.push({
+      type: 'code-settled-after-screenshot',
+      description: JSON.stringify(settled),
+    });
+    const diagnostic = `Default code at ${width}x${height}: ${JSON.stringify({ before, after, settled }).slice(0, 1900)}`;
+    expect(y, diagnostic).toBeLessThan(700);
+    await expect(line, diagnostic).toBeInViewport();
     await showFiles(page);
     await expect(
       page.getByRole('button', { name: 'Add file', exact: true }),

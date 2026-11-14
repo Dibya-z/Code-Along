@@ -20,15 +20,28 @@ async function ready(page: Page) {
     { timeout: 20000 },
   );
 }
-async function send(page: Page, body: string) {
+async function send(
+  page: Page,
+  body: string,
+  diagnostic?: () => Promise<unknown>,
+) {
   await openProjectSection(page, 'Discussion');
   const input = discussion(page).getByLabel('Message to project'),
     button = discussion(page).getByRole('button', {
       name: 'Send message',
       exact: true,
     });
-  await input.fill(body);
-  await expect(input).toHaveValue(body);
+  try {
+    await input.fill(body);
+    await expect(input).toHaveValue(body);
+  } catch (error) {
+    if (!diagnostic) throw error;
+    const state = await diagnostic().catch(() => ({ unavailable: true }));
+    throw new Error(
+      `${error instanceof Error ? error.message : 'Composer input assertion failed.'}\nBounded composer diagnostic: ${JSON.stringify(state).slice(0, 1900)}`,
+      { cause: error },
+    );
+  }
   await expect(button).toBeEnabled();
   await button.click();
   await expect(input).toHaveValue('');
@@ -372,6 +385,99 @@ test('unconfirmed messages retry one immutable nonce only manually, never replay
       frame.type === 'head' || frame.event_type === 'chat.message.created',
   );
   const p = await pair(page, browser, browserName);
+  const composerProbe = await page.evaluateHandle(() => {
+    const events: object[] = [];
+    const stop = new AbortController();
+    const ids = new WeakMap<Node, number>();
+    let nextId = 0;
+    const nodeId = (node: Node | null) => {
+      if (!node) return null;
+      if (!ids.has(node)) ids.set(node, ++nextId);
+      return ids.get(node);
+    };
+    const record = (type: string, event?: Event) => {
+      const textarea = document.querySelector<HTMLTextAreaElement>(
+        '#discussion-message',
+      );
+      events.push({
+        type,
+        node: nodeId(textarea),
+        length: textarea?.value.length,
+        disabled: textarea?.disabled,
+        pending: document.querySelectorAll('.discussion-pending').length,
+        inputType: event instanceof InputEvent ? event.inputType : null,
+        trusted: event?.isTrusted,
+        prevented: event?.defaultPrevented,
+        focus: {
+          tag: document.activeElement?.tagName,
+          id: document.activeElement?.id,
+        },
+        time: Math.round(performance.now()),
+      });
+      if (events.length > 96) events.shift();
+    };
+    for (const type of [
+      'beforeinput',
+      'input',
+      'change',
+      'submit',
+      'reset',
+      'focusin',
+    ])
+      document.addEventListener(
+        type,
+        (event) => {
+          const target = event.target;
+          if (
+            !(target instanceof HTMLElement) ||
+            (!target.matches('#discussion-message') &&
+              !(
+                ['submit', 'reset'].includes(event.type) &&
+                target.querySelector('#discussion-message')
+              ))
+          )
+            return;
+          record(event.type, event);
+          if (event.type === 'input' || event.type === 'submit')
+            queueMicrotask(() => record(`settled-${event.type}`, event));
+        },
+        { capture: true, signal: stop.signal },
+      );
+    let current = document.querySelector('#discussion-message');
+    const observer = new MutationObserver((changes) => {
+      const next = document.querySelector('#discussion-message');
+      if (next !== current) {
+        current = next;
+        record('composer-node-replaced');
+      }
+      for (const change of changes)
+        if (
+          change.type === 'attributes' &&
+          change.target instanceof HTMLElement &&
+          change.target.matches('#discussion-message')
+        )
+          record('composer-disabled-changed');
+    });
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['disabled'],
+    });
+    record('initial');
+    return {
+      events,
+      snapshot() {
+        record('failure-snapshot');
+        return events.slice(-6);
+      },
+      stop() {
+        stop.abort();
+        observer.disconnect();
+      },
+    };
+  });
+  let composerEvidence: object[] = [];
   let loseReplies = true;
   const requests: { client_message_id: string; body: string }[] = [];
   const statuses: number[] = [];
@@ -382,6 +488,11 @@ test('unconfirmed messages retry one immutable nonce only manually, never replay
         `/api/v1/projects/${p.projectId}/chat/messages/`
     )
       statuses.push(response.status());
+  });
+  const composerDiagnostic = async () => ({
+    events: await composerProbe.evaluate((probe) => probe.snapshot()),
+    postAttempts: requests.length,
+    recentStatuses: statuses.slice(-4),
   });
   try {
     await ready(page);
@@ -399,12 +510,12 @@ test('unconfirmed messages retry one immutable nonce only manually, never replay
       },
     );
     const text = 'Retry this same committed request';
-    await send(page, text);
+    await send(page, text, composerDiagnostic);
     await expect(discussion(page).locator('.discussion-pending')).toContainText(
       'Not confirmed',
     );
     for (let n = 1; n < 20; n++) {
-      await send(page, `Other uncertain message ${n}`);
+      await send(page, `Other uncertain message ${n}`, composerDiagnostic);
       await expect(discussion(page).locator('.discussion-pending')).toHaveCount(
         n + 1,
       );
@@ -445,6 +556,10 @@ test('unconfirmed messages retry one immutable nonce only manually, never replay
       requests[0]!.client_message_id,
       'Other uncertain message 19',
     ]);
+    composerEvidence = await composerProbe.evaluate((probe) => {
+      probe.stop();
+      return probe.events;
+    });
     await page.getByRole('button', { name: 'Sign out', exact: true }).click();
     await expect(
       page.getByRole('link', { name: 'Sign in', exact: true }),
@@ -480,6 +595,17 @@ test('unconfirmed messages retry one immutable nonce only manually, never replay
       'An offline composer draft',
     );
   } finally {
+    composerEvidence = await composerProbe
+      .evaluate((probe) => {
+        probe.stop();
+        return probe.events;
+      })
+      .catch(() => composerEvidence);
+    test.info().annotations.push({
+      type: 'composer-event-order',
+      description: JSON.stringify(composerEvidence),
+    });
+    await composerProbe.dispose();
     if (!page.isClosed()) await page.context().setOffline(false);
     await p.context.close();
   }
