@@ -92,6 +92,36 @@ async function codeGeometry(page: Page, breakdown = false) {
   }, breakdown);
 }
 
+test('project routing uses the loaded app stylesheet without a late CSS admission dependency', async ({
+  page,
+  browserName,
+}) => {
+  await register(page, `css-route-${browserName}-${Date.now()}@example.test`);
+  const lateStylesheets: string[] = [];
+  await page.route('**/assets/*.css', async (route) => {
+    lateStylesheets.push(new URL(route.request().url()).pathname);
+    await route.abort('failed');
+  });
+  await createEditorProject(page);
+  expect(lateStylesheets).toEqual([]);
+  await expect(
+    page.getByRole('navigation', { name: 'Project sections', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Run code', exact: true }),
+  ).toBeVisible();
+  const styles = await page
+    .locator('.editor-workbench')
+    .evaluate((element) => ({
+      display: getComputedStyle(element).display,
+      loaded: [...document.styleSheets].filter(
+        (sheet) => sheet.href && new URL(sheet.href).origin === location.origin,
+      ).length,
+    }));
+  expect(styles.display).toBe('grid');
+  expect(styles.loaded).toBe(1);
+});
+
 test('project tasks retain source, undo, a waiting run and discussion draft while controls stay reachable', async ({
   page,
   browserName,

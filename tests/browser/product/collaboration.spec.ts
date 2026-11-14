@@ -610,6 +610,8 @@ test('a removed file preserves its offline text for export after generation admi
       staleAdmission = true;
   });
   let other: BrowserContext | undefined;
+  let cleanupFailure: PromiseRejectedResult | undefined;
+  let phase = 'open-peer';
   try {
     other = await browser.newContext({
       baseURL: new URL(page.url()).origin,
@@ -617,16 +619,19 @@ test('a removed file preserves its offline text for export after generation admi
       storageState: await page.context().storageState(),
     });
     const remover = await other.newPage();
+    phase = 'load-peer';
     await remover.goto(page.url());
     await showFiles(remover);
     await remover
       .getByRole('button', { name: 'helper.py', exact: true })
       .click();
+    phase = 'offline-edit';
     await page.context().setOffline(true);
     await expect(page.locator('.collaboration-status')).toHaveText(/Offline/);
     const text = '# keep this removed file\nanswer = 73\n';
     await source(page, 'helper.py').fill(text);
     holdMetadata = true;
+    phase = 'remove-peer-file';
     await remover
       .getByRole('button', { name: 'Remove file', exact: true })
       .click();
@@ -641,14 +646,18 @@ test('a removed file preserves its offline text for export after generation admi
       .getByRole('button', { name: 'Confirm file removal', exact: true })
       .click();
     await removed;
+    phase = 'reconnect';
     await page.context().setOffline(false);
+    phase = 'existing-lease-denial';
     await expect(page.locator('.collaboration-status')).toHaveText(
       /Editing paused/,
       { timeout: 15000 },
     );
+    phase = 'explicit-admission-recheck';
     await page
       .getByRole('button', { name: 'Recheck access', exact: true })
       .click();
+    phase = 'stale-admission-denial';
     await expect.poll(() => staleAdmission, { timeout: 15000 }).toBe(true);
     await expect(page.locator('.collaboration-status')).toHaveText(
       /Editing paused/,
@@ -656,9 +665,11 @@ test('a removed file preserves its offline text for export after generation admi
     );
     holdMetadata = false;
     releaseMetadata();
+    phase = 'refresh-metadata';
     await page
       .getByRole('button', { name: 'Refresh project', exact: true })
       .click();
+    phase = 'preserved-export';
     await expect(
       page.getByRole('button', {
         name: 'Download preserved helper.py',
@@ -666,10 +677,21 @@ test('a removed file preserves its offline text for export after generation admi
       }),
     ).toBeVisible();
     expect(await downloadText(page, 'Download preserved helper.py')).toBe(text);
+  } catch (error) {
+    throw new Error(`Removed-file journey failed during ${phase}.`, {
+      cause: error,
+    });
   } finally {
     holdMetadata = false;
     releaseMetadata();
-    await page.context().setOffline(false);
-    await other?.close();
+    const cleanup = await Promise.allSettled([
+      page.context().setOffline(false),
+      other?.close(),
+    ]);
+    cleanupFailure = cleanup.find((result) => result.status === 'rejected');
   }
+  if (cleanupFailure)
+    throw new Error('Removed-file journey cleanup failed.', {
+      cause: cleanupFailure.reason,
+    });
 });

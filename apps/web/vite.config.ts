@@ -22,7 +22,8 @@ if (
 }
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  build: { sourcemap: false },
+  // This small app loads its styles once; lazy routes must not wait for another stylesheet.
+  build: { sourcemap: false, cssCodeSplit: false },
   ...(proxied
     ? {
         html: { cspNonce: '__CODE_ALONG_DEV_NONCE__' },
