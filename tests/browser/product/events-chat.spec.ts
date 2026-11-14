@@ -506,6 +506,22 @@ test('viewer history loads older UTC messages, denies writes, and a live capabil
   );
   try {
     await ready(p.peer);
+    const discussionLink = p.peer.getByRole('link', {
+      name: 'Discussion',
+      exact: true,
+    });
+    await discussionLink.focus();
+    await discussionLink.press('Enter');
+    await expect(discussion(p.peer)).toBeFocused();
+    await expect(discussion(p.peer)).toHaveCSS('outline-width', '2px');
+    await expect(discussion(p.peer)).toHaveCSS(
+      'outline-color',
+      'rgb(21, 122, 86)',
+    );
+    await p.peer.evaluate(() => window.scrollBy(0, -12));
+    await p.peer.screenshot({
+      path: test.info().outputPath('discussion-section-keyboard.png'),
+    });
     await expect(rows(p.peer)).toHaveCount(50);
     const log = discussion(p.peer).getByRole('list', {
       name: 'Project discussion messages',
@@ -548,6 +564,11 @@ test('viewer history loads older UTC messages, denies writes, and a live capabil
       discussion(p.peer).getByText('1 new message loaded.', { exact: true }),
     ).toBeVisible();
     await expect(log).toBeFocused();
+    await expect(log).toHaveCSS('outline-width', '2px');
+    await expect(log).toHaveCSS('outline-color', 'rgb(21, 122, 86)');
+    await discussion(p.peer).screenshot({
+      path: test.info().outputPath('discussion-list-keyboard.png'),
+    });
     const jump = discussion(p.peer).getByRole('button', {
       name: 'Jump to latest',
       exact: true,

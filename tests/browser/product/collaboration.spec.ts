@@ -570,6 +570,26 @@ test('a removed file preserves its offline text for export after generation admi
     'false',
   );
   await settled(page);
+  const metadataPath = `/api/v1${new URL(page.url()).pathname}/`;
+  let holdMetadata = false,
+    staleAdmission = false,
+    releaseMetadata!: () => void;
+  const metadataGate = new Promise<void>((resolve) => {
+    releaseMetadata = resolve;
+  });
+  await page.route(`**${metadataPath}`, async (route) => {
+    if (holdMetadata && route.request().method() === 'GET') await metadataGate;
+    await route.continue();
+  });
+  page.on('response', (response) => {
+    const path = new URL(response.url()).pathname;
+    if (
+      path.startsWith(`${metadataPath}documents/`) &&
+      path.endsWith('/ticket/') &&
+      response.status() === 409
+    )
+      staleAdmission = true;
+  });
   let other: BrowserContext | undefined;
   try {
     other = await browser.newContext({
@@ -586,18 +606,36 @@ test('a removed file preserves its offline text for export after generation admi
     await expect(page.locator('.collaboration-status')).toHaveText(/Offline/);
     const text = '# keep this removed file\nanswer = 73\n';
     await source(page, 'helper.py').fill(text);
+    holdMetadata = true;
     await remover
       .getByRole('button', { name: 'Remove file', exact: true })
       .click();
+    const removed = remover.waitForResponse(
+      (response) =>
+        response.request().method() === 'DELETE' &&
+        new URL(response.url()).pathname.includes('/files/') &&
+        response.status() === 204,
+    );
     await remover
       .getByRole('dialog', { name: 'Remove this file?' })
       .getByRole('button', { name: 'Confirm file removal', exact: true })
       .click();
+    await removed;
     await page.context().setOffline(false);
     await expect(page.locator('.collaboration-status')).toHaveText(
       /Editing paused/,
       { timeout: 15000 },
     );
+    await page
+      .getByRole('button', { name: 'Recheck access', exact: true })
+      .click();
+    await expect.poll(() => staleAdmission, { timeout: 15000 }).toBe(true);
+    await expect(page.locator('.collaboration-status')).toHaveText(
+      /Editing paused/,
+      { timeout: 15000 },
+    );
+    holdMetadata = false;
+    releaseMetadata();
     await page
       .getByRole('button', { name: 'Refresh project', exact: true })
       .click();
@@ -609,6 +647,8 @@ test('a removed file preserves its offline text for export after generation admi
     ).toBeVisible();
     expect(await downloadText(page, 'Download preserved helper.py')).toBe(text);
   } finally {
+    holdMetadata = false;
+    releaseMetadata();
     await page.context().setOffline(false);
     await other?.close();
   }

@@ -229,6 +229,8 @@ export class RecoveryController {
     return (
       !!this.snapshot.found &&
       this.workspace.getSnapshot().writable &&
+      (!this.workspace.canonical ||
+        this.workspace.documents().every((file) => file.loaded)) &&
       recoveryMatches(this.workspace, this.snapshot.found)
     );
   }

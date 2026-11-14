@@ -45,6 +45,99 @@ async function workspace(
   return model;
 }
 describe('local recovery decision ordering', () => {
+  it('keeps canonical Restore unavailable until every file has its verified baseline and actual server sync', async () => {
+    const files = [
+      {
+        id: id(3),
+        document_id: id(4),
+        generation: 1,
+        path: 'main.py',
+        kind: 'python' as const,
+        initial_source: '',
+        initial_sha256: await sha256(sourceBytes('')),
+      },
+      {
+        id: id(7),
+        document_id: id(8),
+        generation: 1,
+        path: 'helper.py',
+        kind: 'python' as const,
+        initial_source: '',
+        initial_sha256: await sha256(sourceBytes('')),
+      },
+    ];
+    const project = {
+      id: id(2),
+      owner_id: id(1),
+      workspace_id: id(5),
+      name: 'Shared',
+      role: 'owner' as const,
+      archived: false,
+      workspace_archived: false,
+      acl_version: '1',
+      metadata_version: 1,
+      entrypoint_file_id: id(3),
+      entrypoint_path: 'main.py',
+      runtime_id: CORE_RUNTIME.runtime_id,
+      runtime_profile_id: id(6),
+    };
+    const saved = new EditorWorkspace(id(1), id(2), 'project', true),
+      current = new EditorWorkspace(id(1), id(2), 'project', true);
+    saved.reconcile(project, files);
+    current.reconcile(project, files);
+    for (const file of files) {
+      await saved.loadSource(file);
+      saved.file(file.id)!.synchronizedFromServer();
+    }
+    saved.replaceSource(id(3), 'retained main\n');
+    saved.replaceSource(id(7), 'retained helper\n');
+    const found = await captureRecovery(saved, 'Shared');
+    const store = {
+      read: vi.fn().mockResolvedValue({
+        policy: {
+          account_id: id(1),
+          epoch: id(9),
+          retain: false,
+          used_bytes: found.bytes,
+          count: 1,
+        },
+        record: {
+          account_id: id(1),
+          project_id: id(2),
+          revision: 1,
+          updated_at: Date.now(),
+          bytes: found.bytes,
+          data: found.data,
+        },
+      }),
+      save: vi.fn(),
+      retention: vi.fn(),
+      remove: vi.fn(),
+    };
+    const model = new RecoveryController(current, () => 'Shared', store);
+    try {
+      model.start();
+      await vi.waitFor(() => expect(model.getSnapshot().phase).toBe('found'));
+      expect(model.canRestore()).toBe(false);
+      await current.loadSource(files[0]!);
+      current.file(id(3))!.synchronizedFromServer();
+      await current.loadSource(files[1]!);
+      expect(current.file(id(3))!.loaded).toBe(true);
+      expect(current.file(id(7))!.loaded).toBe(false);
+      expect(model.canRestore()).toBe(false);
+      current.file(id(7))!.synchronizedFromServer();
+      expect(model.canRestore()).toBe(true);
+      model.restore();
+      expect(current.file(id(3))!.text.toString()).toBe('retained main\n');
+      expect(current.file(id(7))!.text.toString()).toBe('retained helper\n');
+      expect(model.getSnapshot().found).toBeNull();
+      expect(model.getSnapshot().error).toBe('');
+    } finally {
+      model.dispose();
+      current.destroy();
+      saved.destroy();
+    }
+  });
   it('settles an initial canonical backup that becomes server Saved before debounce without claiming a local record', async () => {
     const current = await workspace('canonical source', 'project', true);
     const store = {

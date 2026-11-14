@@ -62,8 +62,58 @@ async function stored(page: Page, source: string) {
     /^Local recovery updated/,
   );
 }
-async function serverSaved(page: Page) {
-  await expect(page.locator('.collaboration-status')).toHaveText('Saved');
+const quotaCooldowns = new WeakMap<
+  Page,
+  { observedAt: number; seconds: number }
+>();
+function observeQuota(page: Page) {
+  page.on('response', (response) => {
+    if (
+      response.status() !== 429 ||
+      !new URL(response.url()).pathname.startsWith('/api/v1/')
+    )
+      return;
+    const seconds = Number(response.headers()['retry-after']);
+    if (Number.isFinite(seconds) && seconds >= 1 && seconds <= 60)
+      quotaCooldowns.set(page, { observedAt: Date.now(), seconds });
+  });
+}
+async function serverSaved(page: Page, stage = 'checkpoint') {
+  try {
+    await expect(page.locator('.collaboration-status')).toHaveText('Saved');
+  } catch (error) {
+    const quota = quotaCooldowns.get(page);
+    if (
+      !['writer-return', 'final-reload'].includes(stage) ||
+      !quota ||
+      Date.now() - quota.observedAt > 10_000
+    )
+      throw error;
+    // These two reentries read already durable source. Honor real backpressure once, never retry arbitrary errors.
+    const remaining = Math.max(
+      0,
+      quota.observedAt + quota.seconds * 1000 - Date.now(),
+    );
+    test.info().annotations.push({
+      type: 'observed-quota',
+      description: `${stage}: respected Retry-After ${quota.seconds}s before fresh authorization`,
+    });
+    await page.waitForTimeout(remaining + 2000);
+    const refresh = page.getByRole('button', {
+      name: 'Refresh project',
+      exact: true,
+    });
+    if (await refresh.isVisible()) {
+      await refresh.click();
+      await expect(refresh).toBeEnabled();
+    } else await page.reload();
+    const recheck = page.getByRole('button', {
+      name: 'Recheck access',
+      exact: true,
+    });
+    if (await recheck.isVisible()) await recheck.click();
+    await expect(page.locator('.collaboration-status')).toHaveText('Saved');
+  }
 }
 async function replaceSharedSource(page: Page, source: string): Promise<void> {
   const modifier = await page.evaluate(() =>
@@ -94,7 +144,8 @@ test('canonical recovery, immediate route flush, competing local stores and defa
   page,
   browserName,
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
+  observeQuota(page);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await register(page, `recovery-${browserName}-${Date.now()}@example.test`);
@@ -147,16 +198,24 @@ test('canonical recovery, immediate route flush, competing local stores and defa
     )
     .toBe(true);
   await page.goto(projectUrl);
+  await serverSaved(page);
   await page
     .getByRole('button', { name: 'Restore local changes', exact: true })
     .click();
+  await stored(page, 'print("route flush")\n');
+  const primaryRevision = (await records(page))[0]!.revision;
   await serverSaved(page);
   expect(await archiveSource(page)).toBe('print("route flush")\n');
   const other = await page.context().newPage();
+  observeQuota(other);
   await other.goto(projectUrl);
+  await serverSaved(other);
   await other
     .getByRole('button', { name: 'Restore local changes', exact: true })
     .click();
+  await stored(other, 'print("route flush")\n');
+  // Each controller holds its own committed revision; the first tab is now deterministically stale.
+  expect((await records(other))[0]!.revision).toBeGreaterThan(primaryRevision);
   await serverSaved(other);
   const first = 'print("first shared edit")\n',
     latest = 'print("newer shared edit")\n',
@@ -205,7 +264,7 @@ test('canonical recovery, immediate route flush, competing local stores and defa
   await serverSaved(paused);
   expect(await archiveSource(paused)).toBe(latest);
   await writer.goto(projectUrl);
-  await serverSaved(writer);
+  await serverSaved(writer, 'writer-return');
   expect(await archiveSource(writer)).toBe(latest);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({
@@ -224,7 +283,7 @@ test('canonical recovery, immediate route flush, competing local stores and defa
   });
   await page.setViewportSize({ width: 1280, height: 1000 });
   await page.reload();
-  await serverSaved(page);
+  await serverSaved(page, 'final-reload');
   await page
     .getByRole('button', { name: "Use this tab's code", exact: true })
     .click();
