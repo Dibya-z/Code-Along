@@ -15,6 +15,7 @@ from code_along.collaboration.profiles import public_display_name
 from code_along.events.contracts import utc
 from code_along.learning.contracts import canonical, digest
 from code_along.learning.models import AssignmentWork
+from code_along.learning.notifications import LearningChanges, flush_learning_changes
 from code_along.learning.participation_services import (
     active_verified,
     current_member,
@@ -385,6 +386,9 @@ def submit(
         usage.source_bytes += prepared.manifest.source_bytes
         usage.metadata_bytes += record.metadata_bytes
         usage.save(update_fields=["count", "source_bytes", "metadata_bytes"])
+    signals = LearningChanges()
+    signals.add(assignment.id, [member.user_id for member in frozen])
+    flush_learning_changes(signals)
     # Account/password/email changes need not acquire workspace locks. Recheck
     # every frozen peer after writes without counting this new attempt twice.
     expected_subject = {(member.participation_id, member.user_id) for member in frozen}

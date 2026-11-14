@@ -114,8 +114,9 @@ def test_invalid_handshake_timeout_is_rejected_before_binding(timeout):
         )
 
 
+@pytest.mark.parametrize("path", ["/collab", "/events", "/events/learning"])
 def test_native_websocket_tunnel_preserves_upgrade_bytes_and_bidirectional_data(
-    certificate, monkeypatch
+    certificate, monkeypatch, path
 ):
     monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[2] / "tools/dev"))
     from tools.dev import native_proxy
@@ -144,7 +145,10 @@ def test_native_websocket_tunnel_preserves_upgrade_bytes_and_bidirectional_data(
     thread.start()
     try:
         monkeypatch.setenv(
-            "CODE_ALONG_NATIVE_COLLABORATION_PORT", str(upstream.server_address[1])
+            "CODE_ALONG_NATIVE_COLLABORATION_PORT"
+            if path == "/collab"
+            else "CODE_ALONG_NATIVE_API_PORT",
+            str(upstream.server_address[1]),
         )
         server_context, client_context = certificate
         with serving(server_context, native_proxy.Handler) as address:
@@ -157,7 +161,7 @@ def test_native_websocket_tunnel_preserves_upgrade_bytes_and_bidirectional_data(
                 ) as client:
                     client.sendall(
                         (
-                            f"GET /collab HTTP/1.1\r\nHost: 127.0.0.1:{address[1]}\r\nOrigin: {origin}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nCookie: codealong_session=fixture\r\nX-Forwarded-Proto: attacker\r\n\r\n"
+                            f"GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{address[1]}\r\nOrigin: {origin}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nCookie: codealong_session=fixture\r\nX-Forwarded-Proto: attacker\r\n\r\n"
                         ).encode()
                     )
                     received = bytearray()
@@ -188,6 +192,8 @@ def test_native_websocket_tunnel_preserves_upgrade_bytes_and_bidirectional_data(
     [
         ("/collab", "https://attacker.invalid", 403),
         ("/collab?ticket=must-not-route", "valid", 404),
+        ("/events/learning", "https://attacker.invalid", 403),
+        ("/events/learning?ticket=must-not-route", "valid", 404),
         ("/internal/v1/collaboration/consume/", "valid", 404),
     ],
 )

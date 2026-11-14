@@ -36,6 +36,22 @@ export interface paths {
     patch: operations['update_assignment_draft'];
     trace?: never;
   };
+  '/api/v1/assignments/{assignment_id}/learning-head/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_learning_head'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/assignments/{assignment_id}/participation/': {
     parameters: {
       query?: never;
@@ -142,6 +158,38 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['revoke_assignment_participation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/progress/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_own_learning_progress'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/progress/learners/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_learner_progress'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1416,6 +1464,90 @@ export interface components {
      * @enum {string}
      */
     LatePolicyEnum: 'reject';
+    LearnerProgressPage: {
+      count: number;
+      items: components['schemas']['LearnerProgressRow'][];
+    };
+    LearnerProgressRow: {
+      /** Format: uuid */
+      assignment_id: string;
+      /** Format: uuid */
+      assignment_version_id: string;
+      eligibility_state: components['schemas']['LearningEligibilityState'];
+      latest_assessment: components['schemas']['ProgressAssessment'] | null;
+      latest_submission: components['schemas']['ProgressSubmission'] | null;
+      state: components['schemas']['LearningProgressState'];
+      user: components['schemas']['LearningUser'];
+      /** Format: uuid */
+      user_id: string;
+    };
+    /**
+     * @description * `teaching` - teaching
+     *     * `participant` - participant
+     * @enum {string}
+     */
+    LearningAudience: 'teaching' | 'participant';
+    /**
+     * @description * `not_offered` - not_offered
+     *     * `invited` - invited
+     *     * `expired` - expired
+     *     * `declined` - declined
+     *     * `withdrawn` - withdrawn
+     *     * `revoked` - revoked
+     *     * `unavailable` - unavailable
+     *     * `team_pending` - team_pending
+     *     * `policy_ineligible` - policy_ineligible
+     *     * `eligible` - eligible
+     *     * `archived` - archived
+     * @enum {string}
+     */
+    LearningEligibilityState:
+      | 'not_offered'
+      | 'invited'
+      | 'expired'
+      | 'declined'
+      | 'withdrawn'
+      | 'revoked'
+      | 'unavailable'
+      | 'team_pending'
+      | 'policy_ineligible'
+      | 'eligible'
+      | 'archived';
+    LearningHeadOutput: {
+      /** Format: uuid */
+      assignment_id: string;
+      audience: components['schemas']['LearningAudience'];
+      head_generation: string;
+      protocol: components['schemas']['LearningHeadProtocol'];
+      scope: components['schemas']['LearningHeadScope'];
+      version: number;
+    };
+    /**
+     * @description * `code-along.learning-events` - code-along.learning-events
+     * @enum {string}
+     */
+    LearningHeadProtocol: 'code-along.learning-events';
+    /**
+     * @description * `assignment` - assignment
+     * @enum {string}
+     */
+    LearningHeadScope: 'assignment';
+    /**
+     * @description * `not_started` - not_started
+     *     * `in_progress` - in_progress
+     *     * `submitted` - submitted
+     *     * `reviewed` - reviewed
+     *     * `needs_changes` - needs_changes
+     *     * `complete` - complete
+     * @enum {string}
+     */
+    LearningProgressState:
+      | 'not_started'
+      | 'in_progress'
+      | 'submitted'
+      | 'reviewed'
+      | 'needs_changes'
+      | 'complete';
     LearningUser: {
       display_name: string;
       /** Format: uuid */
@@ -1502,6 +1634,19 @@ export interface components {
      */
     MetadataEventEventTypeEnum: 'project.changed';
     NullEnum: null;
+    OwnProgress: {
+      /** Format: uuid */
+      assignment_id: string;
+      /** Format: uuid */
+      assignment_version_id: string;
+      can_submit: boolean;
+      eligibility_state: components['schemas']['LearningEligibilityState'];
+      latest_assessment: components['schemas']['ProgressAssessment'] | null;
+      latest_submission: components['schemas']['ProgressSubmission'] | null;
+      state: components['schemas']['LearningProgressState'];
+      /** Format: uuid */
+      user_id: string;
+    };
     Participation: {
       /** Format: date-time */
       accepted_at: string | null;
@@ -1543,6 +1688,22 @@ export interface components {
      */
     ParticipationStateEnum:
       'invited' | 'accepted' | 'declined' | 'withdrawn' | 'revoked';
+    ProgressAssessment: {
+      assessment_kind: components['schemas']['AssessmentKindEnum'];
+      assessment_status: components['schemas']['ManualAssessmentStatus'];
+      /** Format: uuid */
+      publication_id: string;
+      /** Format: date-time */
+      published_at: string;
+    };
+    ProgressSubmission: {
+      /** Format: uuid */
+      id: string;
+      number: number;
+      source_manifest_sha256: string;
+      /** Format: date-time */
+      submitted_at: string;
+    };
     ProjectBodyRequest: {
       archived?: boolean;
       /** Format: uuid */
@@ -2521,6 +2682,29 @@ export interface operations {
       };
     };
   };
+  get_learning_head: {
+    parameters: {
+      query: {
+        audience: 'participant' | 'teaching';
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LearningHeadOutput'];
+        };
+      };
+    };
+  };
   get_own_assignment_participation: {
     parameters: {
       query?: never;
@@ -3007,6 +3191,54 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  get_own_learning_progress: {
+    parameters: {
+      query: {
+        assignment_version_id: string;
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['OwnProgress'];
+        };
+      };
+    };
+  };
+  list_learner_progress: {
+    parameters: {
+      query: {
+        assignment_version_id: string;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LearnerProgressPage'];
         };
       };
     };

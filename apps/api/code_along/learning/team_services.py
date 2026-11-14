@@ -13,6 +13,7 @@ from .models import (
     AssignmentTeam,
     AssignmentVersion,
 )
+from .notifications import LearningChanges, flush_learning_changes, roster_users
 from .participation_services import (
     MAX_TEAMS,
     OFFER_DURATION,
@@ -79,6 +80,10 @@ def create_team(
         name=label(name, 80),
     )
     current_member(user, session_key, assignment, teacher=True)
+    signals = LearningChanges()
+    signals.add(assignment.id)
+    flush_learning_changes(signals)
+    current_member(user, session_key, assignment, teacher=True)
     return team
 
 
@@ -99,6 +104,7 @@ def update_team(
     if name is not None or archived is not True:
         require_assignment_mutable(assignment)
     team = get_object_or_404(AssignmentTeam, assignment=assignment, id=team_id)
+    affected = roster_users(assignment.id, team.id)
     require_revision(team.revision, expected_revision)
     if name is not None:
         team.name = label(name, 80)
@@ -114,6 +120,10 @@ def update_team(
             team.archived_at = None
         team.revision = increment(team.revision)
         team.save()
+    current_member(user, session_key, assignment, teacher=True)
+    signals = LearningChanges()
+    signals.add(assignment.id, affected)
+    flush_learning_changes(signals)
     current_member(user, session_key, assignment, teacher=True)
     return team
 
@@ -137,6 +147,11 @@ def offer_team_member(
     )
     participation = get_object_or_404(
         AssignmentParticipation, assignment=assignment, id=participation_id
+    )
+    affected = (
+        roster_users(assignment.id, team.id)
+        | roster_users(assignment.id, participation.team_id)
+        | {participation.user_id}
     )
     require_revision(team.revision, expected_team_revision)
     require_revision(participation.revision, expected_participation_revision)
@@ -165,6 +180,10 @@ def offer_team_member(
         raise AssignmentConflict(
             "The recipient is no longer an eligible workspace member."
         )
+    signals = LearningChanges()
+    signals.add(assignment.id, affected)
+    flush_learning_changes(signals)
+    current_member(user, session_key, assignment, teacher=True)
     return team
 
 
@@ -187,6 +206,11 @@ def remove_team_member(
     )
     if participation.user_id != current.id:
         current_member(user, session_key, assignment, teacher=True)
+    affected = (
+        roster_users(assignment.id, team.id)
+        | roster_users(assignment.id, participation.team_id)
+        | {participation.user_id}
+    )
     require_revision(team.revision, expected_team_revision)
     require_revision(participation.revision, expected_participation_revision)
     current_member(
@@ -199,6 +223,12 @@ def remove_team_member(
     participation.team_consented_at = None
     participation.revision = increment(participation.revision)
     participation.save()
+    current_member(
+        user, session_key, assignment, teacher=participation.user_id != current.id
+    )
+    signals = LearningChanges()
+    signals.add(assignment.id, affected)
+    flush_learning_changes(signals)
     current_member(
         user, session_key, assignment, teacher=participation.user_id != current.id
     )
@@ -221,6 +251,7 @@ def approve_team(
     team = get_object_or_404(
         AssignmentTeam, assignment=assignment, id=team_id, archived_at__isnull=True
     )
+    affected = roster_users(assignment.id, team.id)
     require_revision(team.revision, expected_revision)
     require_revision(team.roster_revision, roster_revision)
     members = roster(team)
@@ -240,6 +271,10 @@ def approve_team(
         active_verified(assignment.workspace, member.user_id) for member in members
     ):
         raise AssignmentConflict("A roster member is no longer eligible for approval.")
+    signals = LearningChanges()
+    signals.add(assignment.id, affected)
+    flush_learning_changes(signals)
+    current_member(user, session_key, assignment, teacher=True)
     return team
 
 
@@ -262,6 +297,7 @@ def consent_team(
     team = get_object_or_404(
         AssignmentTeam, id=team_id, assignment=assignment, archived_at__isnull=True
     )
+    affected = roster_users(assignment.id, team.id)
     require_revision(team.roster_revision, roster_revision)
     if (
         participation.revision == expected_revision + 1
@@ -283,4 +319,8 @@ def consent_team(
     participation.revision = increment(participation.revision)
     participation.save()
     current_member(user, session_key, assignment)
+    signals = LearningChanges()
+    signals.add(assignment.id, affected)
+    flush_learning_changes(signals)
+    current_member(user, session_key, assignment, teacher=False)
     return participation

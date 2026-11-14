@@ -23,6 +23,7 @@ from .models import (
     AssignmentWork,
     AssignmentWorkMember,
 )
+from .notifications import LearningChanges, flush_learning_changes
 from .participation_services import (
     MAX_WORK,
     active_verified,
@@ -311,6 +312,9 @@ def create_work(
             for member in members
         ]
     )
+    signals = LearningChanges()
+    signals.add(assignment.id, [member.user_id for member in members])
+    flush_learning_changes(signals)
     # This runs after file/grant/event preparation as well as after runtime-row waits.
     current_member(user, session_key, assignment)
     if not all(

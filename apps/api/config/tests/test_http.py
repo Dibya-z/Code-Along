@@ -85,6 +85,16 @@ def test_asgi_serves_http_and_denies_invalid_websocket_boundaries() -> None:
         for path, headers, query in [
             ("/events/", [(b"origin", b"https://testserver")], b""),
             ("/unknown", [(b"origin", b"https://testserver")], b""),
+            ("/events/learning/", [(b"origin", b"https://testserver")], b""),
+            ("/events/learning/unknown", [(b"origin", b"https://testserver")], b""),
+            ("/events/learning", [], b""),
+            ("/events/learning", [(b"origin", b"https://attacker.invalid")], b""),
+            ("/events/learning", [(b"origin", b"https://testserver")] * 2, b""),
+            (
+                "/events/learning",
+                [(b"origin", b"https://testserver")],
+                b"token=forbidden",
+            ),
             ("/events", [], b""),
             ("/events", [(b"origin", b"https://attacker.invalid")], b""),
             ("/events", [(b"origin", b"https://testserver")] * 2, b""),
@@ -138,5 +148,38 @@ def test_event_authority_outage_is_bounded_inside_consumer_before_database_auth(
     # pytest denies every DB access here: the standard session wrapper must not perform auth first.
     with patch(
         "code_along.events.consumer.authority", side_effect=RuntimeError("offline")
+    ):
+        asyncio.run(check())
+
+
+def test_learning_authority_outage_is_bounded_inside_consumer_before_database_auth() -> (
+    None
+):
+    async def check() -> None:
+        websocket = ApplicationCommunicator(
+            application,
+            {
+                "type": "websocket",
+                "path": "/events/learning",
+                "query_string": b"",
+                "headers": [
+                    (b"origin", b"https://testserver"),
+                    (b"cookie", f"{settings.SESSION_COOKIE_NAME}={'a' * 32}".encode()),
+                ],
+            },
+        )
+        await websocket.send_input({"type": "websocket.connect"})
+        assert await websocket.receive_output(timeout=3) == {
+            "type": "websocket.close",
+            "code": 4401,
+            "reason": "authorization_unavailable",
+        }
+        await websocket.send_input({"type": "websocket.disconnect", "code": 1000})
+        await websocket.wait(timeout=3)
+
+    # No auth middleware or session lookup may touch the DB before the bounded guard.
+    with patch(
+        "code_along.learning.event_consumer._principal",
+        side_effect=RuntimeError("offline"),
     ):
         asyncio.run(check())

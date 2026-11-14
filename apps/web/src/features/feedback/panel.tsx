@@ -5,6 +5,11 @@ import { queryClient } from '../../app/providers.tsx';
 import type { Identity } from '../auth/session.ts';
 import { formatPublicationTime } from '../learning/presentation.ts';
 import { authorizeFeedback, feedbackApi } from './api.ts';
+import {
+  LearningUpdateStatus,
+  useLearningRead,
+} from '../learning-events/provider.tsx';
+import { PublishedFeedbackModel } from './published-model.ts';
 import { FeedbackModel } from './model.ts';
 import { draftProblem, FEEDBACK_COMMENT_BYTES } from './validation.ts';
 import type {
@@ -61,66 +66,46 @@ export function FeedbackPanel({
   scope: FeedbackScope;
   canReview: boolean;
 }) {
-  const [latest, setLatest] = useState<FeedbackPublication | null>(null),
-    [ready, setReady] = useState(false),
-    [error, setError] = useState<unknown>(null),
-    [revision, setRevision] = useState(0),
-    [historyOpen, setHistoryOpen] = useState(false),
-    [history, setHistory] = useState<readonly FeedbackPublication[] | null>(
-      null,
-    ),
-    [historyError, setHistoryError] = useState<unknown>(null);
-  const { accountId, assignmentId, submissionId, versionId } = scope;
-  useEffect(() => {
-    const abort = new AbortController();
+  const live = useRef(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [resource] = useState(() => {
     const current = () =>
-      !abort.signal.aborted &&
-      queryClient.getQueryData<Identity | null>(['me'])?.id === accountId;
-    setError(null);
-    void authorizeFeedback(scope, abort.signal, current)
-      .then(() => {
-        if (!current()) throw new Error('Feedback access changed.');
-        return feedbackApi.latest(scope, abort.signal);
-      })
-      .then((value) => {
-        if (current()) {
-          setLatest(value);
-          setReady(true);
-        }
-      })
-      .catch((cause: unknown) => {
-        if (current()) setError(cause);
-      });
-    return () => abort.abort();
-  }, [accountId, assignmentId, submissionId, versionId, revision, scope]);
+      live.current &&
+      queryClient.getQueryData<Identity | null>(['me'])?.id === scope.accountId;
+    return {
+      model: new PublishedFeedbackModel(scope, current, {
+        authorize: (signal) => authorizeFeedback(scope, signal, current),
+        latest: (signal) => feedbackApi.latest(scope, signal),
+        history: (signal) => feedbackApi.history(scope, signal),
+      }),
+      leases: 0,
+    };
+  });
+  const model = resource.model;
+  const value = useSyncExternalStore(model.subscribe, model.getSnapshot);
   useEffect(() => {
-    if (!historyOpen) return;
-    const abort = new AbortController();
-    const current = () =>
-      !abort.signal.aborted &&
-      queryClient.getQueryData<Identity | null>(['me'])?.id === accountId;
-    setHistoryError(null);
-    void authorizeFeedback(scope, abort.signal, current)
-      .then(() => {
-        if (!current()) throw new Error('Feedback access changed.');
-        return feedbackApi.history(scope, abort.signal);
-      })
-      .then((items) => {
-        if (current()) setHistory(items);
-      })
-      .catch((cause: unknown) => {
-        if (current()) setHistoryError(cause);
+    live.current = true;
+    resource.leases++;
+    void model.latest().catch(() => undefined);
+    return () => {
+      live.current = false;
+      resource.leases--;
+      queueMicrotask(() => {
+        if (resource.leases === 0) model.destroy();
       });
-    return () => abort.abort();
-  }, [
-    accountId,
-    assignmentId,
-    submissionId,
-    versionId,
+    };
+  }, [resource, model]);
+  useEffect(() => {
+    if (historyOpen) void model.history().catch(() => undefined);
+  }, [model, historyOpen]);
+  useLearningRead(`feedback-latest:${scope.submissionId}`, true, (signal) =>
+    model.latest(signal),
+  );
+  useLearningRead(
+    `feedback-history:${scope.submissionId}`,
     historyOpen,
-    revision,
-    scope,
-  ]);
+    (signal) => model.history(signal),
+  );
   return (
     <section
       aria-labelledby="feedback-heading"
@@ -131,17 +116,24 @@ export function FeedbackPanel({
         Feedback applies to this submitted code. It is a manual assessment, not
         an automated grade.
       </p>
-      {!ready && !error && <Notice>Checking published feedback…</Notice>}
-      {Boolean(error) && <Failure error={error} />}
-      {latest ? (
-        <Publication value={latest} />
+      <LearningUpdateStatus />
+      {!value.ready && !value.error && (
+        <Notice>Checking published feedback…</Notice>
+      )}
+      {Boolean(value.error) && <Failure error={value.error} />}
+      {value.latest ? (
+        <Publication value={value.latest} />
       ) : (
-        ready && <p>No feedback has been published for this submission.</p>
+        value.ready && (
+          <p>No feedback has been published for this submission.</p>
+        )
       )}
       <Button
         type="button"
         variant="secondary"
-        onClick={() => setRevision((value) => value + 1)}
+        onClick={() => {
+          void model.latest().catch(() => undefined);
+        }}
       >
         Refresh published feedback
       </Button>
@@ -151,19 +143,22 @@ export function FeedbackPanel({
         onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
       >
         <summary>Published feedback history</summary>
-        {Boolean(historyError) && <Failure error={historyError} />}
-        {!history && !historyError && (
+        {Boolean(value.historyError) && <Failure error={value.historyError} />}
+        {!value.history && !value.historyError && (
           <p>Loading published feedback history…</p>
         )}
-        {history?.length === 0 && <p>No publications yet.</p>}
-        {history?.map((item) => (
+        {value.history?.length === 0 && <p>No publications yet.</p>}
+        {value.history?.map((item) => (
           <Publication key={item.id} value={item} />
         ))}
       </details>
       {canReview && (
         <FeedbackEditor
           scope={scope}
-          onConfirmed={() => setRevision((value) => value + 1)}
+          onConfirmed={(receipt) => {
+            model.acceptConfirmed(receipt);
+            void model.latest().catch(() => undefined);
+          }}
         />
       )}
     </section>
@@ -175,7 +170,7 @@ function FeedbackEditor({
   onConfirmed,
 }: {
   scope: FeedbackScope;
-  onConfirmed: () => void;
+  onConfirmed: (receipt: FeedbackPublication) => void;
 }) {
   const live = useRef(true);
   const [open, setOpen] = useState(false);
@@ -214,7 +209,7 @@ function FeedbackEditor({
   useEffect(() => {
     if (value.receipt && notified.current !== value.receipt.id) {
       notified.current = value.receipt.id;
-      onConfirmed();
+      onConfirmed(value.receipt);
     }
   }, [value.receipt, onConfirmed]);
   const busy =

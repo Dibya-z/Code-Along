@@ -108,6 +108,7 @@ def test_product_schema_and_real_restricted_role_preserve_binary_receipt_boundar
                 "SELECT * FROM learning_assignmentteam",
                 "SELECT * FROM learning_assignmentwork",
                 "SELECT * FROM learning_assignmentworkmember",
+                "SELECT * FROM learning_learningnotificationstream",
                 "SELECT * FROM submissions_submission",
                 "SELECT * FROM submissions_submissionparticipant",
                 "SELECT * FROM submissions_submissionassignmentusage",

@@ -53,6 +53,7 @@ def update_workspace(
     archived: bool | None = None,
 ) -> Workspace:
     workspace = lock_workspace(workspace_id)
+    was_archived = workspace.archived_at is not None
     require_membership(workspace, user, owner=True)
     if name is not None:
         workspace.name = name
@@ -66,6 +67,13 @@ def update_workspace(
     from code_along.events.services import workspace_access_changed
 
     workspace_access_changed(workspace.id)
+    if was_archived != (workspace.archived_at is not None):
+        from code_along.learning.notifications import (
+            flush_learning_changes,
+            workspace_changes,
+        )
+
+        flush_learning_changes(workspace_changes(workspace.id, all_participants=True))
     return workspace
 
 
@@ -97,6 +105,14 @@ def update_member(
                 "detail": "Transfer workspace ownership before changing the owner membership."
             }
         )
+    from code_along.learning.notifications import (
+        LearningChanges,
+        flush_learning_changes,
+        workspace_changes,
+    )
+
+    signals = LearningChanges()
+    was_teacher = member.role in {"owner", "instructor"}
     if remove:
         from code_along.projects.services import (
             guard_member_removal,
@@ -108,7 +124,7 @@ def update_member(
             invalidate_workspace_membership,
         )
 
-        invalidate_workspace_membership(workspace, user_id)
+        signals.merge(invalidate_workspace_membership(workspace, user_id))
         remove_member_grants(workspace, user_id)
         member.active = False
         WorkspaceInvitation.objects.filter(
@@ -126,6 +142,9 @@ def update_member(
         raise ValidationError({"role": "Choose instructor or learner."})
     member.save(update_fields=["role", "active"])
     bump_acl(workspace)
+    if was_teacher != (member.active and member.role in {"owner", "instructor"}):
+        signals.merge(workspace_changes(workspace.id, all_participants=False))
+    flush_learning_changes(signals)
 
 
 @transaction.atomic
@@ -143,6 +162,7 @@ def transfer_ownership(
         raise ValidationError(
             {"new_owner_id": "Choose an active workspace member."}
         ) from None
+    target_was_teacher = target.role in {"owner", "instructor"}
     if old.id == target.id:
         return workspace
     WorkspaceInvitation.objects.filter(
@@ -156,4 +176,11 @@ def transfer_ownership(
     target.role = WorkspaceMembership.Role.OWNER
     target.save(update_fields=["role"])
     bump_acl(workspace)
+    if not target_was_teacher:
+        from code_along.learning.notifications import (
+            flush_learning_changes,
+            workspace_changes,
+        )
+
+        flush_learning_changes(workspace_changes(workspace.id, all_participants=False))
     return workspace

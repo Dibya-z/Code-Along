@@ -1,5 +1,5 @@
 import { createProductClient } from '@code-along/api-client';
-import { ApiError, secureFetch } from './client.ts';
+import { ApiError, parseRetryAfter, secureFetch } from './client.ts';
 function client() {
   return createProductClient(window.location.origin, async (request) => {
     const url = new URL(request.url);
@@ -30,7 +30,13 @@ async function result<T>(
     throw error;
   }
   if (!value.response.ok)
-    throw new ApiError(value.response.status, value.error);
+    throw new ApiError(
+      value.response.status,
+      value.error,
+      value.response.status === 429
+        ? parseRetryAfter(value.response.headers.get('Retry-After'))
+        : undefined,
+    );
   return value.data as T;
 }
 export const productApi = {

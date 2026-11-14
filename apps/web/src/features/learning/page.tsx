@@ -7,6 +7,13 @@ import { ApiError } from '../../api/client.ts';
 import { Pagination } from '../../components/pagination.tsx';
 import { SignedIn } from '../auth/guard.tsx';
 import { useIdentity } from '../auth/session.ts';
+import {
+  LearningUpdatesProvider,
+  LearningQueryRead,
+  LearningUpdateStatus,
+  useLearningQuery,
+} from '../learning-events/provider.tsx';
+import { participationApi } from './participation-api.ts';
 import { learningApi } from './api.ts';
 import { AssignmentAuthor } from './author.tsx';
 import { TaskNavigation } from './navigation.tsx';
@@ -15,6 +22,7 @@ import { formatPublicationTime } from './presentation.ts';
 import { MyAssignmentWork } from './my-work.tsx';
 import { TeachingRoster } from './teaching-roster.tsx';
 import { TeachingTeams } from './teaching-teams.tsx';
+import { TeachingProgress } from './progress.tsx';
 import { SubmissionList } from '../submissions/list.tsx';
 import './styles.css';
 
@@ -49,6 +57,11 @@ function AssignmentDetail({
     queryFn: ({ signal }) => learningApi.summary(assignmentId, signal),
   });
   const assignment = query.data;
+  const participation = useQuery({
+    queryKey: ['assignment-participation', accountId, assignmentId],
+    queryFn: ({ signal }) => participationApi.own(assignmentId, signal),
+    enabled: Boolean(assignment && !assignment.can_author),
+  });
   const hardDenial =
     query.error instanceof ApiError &&
     [401, 403, 404].includes(query.error.status);
@@ -62,6 +75,7 @@ function AssignmentDetail({
           { id: 'teaching-roster', label: 'Teaching roster' },
           { id: 'teaching-teams', label: 'Teams' },
           { id: 'submissions', label: 'Submissions' },
+          { id: 'progress', label: 'Progress' },
         ]
       : []),
   ];
@@ -82,40 +96,35 @@ function AssignmentDetail({
       </div>
     );
   return (
-    <div className="page">
-      <Link to={`/workspaces/${assignment.workspace_id}#assignments`}>
-        ← Workspace assignments
-      </Link>
-      <div className="section-head content-section">
-        <div>
-          <p className="eyebrow">
-            ASSIGNMENT{assignment.can_author ? ' · TEACHING' : ''}
-          </p>
-          <h1>{assignment.current_version?.title ?? assignment.title}</h1>
-        </div>
-        {assignment.archived && <span className="badge">Archived</span>}
-        <Button
-          variant="secondary"
-          busy={query.isFetching}
-          onClick={() => {
-            void query.refetch();
-          }}
-        >
-          Refresh assignment
-        </Button>
-      </div>
-      {assignment.archived && (
-        <Notice>
-          This assignment is archived. Published versions remain readable.
-        </Notice>
-      )}
-      {query.error && (
-        <>
-          <Failure error={query.error} />
-          <Notice>
-            Assignment access could not be refreshed. Your draft is retained;
-            changes are paused until access is checked again.
-          </Notice>
+    <LearningUpdatesProvider
+      scope={{
+        accountId,
+        assignmentId,
+        audience: assignment.can_author ? 'teaching' : 'participant',
+      }}
+      streaming={assignment.can_author || Boolean(participation.data)}
+    >
+      <LearningQueryRead
+        queryKey={['assignment', accountId, assignmentId]}
+        query={query}
+      />
+      <LearningQueryRead
+        queryKey={['assignment-participation', accountId, assignmentId]}
+        query={participation}
+        active={!assignment.can_author}
+      />
+      <div className="page">
+        <Link to={`/workspaces/${assignment.workspace_id}#assignments`}>
+          ← Workspace assignments
+        </Link>
+        <div className="section-head content-section">
+          <div>
+            <p className="eyebrow">
+              ASSIGNMENT{assignment.can_author ? ' · TEACHING' : ''}
+            </p>
+            <h1>{assignment.current_version?.title ?? assignment.title}</h1>
+          </div>
+          {assignment.archived && <span className="badge">Archived</span>}
           <Button
             variant="secondary"
             busy={query.isFetching}
@@ -123,134 +132,178 @@ function AssignmentDetail({
               void query.refetch();
             }}
           >
-            Recheck assignment access
+            Refresh assignment
           </Button>
-        </>
-      )}
-      <TaskNavigation
-        label="Assignment sections"
-        sections={sections}
-        active={active}
-      />
-      <section
-        className="content-section learning-view"
-        id="overview"
-        tabIndex={-1}
-        hidden={active !== 'overview'}
-        aria-label="Assignment overview"
-      >
-        {assignment.current_version ? (
-          <PublishedVersion
-            key={assignment.current_version.id}
-            assignmentId={assignment.id}
-            versionId={assignment.current_version.id}
-            accountId={accountId}
-            active={active === 'overview'}
-          />
-        ) : (
+        </div>
+        {assignment.archived && (
+          <Notice>
+            This assignment is archived. Published versions remain readable.
+          </Notice>
+        )}
+        {query.error && (
           <>
-            <h2>Not published yet</h2>
-            <p>
-              Only workspace teachers can read this draft. Publish a saved draft
-              to share its frozen content with active workspace members.
-            </p>
-            {assignment.can_author && (
-              <Link to="#draft">Edit assignment draft</Link>
-            )}
+            <Failure error={query.error} />
+            <Notice>
+              Assignment access could not be refreshed. Your draft is retained;
+              changes are paused until access is checked again.
+            </Notice>
+            <Button
+              variant="secondary"
+              busy={query.isFetching}
+              onClick={() => {
+                void query.refetch();
+              }}
+            >
+              Recheck assignment access
+            </Button>
           </>
         )}
-      </section>
-      <section
-        className="content-section learning-view"
-        id="my-work"
-        tabIndex={-1}
-        hidden={active !== 'my-work'}
-        aria-label="My assignment work"
-      >
-        <MyAssignmentWork
-          assignment={assignment}
-          accountId={accountId}
-          active={active === 'my-work'}
-          paused={Boolean(query.error)}
-          onRefreshAssignment={() => query.refetch({ throwOnError: true })}
+        <LearningUpdateStatus />
+        <TaskNavigation
+          label="Assignment sections"
+          sections={sections}
+          active={active}
         />
-      </section>
-      {assignment.can_author && (
         <section
           className="content-section learning-view"
-          id="draft"
+          id="overview"
           tabIndex={-1}
-          hidden={active !== 'draft'}
-          aria-label="Assignment draft editing"
+          hidden={active !== 'overview'}
+          aria-label="Assignment overview"
         >
-          <AssignmentAuthor
+          {assignment.current_version ? (
+            <PublishedVersion
+              key={assignment.current_version.id}
+              assignmentId={assignment.id}
+              versionId={assignment.current_version.id}
+              accountId={accountId}
+              active={active === 'overview'}
+            />
+          ) : (
+            <>
+              <h2>Not published yet</h2>
+              <p>
+                Only workspace teachers can read this draft. Publish a saved
+                draft to share its frozen content with active workspace members.
+              </p>
+              {assignment.can_author && (
+                <Link to="#draft">Edit assignment draft</Link>
+              )}
+            </>
+          )}
+        </section>
+        <section
+          className="content-section learning-view"
+          id="my-work"
+          tabIndex={-1}
+          hidden={active !== 'my-work'}
+          aria-label="My assignment work"
+        >
+          <MyAssignmentWork
             assignment={assignment}
             accountId={accountId}
-            active={active === 'draft'}
+            active={active === 'my-work'}
             paused={Boolean(query.error)}
+            onRefreshAssignment={() => query.refetch({ throwOnError: true })}
           />
         </section>
-      )}
-      <section
-        className="content-section learning-view"
-        id="versions"
-        tabIndex={-1}
-        hidden={active !== 'versions'}
-        aria-labelledby="versions-heading"
-      >
-        <Versions
-          assignmentId={assignment.id}
-          accountId={accountId}
-          active={active === 'versions'}
-        />
-      </section>
-      {assignment.can_author && (
-        <>
+        {assignment.can_author && (
           <section
             className="content-section learning-view"
-            id="submissions"
+            id="draft"
             tabIndex={-1}
-            hidden={active !== 'submissions'}
-            aria-label="Assignment submission discovery"
+            hidden={active !== 'draft'}
+            aria-label="Assignment draft editing"
           >
-            <SubmissionList
-              accountId={accountId}
-              assignmentId={assignmentId}
-              active={active === 'submissions'}
-            />
-          </section>
-          <section
-            className="content-section learning-view"
-            id="teaching-roster"
-            tabIndex={-1}
-            hidden={active !== 'teaching-roster'}
-            aria-label="Assignment teaching roster"
-          >
-            <TeachingRoster
+            <AssignmentAuthor
               assignment={assignment}
               accountId={accountId}
-              active={active === 'teaching-roster'}
-              paused={Boolean(query.error)}
-              onRefreshAssignment={() => query.refetch({ throwOnError: true })}
-            />
-          </section>
-          <section
-            className="content-section learning-view"
-            id="teaching-teams"
-            tabIndex={-1}
-            hidden={active !== 'teaching-teams'}
-            aria-label="Assignment teams"
-          >
-            <TeachingTeams
-              assignment={assignment}
-              accountId={accountId}
-              active={active === 'teaching-teams'}
+              active={active === 'draft'}
               paused={Boolean(query.error)}
             />
           </section>
-        </>
-      )}
-    </div>
+        )}
+        <section
+          className="content-section learning-view"
+          id="versions"
+          tabIndex={-1}
+          hidden={active !== 'versions'}
+          aria-labelledby="versions-heading"
+        >
+          <Versions
+            assignmentId={assignment.id}
+            accountId={accountId}
+            active={active === 'versions'}
+          />
+        </section>
+        {assignment.can_author && (
+          <>
+            <section
+              className="content-section learning-view"
+              id="progress"
+              tabIndex={-1}
+              hidden={active !== 'progress'}
+              aria-label="Teaching learning progress"
+            >
+              {assignment.current_version ? (
+                <TeachingProgress
+                  assignmentId={assignmentId}
+                  initialVersion={assignment.current_version}
+                  accountId={accountId}
+                  active={active === 'progress'}
+                />
+              ) : (
+                <p>Publish a version before viewing learner progress.</p>
+              )}
+            </section>
+            <section
+              className="content-section learning-view"
+              id="submissions"
+              tabIndex={-1}
+              hidden={active !== 'submissions'}
+              aria-label="Assignment submission discovery"
+            >
+              <SubmissionList
+                accountId={accountId}
+                assignmentId={assignmentId}
+                active={active === 'submissions'}
+              />
+            </section>
+            <section
+              className="content-section learning-view"
+              id="teaching-roster"
+              tabIndex={-1}
+              hidden={active !== 'teaching-roster'}
+              aria-label="Assignment teaching roster"
+            >
+              <TeachingRoster
+                assignment={assignment}
+                accountId={accountId}
+                active={active === 'teaching-roster'}
+                paused={Boolean(query.error)}
+                onRefreshAssignment={() =>
+                  query.refetch({ throwOnError: true })
+                }
+              />
+            </section>
+            <section
+              className="content-section learning-view"
+              id="teaching-teams"
+              tabIndex={-1}
+              hidden={active !== 'teaching-teams'}
+              aria-label="Assignment teams"
+            >
+              <TeachingTeams
+                assignment={assignment}
+                accountId={accountId}
+                active={active === 'teaching-teams'}
+                paused={Boolean(query.error)}
+              />
+            </section>
+          </>
+        )}
+      </div>
+    </LearningUpdatesProvider>
   );
 }
 function Versions({
@@ -269,6 +322,11 @@ function Versions({
     queryFn: ({ signal }) => learningApi.versions(assignmentId, offset, signal),
     enabled: active,
   });
+  useLearningQuery(
+    ['assignment-versions', accountId, assignmentId, offset],
+    query,
+    active,
+  );
   return (
     <>
       <div className="section-head">

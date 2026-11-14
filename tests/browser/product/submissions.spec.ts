@@ -2,6 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { components } from '../../../packages/api-client/src/schema.d.ts';
+import {
+  watchStaticLearning,
+  assertStaticLearning,
+} from './static-learning-proof.ts';
 import { register } from './helpers.ts';
 import {
   practiceFixture,
@@ -91,21 +95,13 @@ async function archive(page: Page, name: string) {
   };
 }
 async function staticSource(page: Page, assignmentId: string, detail: Detail) {
-  const traffic: { source: number; work: number; sockets: number } = {
-    source: 0,
-    work: 0,
-    sockets: 0,
-  };
-  const request = (value: import('@playwright/test').Request) => {
-    const path = new URL(value.url()).pathname;
-    if (path.startsWith('/api/v1/projects/')) traffic.source++;
-    if (/^\/api\/v1\/assignments\/[^/]+\/works\//.test(path)) traffic.work++;
-  };
-  const socket = () => {
-    traffic.sockets++;
-  };
-  page.on('request', request);
-  page.on('websocket', socket);
+  const actor = await get<{ id: string }>(page, '/api/v1/me/');
+  const proof = await watchStaticLearning(page, {
+    assignmentId,
+    audience: detail.participants.some((person) => person.id === actor.id)
+      ? 'participant'
+      : 'teaching',
+  });
   try {
     await page.goto(`/assignments/${assignmentId}/submissions/${detail.id}`);
     await expect(
@@ -122,10 +118,9 @@ async function staticSource(page: Page, assignmentId: string, detail: Detail) {
     expect(frozen.files).toEqual(
       detail.manifest.files.map(({ path, source }) => ({ path, source })),
     );
-    expect(traffic).toEqual({ source: 0, work: 0, sockets: 0 });
+    await assertStaticLearning(proof);
   } finally {
-    page.off('request', request);
-    page.off('websocket', socket);
+    proof.dispose();
   }
 }
 

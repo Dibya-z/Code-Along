@@ -19,6 +19,18 @@ from django.db.models import Q
 from django.utils import timezone
 
 from code_along.collaboration.control import post_control
+from code_along.learning.delivery import (
+    LearningClaim,
+    LearningDeliveryUnavailable,
+    identity,
+    mark_learning_claim,
+    select_learning_claims,
+)
+from code_along.learning.notification_types import (
+    MAX_GENERATION,
+    LearningDenied,
+    stream_group,
+)
 
 from .contracts import uuid_value
 from .models import InvalidationDelivery, OutboxEvent
@@ -97,29 +109,39 @@ def _select_claims(model: RowClass, limit: int, now: datetime) -> list[Claim]:
     return claims
 
 
-def claim_batch(limit: int = MAX_BATCH) -> list[Claim]:
-    """Reserve half for each queue, then fill unused capacity; commit before return."""
+def claim_batch(limit: int = MAX_BATCH) -> list[Claim | LearningClaim]:
+    """Reserve all three queues a share of one batch, then interleave spare fill."""
     if type(limit) is not int or not 1 <= limit <= MAX_BATCH:
         raise ValueError("invalid_dispatch_limit")
     try:
         _autocommit_required()
         now = timezone.now()
         with transaction.atomic():
-            share = limit // 2
-            private = _select_claims(InvalidationDelivery, share, now)
-            public = _select_claims(OutboxEvent, share, now)
-            remaining = limit - len(private) - len(public)
-            private += _select_claims(InvalidationDelivery, remaining, now)
-            remaining = limit - len(private) - len(public)
-            public += _select_claims(OutboxEvent, remaining, now)
-        ordered = []
-        for index in range(max(len(private), len(public))):
-            if index < len(private):
-                ordered.append(private[index])
-            if index < len(public):
-                ordered.append(public[index])
-        return ordered
-    except DatabaseError:
+            selectors: list[Callable[[int, datetime], list[Claim | LearningClaim]]] = [
+                lambda count, at: list(_select_claims(InvalidationDelivery, count, at)),
+                lambda count, at: list(_select_claims(OutboxEvent, count, at)),
+                lambda count, at: list(select_learning_claims(count, at)),
+            ]
+            queues = [select(limit // 3, now) for select in selectors]
+            remaining = limit - sum(map(len, queues))
+            while remaining:
+                added = 0
+                for queue, select in zip(queues, selectors, strict=True):
+                    if not remaining:
+                        break
+                    extra = select(1, now)
+                    queue.extend(extra)
+                    remaining -= len(extra)
+                    added += len(extra)
+                if not added:
+                    break
+        return [
+            queue[index]
+            for index in range(max(map(len, queues)))
+            for queue in queues
+            if index < len(queue)
+        ]
+    except (DatabaseError, LearningDeliveryUnavailable):
         raise DispatchUnavailable() from None
 
 
@@ -243,6 +265,28 @@ def _publish_private(row: InvalidationDelivery) -> str | None:
     return error
 
 
+def _publish_learning(claim: LearningClaim) -> str | None:
+    try:
+        if (
+            type(claim.generation) is not int
+            or not 0 < claim.generation <= MAX_GENERATION
+        ):
+            raise ValueError("invalid_delivery")
+        group = stream_group(identity(claim.row))
+        message = {
+            "type": "learning.changed",
+            "stream_id": str(claim.row.id),
+            "generation": claim.generation,
+        }
+    except (TypeError, ValueError, LearningDenied):
+        return "invalid_delivery"
+    try:
+        async_to_sync(_group_send)(group, message)
+        return None
+    except Exception:
+        return "channel_unavailable"
+
+
 def dispatch_batch() -> DispatchStats:
     """One finite batch. Periodic polling repairs missed best-effort wakeups."""
     stats = DispatchStats()
@@ -252,12 +296,20 @@ def dispatch_batch() -> DispatchStats:
         if timezone.now() >= claim.deadline:
             stats.lost += 1
             continue
-        error = (
-            _publish_public(claim.row)
-            if isinstance(claim.row, OutboxEvent)
-            else _publish_private(claim.row)
-        )
-        if not mark_claim(claim, error):
+        if isinstance(claim, LearningClaim):
+            error = _publish_learning(claim)
+            try:
+                marked = mark_learning_claim(claim, error)
+            except LearningDeliveryUnavailable:
+                raise DispatchUnavailable() from None
+        else:
+            error = (
+                _publish_public(claim.row)
+                if isinstance(claim.row, OutboxEvent)
+                else _publish_private(claim.row)
+            )
+            marked = mark_claim(claim, error)
+        if not marked:
             stats.lost += 1
         elif error is None:
             stats.published += 1

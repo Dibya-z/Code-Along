@@ -3,12 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Button, Dialog, Notice } from '@code-along/design-system';
 import { Failure } from '../../api/feedback.tsx';
 import { queryClient } from '../../app/providers.tsx';
+import { useLearningQuery } from '../learning-events/provider.tsx';
 import { participationApi } from './participation-api.ts';
 import { CommandFeedback, useLearningCommand } from './command.tsx';
 import { formatPublicationTime } from './presentation.ts';
 import { TeamRoster } from './team-roster.tsx';
 import { AssignmentWorkList } from './work-list.tsx';
 import { CreateAssignmentWork } from './work-create.tsx';
+import { OwnProgress } from './progress.tsx';
 import { OLD_WORK_NOTICE } from './work-model.ts';
 import type { Assignment } from './types.ts';
 import type {
@@ -79,6 +81,27 @@ export function MyAssignmentWork({
       ),
     enabled: active && Boolean(teamId),
   });
+  useLearningQuery(
+    ['assignment-participation', accountId, assignment.id],
+    own,
+    active,
+    participation?.state === 'invited' ? participation.invite_expires_at : null,
+  );
+  useLearningQuery(
+    [
+      'assignment-team',
+      accountId,
+      assignment.id,
+      teamId,
+      assignment.current_version?.id,
+    ],
+    team,
+    active && Boolean(teamId),
+    participation?.team_offer &&
+      participation.team_offer.consented_revision !== team.data?.roster_revision
+      ? participation.team_offer.expires_at
+      : null,
+  );
   const [consentPreview, setConsentPreview] = useState<AssignmentTeam | null>(
     null,
   );
@@ -223,6 +246,15 @@ export function MyAssignmentWork({
   );
   return (
     <>
+      {assignment.current_version && (
+        <OwnProgress
+          assignmentId={assignment.id}
+          versionId={assignment.current_version.id}
+          versionNumber={assignment.current_version.number}
+          accountId={accountId}
+          active={active}
+        />
+      )}
       <section
         className="content-section"
         aria-labelledby="my-participation-heading"

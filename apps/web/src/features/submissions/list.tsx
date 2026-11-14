@@ -6,6 +6,7 @@ import { Failure } from '../../api/feedback.tsx';
 import { Pagination } from '../../components/pagination.tsx';
 import { formatPublicationTime } from '../learning/presentation.ts';
 import { submissionsApi } from './api.ts';
+import { useLearningQuery } from '../learning-events/provider.tsx';
 import { learningApi } from '../learning/api.ts';
 import type { WorkSubmissionPage } from './types.ts';
 
@@ -47,6 +48,24 @@ export function SubmissionList({
         : submissionsApi.assignment(assignmentId, versionId, offset, signal),
     enabled: active,
   });
+  useLearningQuery(
+    ['submission-versions', accountId, assignmentId, versionOffset],
+    versions,
+    active && !workId,
+  );
+  useLearningQuery(
+    [
+      'submissions',
+      accountId,
+      assignmentId,
+      workId ?? 'teaching',
+      versionId,
+      offset,
+      confirmed,
+    ],
+    query,
+    active,
+  );
   const availability = workId
     ? (query.data as WorkSubmissionPage | undefined)?.availability
     : undefined;

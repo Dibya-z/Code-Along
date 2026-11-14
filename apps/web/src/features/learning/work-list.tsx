@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button, Notice } from '@code-along/design-system';
 import { Failure } from '../../api/feedback.tsx';
 import { Pagination } from '../../components/pagination.tsx';
+import { useLearningQuery } from '../learning-events/provider.tsx';
 import { participationApi } from './participation-api.ts';
 import { formatPublicationTime } from './presentation.ts';
 import { OLD_WORK_NOTICE } from './work-model.ts';
@@ -100,6 +101,16 @@ export function AssignmentWorkList({
       participationApi.versionSummaries(assignmentId, signal),
     enabled: active,
   });
+  useLearningQuery(
+    ['assignment-works', accountId, assignmentId, mine, retired, offset],
+    query,
+    active,
+  );
+  useLearningQuery(
+    ['assignment-versions', accountId, assignmentId, 'work-context'],
+    versions,
+    active,
+  );
   return (
     <section
       className="content-section"

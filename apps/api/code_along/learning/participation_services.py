@@ -21,6 +21,12 @@ from .models import (
     AssignmentTeam,
     AssignmentWork,
 )
+from .notifications import (
+    LearningChanges,
+    create_participant_stream,
+    flush_learning_changes,
+    roster_users,
+)
 from .policies import require_assignment_mutable, require_assignment_teacher
 from .services import AssignmentCapacity, AssignmentConflict, lock_assignment
 
@@ -187,6 +193,10 @@ def offer_participation(
             raise AssignmentConflict(
                 "The recipient is no longer an eligible workspace member."
             )
+        signals = LearningChanges()
+        signals.add(assignment.id, [recipient_id])
+        flush_learning_changes(signals)
+        current_member(user, session_key, assignment, teacher=True)
         return existing, False
     if expected_revision is not None:
         raise AssignmentConflict("A new offer has no previous revision.")
@@ -209,6 +219,11 @@ def offer_participation(
         raise AssignmentConflict(
             "The recipient is no longer an eligible workspace member."
         )
+    create_participant_stream(record)
+    signals = LearningChanges()
+    signals.add(assignment.id, [recipient_id])
+    flush_learning_changes(signals)
+    current_member(user, session_key, assignment, teacher=True)
     return record, True
 
 
@@ -242,6 +257,9 @@ def transition_participation(
         and participation.revision == expected_revision + 1
     ):
         return participation
+    affected = roster_users(assignment.id, participation.team_id) | {
+        participation.user_id
+    }
     require_revision(participation.revision, expected_revision)
     if action == "accept":
         require_assignment_mutable(assignment)
@@ -270,12 +288,22 @@ def transition_participation(
             )
         current_member(user, session_key, assignment, teacher=action == "revoke")
         end_participation(participation, target)
+    signals = LearningChanges()
+    signals.add(assignment.id, affected)
+    flush_learning_changes(signals)
     current_member(user, session_key, assignment, teacher=action == "revoke")
     return participation
 
 
-def invalidate_workspace_membership(workspace: Workspace, user_id: uuid.UUID) -> None:
+def invalidate_workspace_membership(
+    workspace: Workspace, user_id: uuid.UUID
+) -> LearningChanges:
     """Call inside the normal workspace-first deactivation transaction, before project writes."""
+    signals = LearningChanges()
+    for identifier in AssignmentParticipation.objects.filter(
+        workspace=workspace, user_id=user_id
+    ).values_list("assignment_id", flat=True):
+        signals.add(identifier, [user_id])
     assignment_ids = list(
         AssignmentParticipation.objects.filter(
             workspace=workspace, user_id=user_id, state__in=["invited", "accepted"]
@@ -288,4 +316,9 @@ def invalidate_workspace_membership(workspace: Workspace, user_id: uuid.UUID) ->
         participation = AssignmentParticipation.objects.get(
             assignment=assignment, user_id=user_id
         )
+        affected = roster_users(assignment.id, participation.team_id) | {
+            participation.user_id
+        }
         end_participation(participation, "revoked")
+        signals.add(assignment.id, affected)
+    return signals

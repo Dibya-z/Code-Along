@@ -11,7 +11,7 @@ npm run dev
 # Open https://127.0.0.1:8443 and keep this terminal open.
 ```
 
-The foreground controller initializes missing ignored credentials/TLS without overwriting existing state, selects the existing project-owned Lima engine on this workstation (or a working Docker engine elsewhere), builds frozen dependencies/images, applies migrations and waits for DB/Redis/API readiness. The optional `infra/compose.development.yaml` profile adds a non-root React/Vite watcher on the private Docker network. App API requests go directly through the same HTTPS proxy to Django. Vite's port is not published to the host. Read-only frontend/shared-source mounts and polling support updates across the VM filesystem; backend and dependency changes need a restart/rebuild.
+The foreground controller initializes missing ignored credentials/TLS without overwriting existing state, selects the existing project-owned Lima engine on this workstation (or a working Docker engine elsewhere), builds frozen dependencies/images, applies migrations and waits for DB/Redis/API readiness. The optional `infra/compose.development.yaml` profile adds a non-root React/Vite watcher on the private Docker network. App API requests go directly through the same HTTPS proxy to Django. Vite's port is not published to the host. Read-only frontend/shared-source mounts and polling support updates across the VM filesystem, including the collaboration, execution, project-event and learning-event contracts; backend and dependency changes need a restart/rebuild.
 
 ```sh
 npm run status
@@ -169,6 +169,8 @@ It requires the documented owned PostgreSQL 18 tools and installed Python/Node w
 ## Project events and notification jobs
 
 The same `npm run dev` controller manages Django's `/events` socket, one Celery solo notification worker (`jobs`) and one scheduler (`scheduler`), alongside the existing collaboration/API/database/Redis/proxy/frontend services. They reuse the API image and installed locked Python dependencies; there is no additional VM or independent dependency tree. The worker is capped at 384 MiB/0.5 CPU and the scheduler at 192 MiB/0.25 CPU. Both use read-only root filesystems, dropped capabilities and ephemeral `/tmp`, with no mail-volume mount. A failed required service makes the controller stop the owned stack instead of leaving a partially advertised environment running.
+
+M4 adds the exact private `/events/learning` route and durable learning heads to that same dispatcher/worker/scheduler. There is no extra process, port or queue. It refreshes authorized visible learning views independently of project events and never sends source or private draft feedback. See [private learning updates](../protocols/learning-updates.md) for its authority, bounded delivery and HTTP repair rules.
 
 The API Dockerfile copies only dependency manifests before its locked wheel-only install, then copies application source. Source edits can therefore reuse that dependency layer. The install uses an ephemeral download cache so wheel copies do not remain in the runtime image. API, migration, role-provisioning, notification worker and scheduler share those image layers; their source changes do not require separate dependency trees.
 

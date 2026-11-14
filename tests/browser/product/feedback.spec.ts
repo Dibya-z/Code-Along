@@ -2,6 +2,10 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import type { components } from '../../../packages/api-client/src/schema.d.ts';
+import {
+  watchStaticLearning,
+  assertStaticLearning,
+} from './static-learning-proof.ts';
 import { register } from './helpers.ts';
 import {
   disclosure,
@@ -86,32 +90,29 @@ async function submitted(page: Page, browser: Browser, browserName: string) {
     throw error;
   }
 }
-async function sourceOnly(page: Page, url: string, run: () => Promise<void>) {
-  const traffic = { source: 0, work: 0, sockets: 0 };
-  const request = (r: import('@playwright/test').Request) => {
-    const path = new URL(r.url()).pathname;
-    if (path.startsWith('/api/v1/projects/')) traffic.source++;
-    if (/^\/api\/v1\/assignments\/[^/]+\/works\//.test(path)) traffic.work++;
-  };
-  const socket = () => {
-    traffic.sockets++;
-  };
-  page.on('request', request);
-  page.on('websocket', socket);
+async function sourceOnly(
+  page: Page,
+  url: string,
+  audience: 'participant' | 'teaching',
+  run: () => Promise<void>,
+) {
+  const proof = await watchStaticLearning(page, {
+    assignmentId: new URL(url, page.url()).pathname.split('/')[2]!,
+    audience,
+  });
   try {
     await page.goto(url);
     await expect(
       page.getByRole('heading', { name: 'Instructor feedback', exact: true }),
     ).toBeVisible();
     await run();
-    expect(traffic).toEqual({ source: 0, work: 0, sockets: 0 });
+    await assertStaticLearning(proof);
     await expect(page.locator('.editor-workbench')).toHaveCount(0);
     await expect(
       page.locator('iframe[title="Isolated Python runtime"]'),
     ).toHaveCount(0);
   } finally {
-    page.off('request', request);
-    page.off('websocket', socket);
+    proof.dispose();
   }
 }
 async function review(page: Page) {
@@ -196,7 +197,7 @@ test('manual feedback stays private until publish and corrections keep frozen H 
     page.on('request', (r) => {
       if (new URL(r.url()).pathname === `${f.feedbackPath}draft/`) drafts++;
     });
-    await sourceOnly(page, f.url, async () => {
+    await sourceOnly(page, f.url, 'teaching', async () => {
       await expect(
         page.getByText('No feedback has been published for this submission.', {
           exact: true,
@@ -301,7 +302,7 @@ test('manual feedback stays private until publish and corrections keep frozen H 
       if (new URL(r.url()).pathname === `${f.feedbackPath}draft/`)
         learnerDrafts++;
     });
-    await sourceOnly(f.learner, f.url, async () => {
+    await sourceOnly(f.learner, f.url, 'participant', async () => {
       await expect(
         f.learner.getByRole('article', {
           name: 'Published feedback 2',
@@ -621,7 +622,7 @@ test('a teacher frozen as a participant reads published feedback but never reque
       if (new URL(r.url()).pathname === `${f.feedbackPath}draft/`)
         draftRequests++;
     });
-    await sourceOnly(f.learner, f.url, async () => {
+    await sourceOnly(f.learner, f.url, 'participant', async () => {
       await expect(
         f.learner.getByText(
           'No feedback has been published for this submission.',

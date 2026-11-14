@@ -553,3 +553,102 @@ class AssignmentWorkMember(models.Model):
                 condition=~models.Q(display_name=""), name="work_member_name_nonempty"
             ),
         ]
+
+
+class LearningNotificationStream(models.Model):
+    """One reusable private durable head/claim per assignment audience."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    assignment = models.ForeignKey(Assignment, on_delete=models.PROTECT)
+    workspace = models.ForeignKey("workspaces.Workspace", on_delete=models.PROTECT)
+    audience_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True
+    )
+    participation = models.ForeignKey(
+        AssignmentParticipation, on_delete=models.PROTECT, null=True, blank=True
+    )
+    head_generation = models.PositiveBigIntegerField(default=0)
+    published_generation = models.PositiveBigIntegerField(default=0)
+    updated_at = models.DateTimeField(default=timezone.now)
+    available_at = models.DateTimeField(default=timezone.now)
+    attempts = models.PositiveIntegerField(default=0)
+    lock_token = models.UUIDField(null=True, blank=True)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    claim_generation = models.PositiveBigIntegerField(null=True, blank=True)
+    last_error_code = models.CharField(max_length=32, default="", blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assignment", "audience_user"],
+                nulls_distinct=False,
+                name="learning_stream_audience",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(audience_user__isnull=True, participation__isnull=True)
+                    | models.Q(audience_user__isnull=False, participation__isnull=False)
+                ),
+                name="learning_stream_audience_pair",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    published_generation__lte=models.F("head_generation"),
+                    head_generation__lte=9223372036854775807,
+                    attempts__lte=1000000,
+                ),
+                name="learning_stream_generation_bounds",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(lock_token__isnull=True, locked_until__isnull=True)
+                    | models.Q(
+                        lock_token__isnull=False,
+                        locked_until__isnull=False,
+                        claim_generation__isnull=False,
+                    )
+                ),
+                name="learning_stream_lock_pair",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(claim_generation__isnull=True)
+                    | models.Q(
+                        claim_generation__gt=models.F("published_generation"),
+                        claim_generation__lte=models.F("head_generation"),
+                    )
+                ),
+                name="learning_stream_capture_bounds",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(head_generation=models.F("published_generation"))
+                    | models.Q(
+                        lock_token__isnull=True,
+                        locked_until__isnull=True,
+                        claim_generation__isnull=True,
+                    )
+                ),
+                name="learning_stream_clean_claim",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    last_error_code__in=[
+                        "",
+                        "channel_unavailable",
+                        "invalid_delivery",
+                        "projection_failed",
+                    ]
+                ),
+                name="learning_stream_error_code",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["available_at", "id"],
+                condition=models.Q(
+                    head_generation__gt=models.F("published_generation")
+                ),
+                name="learning_stream_pending",
+            )
+        ]

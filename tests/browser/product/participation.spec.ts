@@ -226,6 +226,7 @@ async function disclosure(page: Page, title: string) {
     ))
   )
     await summary.click();
+  await expect(summary.locator('..')).toHaveJSProperty('open', true);
 }
 async function offer(page: Page, assignmentId: string, actor: Actor) {
   await task(page, assignmentId, 'teaching-roster');
@@ -827,7 +828,7 @@ test('exact team consent and approval creates only its new shared work, while wi
   page,
   browser,
   browserName,
-}) => {
+}, info) => {
   test.setTimeout(180000);
   const f = await fixture(page, browser, browserName, 'team', [
     'River',
@@ -835,11 +836,198 @@ test('exact team consent and approval creates only its new shared work, while wi
   ]);
   const actor = f.actors[0]!,
     peer = f.actors[1]!;
+  let primary: unknown;
+  let phase = 'participation';
+  const began = Date.now();
+  const events: Record<string, unknown>[] = [];
+  const receipts: Record<string, unknown>[] = [];
+  type QuotaObservation = { at: number; seconds: number; route: string };
+  const quotas = new WeakMap<Page, Map<string, QuotaObservation>>();
+  function rememberQuota(currentPage: Page, observation: QuotaObservation) {
+    const routes =
+      quotas.get(currentPage) ?? new Map<string, QuotaObservation>();
+    routes.set(observation.route, observation);
+    quotas.set(currentPage, routes);
+  }
+  const recovered = new WeakMap<Page, Set<string>>();
+  async function waitObservedQuota(
+    currentPage: Page,
+    stage: string,
+    since: number,
+    routes: readonly string[],
+  ) {
+    const quota = [...(quotas.get(currentPage)?.values() ?? [])]
+      .filter((value) => value.at >= since && routes.includes(value.route))
+      .sort((a, b) => b.at - a.at)[0];
+    const used = recovered.get(currentPage) ?? new Set<string>();
+    if (
+      !quota ||
+      quota.at < since ||
+      !routes.includes(quota.route) ||
+      used.has(stage)
+    )
+      return false;
+    used.add(stage);
+    recovered.set(currentPage, used);
+    info.annotations.push({
+      type: 'observed-quota',
+      description: `${stage}: respected Retry-After ${quota.seconds}s before explicit read-only recheck`,
+    });
+    await currentPage.waitForTimeout(
+      Math.max(0, quota.at + quota.seconds * 1000 - Date.now()) + 2000,
+    );
+    return true;
+  }
+  const pending = new Set<Promise<void>>();
+  const disposers: (() => void)[] = [];
+  for (const [index, currentPage] of [page, actor.page, peer.page].entries()) {
+    const role = ['teacher', 'actor', 'peer'][index]!;
+    const ids = new WeakMap<import('@playwright/test').Request, number>();
+    let sequence = 0;
+    const append = (value: Record<string, unknown>) => {
+      const event = { ms: Date.now() - began, phase, role, ...value };
+      events.push(event);
+      if (
+        value['event'] === 'consent-receipt' ||
+        (role === 'teacher' && phase === 'teacher-refresh')
+      ) {
+        receipts.push(event);
+        if (receipts.length > 40) receipts.shift();
+      }
+      if (events.length > 160) events.shift();
+    };
+    const route = (url: string) => {
+      const path = new URL(url).pathname;
+      const base = `/api/v1/assignments/${f.assignmentId}/`;
+      if (!path.startsWith(base)) {
+        if (path === '/api/v1/me/') return 'me';
+        if (/^\/api\/v1\/projects\/[^/]+\/$/.test(path))
+          return 'source-metadata';
+        if (/^\/api\/v1\/projects\/[^/]+\/files\/(?:[^/]+\/)?$/.test(path))
+          return 'source-files';
+        if (
+          /^\/api\/v1\/projects\/[^/]+\/documents\/[^/]+\/ticket\/$/.test(path)
+        )
+          return 'source-ticket';
+        return null;
+      }
+      const rest = path.slice(base.length);
+      return rest === 'participation/team-consent/'
+        ? 'consent'
+        : rest === 'teams/'
+          ? 'teams'
+          : /^teams\/[^/]+\/$/.test(rest)
+            ? 'team-detail'
+            : rest === 'participations/'
+              ? 'roster'
+              : rest === 'participation/'
+                ? 'participation'
+                : rest === 'learning-head/'
+                  ? 'head'
+                  : rest.startsWith('works/')
+                    ? 'work'
+                    : rest === ''
+                      ? 'summary'
+                      : 'other-learning';
+    };
+    const onRequest = (request: import('@playwright/test').Request) => {
+      const kind = route(request.url());
+      if (!kind) return;
+      const id = ++sequence;
+      ids.set(request, id);
+      append({ event: 'request', id, route: kind, method: request.method() });
+    };
+    const onResponse = (response: import('@playwright/test').Response) => {
+      const kind = route(response.url());
+      if (!kind) return;
+      const seconds = Number(response.headers()['retry-after']);
+      const status = response.status();
+      if (
+        status === 429 &&
+        Number.isInteger(seconds) &&
+        seconds >= 1 &&
+        seconds <= 60
+      )
+        rememberQuota(currentPage, { at: Date.now(), seconds, route: kind });
+      append({
+        event: 'response',
+        id: ids.get(response.request()),
+        route: kind,
+        status,
+        retryAfter:
+          Number.isInteger(seconds) && seconds >= 1 && seconds <= 60
+            ? seconds
+            : null,
+      });
+      if (status !== 200 || !['consent', 'teams', 'team-detail'].includes(kind))
+        return;
+      const task = response
+        .json()
+        .then((data: unknown) => {
+          if (!data || typeof data !== 'object') return;
+          if (kind === 'consent') {
+            const value = data as Participation;
+            append({
+              event: 'consent-receipt',
+              revision: value.revision,
+              roster: value.team_offer?.roster_revision ?? null,
+              consented: value.team_offer?.consented_revision ?? null,
+            });
+          } else {
+            const values =
+              kind === 'teams' ? (data as PageOf<Team>).items : [data as Team];
+            if (!Array.isArray(values)) return;
+            for (const team of values.slice(0, 2))
+              append({
+                event: 'team-read',
+                id: ids.get(response.request()),
+                roster: team.roster_revision,
+                ready: team.consent_ready,
+                members: team.members.map((member) => ({
+                  actor:
+                    member.user.id === actor.id
+                      ? 'actor'
+                      : member.user.id === peer.id
+                        ? 'peer'
+                        : 'other',
+                  consented: member.consented,
+                })),
+              });
+          }
+        })
+        .catch(() => undefined)
+        .finally(() => pending.delete(task));
+      pending.add(task);
+    };
+    const onFailed = (request: import('@playwright/test').Request) => {
+      const kind = route(request.url());
+      if (kind)
+        append({
+          event: 'failed',
+          id: ids.get(request),
+          route: kind,
+          reason: /abort|cancel/i.test(request.failure()?.errorText ?? '')
+            ? 'cancelled'
+            : 'other-network-failure',
+        });
+    };
+    currentPage.on('request', onRequest);
+    currentPage.on('response', onResponse);
+    currentPage.on('requestfailed', onFailed);
+    disposers.push(() => {
+      currentPage.off('request', onRequest);
+      currentPage.off('response', onResponse);
+      currentPage.off('requestfailed', onFailed);
+    });
+  }
   try {
     for (const learner of f.actors) {
       await offer(page, f.assignmentId, learner);
       await accept(learner, f.assignmentId);
+      // No work exists yet; reopen the real consent UI when this learner acts.
+      await learner.page.goto('about:blank');
     }
+    phase = 'team-setup';
     await task(page, f.assignmentId, 'teaching-teams');
     await disclosure(page, 'Create a team');
     await page
@@ -920,14 +1108,55 @@ test('exact team consent and approval creates only its new shared work, while wi
       [actor.id, peer.id].sort(),
     );
     expect(team.consent_ready).toBe(false);
-    for (const learner of f.actors)
+    let finalConsentConfirmedAt = 0;
+    for (const [index, learner] of f.actors.entries()) {
+      phase = index === 0 ? 'actor-consent' : 'peer-consent';
       await consent(learner, f.assignmentId, team, ['River', 'Sage']);
+      finalConsentConfirmedAt = Date.now();
+      // The accepted roster is server-owned. No editor or pending choice exists here.
+      await learner.page.goto('about:blank');
+    }
+    phase = 'teacher-refresh';
+    const teacherReadStarted = Date.now();
     await page
       .getByRole('button', { name: 'Refresh teams', exact: true })
       .click();
-    await expect(selected).toContainText(
-      'Consent and approval: ready for this exact roster',
+    try {
+      await expect(selected).toContainText(
+        'Consent and approval: ready for this exact roster',
+      );
+    } catch (error) {
+      if (
+        !(await waitObservedQuota(
+          page,
+          'teacher-roster-read',
+          teacherReadStarted,
+          ['teams', 'team-detail', 'roster', 'me'],
+        ))
+      )
+        throw error;
+      await page
+        .getByRole('button', { name: 'Refresh teams', exact: true })
+        .click();
+      await expect(selected).toContainText(
+        'Consent and approval: ready for this exact roster',
+      );
+    }
+    // Keep the real 120/minute quota. These compressed multi-account setup
+    // actions are functional QA, not a load test; no Work or source exists yet.
+    phase = 'post-consent-pacing';
+    const remainingSetupWindow = Math.max(
+      0,
+      finalConsentConfirmedAt + 60000 - Date.now(),
     );
+    info.annotations.push({
+      type: 'functional-fixture-pacing',
+      description:
+        'Kept the normal 120/minute quota; aged out compressed setup reads before creating work.',
+    });
+    if (remainingSetupWindow > 0)
+      await page.waitForTimeout(remainingSetupWindow);
+    phase = 'actor-work';
     const work = await createWork(
       actor,
       f.assignmentId,
@@ -938,16 +1167,61 @@ test('exact team consent and approval creates only its new shared work, while wi
     const projectId = work.project!.id;
     await sourceIs(actor.page, f.original);
     await workbenchVisuals(actor.page, f.original);
+    phase = 'peer-work';
+    const peerReadStarted = Date.now();
     await peer.page.goto(`/assignments/${f.assignmentId}/works/${work.id}`);
-    await sourceIs(peer.page, f.original);
-    const project = await get<Project>(
-      actor.page,
-      `/api/v1/projects/${projectId}/`,
-    );
+    try {
+      await sourceIs(peer.page, f.original);
+    } catch (error) {
+      if (
+        !(await waitObservedQuota(
+          peer.page,
+          'peer-source-entry',
+          peerReadStarted,
+          ['source-metadata', 'source-files', 'source-ticket', 'work', 'me'],
+        ))
+      )
+        throw error;
+      const refresh = peer.page.getByRole('button', {
+        name: 'Refresh work access',
+        exact: true,
+      });
+      await refresh.click();
+      await expect(refresh).toBeEnabled();
+      const retryFile = peer.page.getByRole('button', {
+        name: 'Retry file',
+        exact: true,
+      });
+      if (await retryFile.isVisible()) await retryFile.click();
+      const recheck = peer.page.getByRole('button', {
+        name: 'Recheck access',
+        exact: true,
+      });
+      if (await recheck.isVisible()) await recheck.click();
+      await sourceIs(peer.page, f.original);
+    }
+    async function sourceIdentity(currentPage: Page): Promise<Project> {
+      const path = `/api/v1/projects/${projectId}/`;
+      let response = await currentPage.request.get(path);
+      if (response.status() === 429) {
+        const seconds = Number(response.headers()['retry-after']);
+        if (Number.isInteger(seconds) && seconds >= 1 && seconds <= 60) {
+          const at = Date.now();
+          rememberQuota(currentPage, { at, seconds, route: 'source-metadata' });
+          if (
+            await waitObservedQuota(currentPage, 'source-identity-read', at, [
+              'source-metadata',
+            ])
+          )
+            response = await currentPage.request.get(path);
+        }
+      }
+      expect(response.status(), 'GET source project identity').toBe(200);
+      return response.json() as Promise<Project>;
+    }
+    const project = await sourceIdentity(actor.page);
     expect(project.owner_id).toBe(actor.id);
-    expect(
-      (await get<Project>(peer.page, `/api/v1/projects/${projectId}/`)).role,
-    ).toBe('editor');
+    expect((await sourceIdentity(peer.page)).role).toBe('editor');
     const grants = await get<components['schemas']['GrantPage']>(
       actor.page,
       `/api/v1/projects/${projectId}/grants/`,
@@ -961,6 +1235,7 @@ test('exact team consent and approval creates only its new shared work, while wi
     await peer.page.reload();
     await sourceIs(peer.page, edited);
 
+    phase = 'teacher-source-denial';
     const privateRequests: string[] = [],
       sockets: string[] = [];
     page.on('request', (request) => {
@@ -978,7 +1253,25 @@ test('exact team consent and approval creates only its new shared work, while wi
       name: 'Teaching work records',
       exact: true,
     });
-    await expect(records).toContainText(
+    const visibility = await page.evaluate(() => {
+      const panel = document.getElementById('teaching-roster');
+      const summary = [...document.querySelectorAll('summary')].find(
+        (element) => element.textContent === 'Learning work records',
+      );
+      return {
+        hash: location.hash,
+        panelPresent: panel !== null,
+        panelHidden: panel?.hidden ?? null,
+        disclosureOpen:
+          summary?.parentElement instanceof HTMLDetailsElement
+            ? summary.parentElement.open
+            : null,
+        regionInDom: Boolean(
+          document.querySelector('section[aria-label="Teaching work records"]'),
+        ),
+      };
+    });
+    await expect(records, JSON.stringify(visibility)).toContainText(
       'This account does not currently have access to the source project.',
     );
     const projection = await get<Work>(
@@ -1011,6 +1304,7 @@ test('exact team consent and approval creates only its new shared work, while wi
       (await page.request.get(`/api/v1/projects/${projectId}/`)).status(),
     ).toBe(404);
 
+    phase = 'worker-retention';
     // Finish roster administration before the bounded interactive run. Task,
     // source and output switches must preserve the actual running Worker/input.
     await actor.page.setViewportSize({ width: 1000, height: 900 });
@@ -1092,6 +1386,7 @@ test('exact team consent and approval creates only its new shared work, while wi
       .locator('.cm-editor')
       .elementHandle();
     expect(originalEditor).not.toBeNull();
+    phase = 'withdrawal';
     const withdrawal = await actor.context.newPage();
     try {
       await task(withdrawal, f.assignmentId, 'my-work');
@@ -1159,8 +1454,71 @@ test('exact team consent and approval creates only its new shared work, while wi
       (await exported(actor.page)).files.find((file) => file.path === 'main.py')
         ?.source,
     ).toBe(edited);
+  } catch (error) {
+    primary = error;
+    for (const dispose of disposers) dispose();
+    await Promise.allSettled([...pending]);
+    const states = await Promise.all(
+      [page, actor.page, peer.page].map(async (currentPage, index) => {
+        const role = ['teacher', 'actor', 'peer'][index]!;
+        const state = await currentPage
+          .evaluate(() => ({
+            path: /\/works\//.test(location.pathname) ? 'work' : 'assignment',
+            hash: ['#my-work', '#teaching-teams', '#teaching-roster'].includes(
+              location.hash,
+            )
+              ? location.hash
+              : 'other',
+            workbench: Boolean(document.querySelector('.editor-workbench')),
+            editors: document.querySelectorAll(
+              '[aria-label^="Python source for"]',
+            ).length,
+            panes: [
+              ...document.querySelectorAll(
+                'nav[aria-label="Workbench panes"] button',
+              ),
+            ].map((e) => ({
+              name: e.textContent,
+              pressed: e.getAttribute('aria-pressed'),
+            })),
+            alerts: [...document.querySelectorAll('[role="alert"]')].map((e) =>
+              /throttl/i.test(e.textContent ?? '')
+                ? 'quota'
+                : /cancel/i.test(e.textContent ?? '')
+                  ? 'cancelled'
+                  : 'other',
+            ),
+            teamButtons: [
+              ...document.querySelectorAll(
+                'section[aria-label="Selected team: River and Sage"] button',
+              ),
+            ].map((e) => ({ disabled: (e as HTMLButtonElement).disabled })),
+            learning: document.querySelector(
+              '.learning-update-status [role="status"]',
+            )?.textContent,
+          }))
+          .catch(() => ({ closed: true }));
+        await currentPage
+          .screenshot({
+            path: info.outputPath(`team-${role}-original-failure.png`),
+            fullPage: true,
+            animations: 'disabled',
+            timeout: 3000,
+          })
+          .catch(() => undefined);
+        return { role, ...state };
+      }),
+    );
+    await writeFile(
+      info.outputPath('team-original-failure.json'),
+      JSON.stringify({ phase, receipts, events, states }, null, 2),
+    );
+    throw error;
   } finally {
-    await f.close();
+    for (const dispose of disposers) dispose();
+    await f.close().catch((error: unknown) => {
+      if (primary === undefined) throw error;
+    });
   }
 });
 

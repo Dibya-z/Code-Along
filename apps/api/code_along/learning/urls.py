@@ -2,8 +2,13 @@ from django.urls import path
 
 from . import api
 from . import participation_api as participation
+from .head_api import LearningHeadView
+from .progress_api import LearnerProgressView, OwnProgressView
 
 urlpatterns = [
+    path("<uuid:assignment_id>/learning-head/", LearningHeadView.as_view()),
+    path("<uuid:assignment_id>/progress/", OwnProgressView.as_view()),
+    path("<uuid:assignment_id>/progress/learners/", LearnerProgressView.as_view()),
     path(
         "<uuid:assignment_id>/participations/",
         participation.ParticipationListView.as_view(),

@@ -383,10 +383,12 @@ def test_expired_claims_retry_same_uuid_and_stale_or_expired_owners_cannot_mark(
 ) -> None:
     row = public_row(project)
     first = dispatcher.claim_batch()[0]
+    assert isinstance(first, dispatcher.Claim)
     after = first.deadline + timedelta(milliseconds=1)
     with patch.object(timezone, "now", return_value=after):
         assert not dispatcher.mark_claim(first)
         second = dispatcher.claim_batch()[0]
+        assert isinstance(second, dispatcher.Claim)
         assert second.row.id == row.id and second.token != first.token
         assert not dispatcher.mark_claim(first)
         assert not dispatcher.mark_claim(first, "channel_unavailable")

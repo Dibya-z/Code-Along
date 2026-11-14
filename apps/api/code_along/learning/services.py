@@ -31,6 +31,11 @@ from code_along.workspaces.services import lock_workspace, require_open
 
 from . import contracts
 from .models import Assignment, AssignmentVersion
+from .notifications import (
+    LearningChanges,
+    create_teaching_stream,
+    flush_learning_changes,
+)
 from .policies import require_assignment_mutable, require_assignment_teacher
 from .selectors import public_versions
 
@@ -146,9 +151,15 @@ def create_assignment(
             "assignment_capacity",
             "This workspace has reached its limit of 100 assignments.",
         )
-    return Assignment.objects.create(
+    assignment = Assignment.objects.create(
         workspace=workspace, created_by=current, draft_title=contracts.label(title, 120)
     )
+    create_teaching_stream(assignment)
+    signals = LearningChanges()
+    signals.add(assignment.id)
+    flush_learning_changes(signals)
+    require_assignment_teacher(workspace, current_actor(user, session_key))
+    return assignment
 
 
 @transaction.atomic
@@ -167,6 +178,10 @@ def archive_assignment(
     assignment.archived_at = timezone.now() if archived else None
     assignment.revision += 1
     assignment.save(update_fields=["archived_at", "revision", "updated_at"])
+    signals = LearningChanges()
+    signals.add(assignment.id, all_participants=True)
+    flush_learning_changes(signals)
+    require_assignment_teacher(assignment.workspace, current_actor(user, session_key))
     return assignment
 
 
@@ -319,4 +334,8 @@ def publish_version(
             "updated_at",
         ]
     )
+    signals = LearningChanges()
+    signals.add(assignment.id, all_participants=True)
+    flush_learning_changes(signals)
+    require_assignment_teacher(assignment.workspace, current_actor(user, session_key))
     return version, True

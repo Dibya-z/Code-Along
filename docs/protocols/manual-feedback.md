@@ -1,6 +1,6 @@
 # Manual instructor feedback
 
-M4.5 is locally verified. It extends [exact submissions](submissions.md) with private saved drafts and explicit immutable publications. There is no automatic grade, remote learner-code execution or editable progress endpoint. Exact-source Linux acceptance is tracked separately in the validation record.
+Manual feedback is implemented and locally verified. It extends [exact submissions](submissions.md) with private saved drafts and explicit immutable publications. There is no automatic grade, remote learner-code execution or editable progress endpoint. Exact acceptance evidence and milestone status are tracked separately in the validation record.
 
 ## Authority and source
 
@@ -56,4 +56,4 @@ Database constraints bind publication, draft and submission parents/current poin
 
 The review UI composes on the static submission route. It keeps editable local text separate from the saved CAS snapshot and any pending immutable publication. Fresh account checks, abort/current-account guards and strict IDs/status/hash validation reject stale or malformed completions. Local errors/conflicts preserve the draft for explicit reconciliation. Feedback is not stored in source files, project chat, browser recovery or an offline mutation queue.
 
-Comments render as text, including HTML-like input. Published history and manual author/time remain distinct from unsaved/private drafts and untrusted browser practice. M4.6 adds derived progress and private refresh notifications later; M4.5 does not claim those updates. Actual database/browser results and remaining limitations are recorded in the [M4 validation report](../architecture/m4-validation.md).
+Comments render as text, including HTML-like input. Published history and manual author/time remain distinct from unsaved/private drafts and untrusted browser practice. [Derived progress](learning-progress.md) and [private learning updates](learning-updates.md) are implemented and locally verified. Private draft edits produce no learning head; published feedback refreshes authorized visible views without replacing a local draft or confirming a pending publication from matching latest content. Actual results and remaining limitations are recorded in the [M4 validation report](../architecture/m4-validation.md).

@@ -16,6 +16,8 @@ services:
       - ../packages/api-client/src:/app/packages/api-client/src:ro
       - ../packages/contracts/collaboration:/app/packages/contracts/collaboration:ro
       - ../packages/contracts/execution:/app/packages/contracts/execution:ro
+      - ../packages/contracts/events:/app/packages/contracts/events:ro
+      - ../packages/contracts/learning-events:/app/packages/contracts/learning-events:ro
     networks: [backend]
     healthcheck:
       test:

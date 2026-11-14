@@ -9,6 +9,8 @@ import { RevisionViewer } from '../history/viewer.tsx';
 import { formatPublicationTime } from '../learning/presentation.ts';
 import { submissionsApi, readSubmissionEntry } from './api.ts';
 import { isRunnerId } from '@code-along/contracts/execution';
+import { LearningUpdatesProvider } from '../learning-events/provider.tsx';
+import { OwnProgress } from '../learning/progress.tsx';
 import { FeedbackPanel } from '../feedback/panel.tsx';
 
 export function SubmissionPage() {
@@ -90,60 +92,116 @@ function FrozenSubmission({
         </>
       )}
       {value && (
-        <>
-          <p className="eyebrow">
-            SUBMITTED CODE · VERSION {value.detail.published_version.number}
-          </p>
-          <h1>Submission {value.detail.assignment_submission_number}</h1>
-          <p>
-            {value.detail.author.display_name} ·{' '}
-            <time dateTime={value.detail.submitted_at}>
-              {formatPublicationTime(value.detail.submitted_at)}
-            </time>
-          </p>
-          <p>
-            This frozen code is separate from the live project.{' '}
-            {value.detail.practice
-              ? 'Its attached browser practice result is untrusted and is not a grade.'
-              : 'No runtime result was attached.'}
-          </p>
-          <RevisionViewer
-            manifest={value.revision}
-            name={value.detail.published_version.title}
-            provenance="submission"
-          />
-          <FeedbackPanel
-            scope={{
-              accountId,
-              assignmentId,
-              submissionId,
-              versionId: value.detail.assignment_version_id,
-            }}
-            canReview={value.detail.can_review}
-          />
-          <details className="revision-provenance">
-            <summary>Submission receipt</summary>
-            <dl>
-              <dt>Source manifest SHA-256</dt>
-              <dd>{value.detail.source_manifest_sha256}</dd>
-              <dt>Artifact manifest SHA-256</dt>
-              <dd>{value.detail.artifact_manifest_sha256}</dd>
-              <dt>Participants at submission</dt>
-              <dd>
-                {value.detail.participants
-                  .map((person) => person.display_name)
-                  .join(', ')}
-              </dd>
-              <dt>Practice result</dt>
-              <dd>
-                {value.detail.practice
-                  ? `${value.detail.practice.kind} · ${value.detail.practice.status}`
-                  : 'None attached'}
-              </dd>
-            </dl>
-          </details>
-        </>
+        <LearningUpdatesProvider
+          scope={{
+            accountId,
+            assignmentId,
+            audience: value.detail.participants.some(
+              (person) => person.id === accountId,
+            )
+              ? 'participant'
+              : 'teaching',
+          }}
+        >
+          <>
+            <p className="eyebrow">
+              SUBMITTED CODE · VERSION {value.detail.published_version.number}
+            </p>
+            <h1>Submission {value.detail.assignment_submission_number}</h1>
+            <p>
+              {value.detail.author.display_name} ·{' '}
+              <time dateTime={value.detail.submitted_at}>
+                {formatPublicationTime(value.detail.submitted_at)}
+              </time>
+            </p>
+            <p>
+              This frozen code is separate from the live project.{' '}
+              {value.detail.practice
+                ? 'Its attached browser practice result is untrusted and is not a grade.'
+                : 'No runtime result was attached.'}
+            </p>
+            <RevisionViewer
+              manifest={value.revision}
+              name={value.detail.published_version.title}
+              provenance="submission"
+            />
+            <FeedbackPanel
+              scope={{
+                accountId,
+                assignmentId,
+                submissionId,
+                versionId: value.detail.assignment_version_id,
+              }}
+              canReview={value.detail.can_review}
+            />
+            {value.detail.participants.some(
+              (person) => person.id === accountId,
+            ) && (
+              <SubmissionProgress
+                accountId={accountId}
+                assignmentId={assignmentId}
+                versionId={value.detail.assignment_version_id}
+                versionNumber={value.detail.published_version.number}
+              />
+            )}
+            <details className="revision-provenance">
+              <summary>Submission receipt</summary>
+              <dl>
+                <dt>Source manifest SHA-256</dt>
+                <dd>{value.detail.source_manifest_sha256}</dd>
+                <dt>Artifact manifest SHA-256</dt>
+                <dd>{value.detail.artifact_manifest_sha256}</dd>
+                <dt>Participants at submission</dt>
+                <dd>
+                  {value.detail.participants
+                    .map((person) => person.display_name)
+                    .join(', ')}
+                </dd>
+                <dt>Practice result</dt>
+                <dd>
+                  {value.detail.practice
+                    ? `${value.detail.practice.kind} · ${value.detail.practice.status}`
+                    : 'None attached'}
+                </dd>
+              </dl>
+            </details>
+          </>
+        </LearningUpdatesProvider>
       )}
     </div>
+  );
+}
+
+function SubmissionProgress({
+  accountId,
+  assignmentId,
+  versionId,
+  versionNumber,
+}: {
+  accountId: string;
+  assignmentId: string;
+  versionId: string;
+  versionNumber: number;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details
+      className="task-disclosure"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary>Your progress for this version</summary>
+      <p>
+        Progress follows your latest submission for this version. It can differ
+        from the frozen code open here.
+      </p>
+      <OwnProgress
+        accountId={accountId}
+        assignmentId={assignmentId}
+        versionId={versionId}
+        versionNumber={versionNumber}
+        active={open}
+      />
+    </details>
   );
 }

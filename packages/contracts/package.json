@@ -14,7 +14,8 @@
     "./execution/practice": "./execution/practice.ts",
     "./execution/runtime-inventory": "./execution/runtime-inventory.ts",
     "./execution/plots": "./execution/plots.ts",
-    "./execution/budgets": "./execution/budgets.ts"
+    "./execution/budgets": "./execution/budgets.ts",
+    "./learning-events": "./learning-events/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --project tsconfig.json && tsc --project tsconfig.test.json"

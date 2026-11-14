@@ -5,6 +5,7 @@ import { Failure } from '../../api/feedback.tsx';
 import { queryClient } from '../../app/providers.tsx';
 import { Pagination } from '../../components/pagination.tsx';
 import { CommandFeedback, useLearningCommand } from './command.tsx';
+import { useLearningQuery } from '../learning-events/provider.tsx';
 import { participationApi } from './participation-api.ts';
 import type { AssignmentTeam, Participation } from './participation-types.ts';
 import type { Assignment } from './types.ts';
@@ -91,6 +92,21 @@ function ScopedTeachingTeams({
       participationApi.team(assignment.id, selected, versionId, signal),
     enabled: enabled && Boolean(selected),
   });
+  useLearningQuery(
+    ['assignment-teams', accountId, assignment.id, versionId, offset],
+    teams,
+    enabled,
+  );
+  useLearningQuery(
+    ['assignment-team-participations', accountId, assignment.id],
+    participations,
+    enabled,
+  );
+  useLearningQuery(
+    ['assignment-team', accountId, assignment.id, selected, versionId],
+    detail,
+    enabled && Boolean(selected),
+  );
   async function refresh() {
     setRechecking(true);
     setCheckError(null);

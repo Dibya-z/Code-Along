@@ -11,6 +11,7 @@ from code_along.collaboration.profiles import public_display_name
 from code_along.events.contracts import utc
 from code_along.learning.contracts import canonical, digest
 from code_along.learning.models import Assignment
+from code_along.learning.notifications import LearningChanges, flush_learning_changes
 from code_along.learning.services import lock_assignment
 
 from . import feedback_contracts as contract
@@ -240,5 +241,10 @@ def publish_feedback(
     for usage in (assignment_usage, workspace_usage):
         usage.feedback_metadata_bytes += record.metadata_bytes
         usage.save(update_fields=["feedback_metadata_bytes"])
+    signals = LearningChanges()
+    signals.add(
+        assignment.id, submission.participants.values_list("user_id", flat=True)
+    )
+    flush_learning_changes(signals)
     require_reviewer(assignment, submission.id, user, session_key, open_parents=True)
     return record, True

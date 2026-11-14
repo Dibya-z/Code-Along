@@ -2,6 +2,7 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly body: unknown,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(
       status === 403
@@ -13,6 +14,25 @@ export class ApiError extends Error {
             : 'The request could not be completed.',
     );
   }
+}
+/** Keep bounded timing only; never retain or display a raw response header. */
+export function parseRetryAfter(
+  value: string | null,
+  now = Date.now(),
+): number | undefined {
+  if (value === null) return undefined;
+  let seconds: number;
+  if (/^[0-9]{1,5}$/.test(value)) seconds = Number(value);
+  else if (
+    /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/.test(
+      value,
+    )
+  )
+    seconds = Math.ceil((Date.parse(value) - now) / 1000);
+  else return undefined;
+  return Number.isFinite(seconds) && seconds >= 0 && seconds <= 86400
+    ? Math.max(1, seconds)
+    : undefined;
 }
 let csrf: string | undefined;
 let pendingCsrf: Promise<string> | undefined;
@@ -81,7 +101,17 @@ export async function secureFetch(
       JSON.stringify({ detail: 'The request could not be completed.' }),
       {
         status: response.status,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(response.status === 429 &&
+          parseRetryAfter(response.headers.get('Retry-After')) !== undefined
+            ? {
+                'Retry-After': String(
+                  parseRetryAfter(response.headers.get('Retry-After')),
+                ),
+              }
+            : {}),
+        },
       },
     );
   return response;
@@ -111,6 +141,13 @@ export async function api<T>(
       );
     }
   }
-  if (!response.ok) throw new ApiError(response.status, body);
+  if (!response.ok)
+    throw new ApiError(
+      response.status,
+      body,
+      response.status === 429
+        ? parseRetryAfter(response.headers.get('Retry-After'))
+        : undefined,
+    );
   return body as T;
 }

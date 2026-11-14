@@ -6,6 +6,7 @@ import { Failure } from '../../api/feedback.tsx';
 import { queryClient } from '../../app/providers.tsx';
 import { Pagination } from '../../components/pagination.tsx';
 import { CommandFeedback, useLearningCommand } from './command.tsx';
+import { useLearningQuery } from '../learning-events/provider.tsx';
 import { participationApi } from './participation-api.ts';
 import type { LearningUser, Participation } from './participation-types.ts';
 import { formatPublicationTime } from './presentation.ts';
@@ -83,6 +84,21 @@ function ScopedTeachingRoster({
     queryFn: () => productApi.members(assignment.workspace_id, memberOffset),
     enabled: active && offerOpen,
   });
+  useLearningQuery(
+    ['assignment-participations', accountId, assignment.id, offset],
+    roster,
+    active,
+  );
+  useLearningQuery(
+    [
+      'assignment-participation-members',
+      accountId,
+      assignment.workspace_id,
+      memberOffset,
+    ],
+    members,
+    active && offerOpen,
+  );
   async function refresh() {
     setRechecking(true);
     setReadError(null);

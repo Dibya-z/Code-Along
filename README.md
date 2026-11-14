@@ -24,14 +24,16 @@ Private submissions are implemented. In **Task → Submit code**, explicitly cho
 
 Manual instructor feedback is implemented on **View submitted code → Review this submission**. Save a private draft, then explicitly publish Reviewed, Needs changes or Complete as a manual assessment. Corrections retain earlier publications; participants see published feedback only. A teacher cannot review their own submitted work. Concurrent edits use revision checks, and an uncertain publication retains its original in-tab request for manual confirmation. Feedback does not run Python or grant live-source access. See [manual feedback and limits](docs/protocols/manual-feedback.md).
 
-Derived progress and private learning updates remain the final M4 feature unit; nothing is deployed.
+Derived progress and [private learning updates](docs/protocols/learning-updates.md) are implemented and locally verified. Learners see progress in **My work**, a pinned Work's **Task → Your progress**, and the submitted-code progress disclosure. Teachers use **Progress** to choose a published version and review each learner's latest submission and manual assessment. Historical assessment stays separate from current participation/submission availability. Updates refresh visible learning records while retaining open source, running Python, chosen code and private drafts. See [learning progress](docs/protocols/learning-progress.md).
+
+M4 remains In Progress until normal primary startup/preservation and exact-source Linux CI pass. The latest primary-stack build stopped safely at the storage floor before readiness; local feature/browser verification does not replace that setup gate. Nothing is deployed. Current results and remaining checks are in the [M4 validation record](docs/architecture/m4-validation.md).
 
 Open **https://127.0.0.1:8443** after starting the [local development stack](docs/operations/development-stack.md). This workstation uses the project-owned Lima VM; that guide includes its exact commands. Development verification/reset emails stay in a private local mail store, described in the [account guide](docs/operations/authentication.md).
 
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): milestones, dependencies, verification, commits and remaining work.
 - [M2 validation report](docs/architecture/m2-validation.md): editor/runner/recovery functionality, browser evidence and remaining boundaries.
 - [M3 validation record](docs/architecture/m3-validation.md): completed collaboration tests, crash recovery, CI and preservation evidence.
-- [M4 validation record](docs/architecture/m4-validation.md): current UI verification, preservation and pending learning-feature gates.
+- [M4 validation record](docs/architecture/m4-validation.md): locally verified learning features, failure history and remaining primary/Linux acceptance gates.
 - [M1 validation report](docs/architecture/m1-validation.md): completed functionality, test evidence, CI and limitations.
 - [Approved architecture](docs/architecture/approved-architecture.html): decisions, schema, protocols and roadmap. Open the HTML in a browser; some archived investigation links are machine-local.
 - [Design direction](DESIGN.md) and [repository instructions](AGENTS.md).

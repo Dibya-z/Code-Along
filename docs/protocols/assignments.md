@@ -141,5 +141,5 @@ corepack pnpm api:generate
 The [tests](../../apps/api/code_along/learning/tests/) cover immutable exact bytes, scoped reads, co-teacher H/H2 separation, actual session races,
 CSRF/Origin, bounded JSON, parent constraints, migration reversal/restoration, concurrent CAS/capacity and transactional rollback.
 Conservative metadata limits can be dominated by field limits; valid-row lower-limit tests exercise capacity logic without claiming unreachable boundary fixtures.
-The M4.2 [participation/team/fresh-work contract](participation-and-work.md) uses these publications. Browser practice execution, private submissions, manual feedback, progress and learning notifications remain later units.
+The [participation/team/fresh-work contract](participation-and-work.md), [browser practice](learning-practice.md), [private submissions](submissions.md) and [manual feedback](manual-feedback.md) use these publications. [Derived progress](learning-progress.md) and [private learning updates](learning-updates.md) are implemented and locally verified; exact acceptance evidence and milestone status are in the [M4 validation record](../architecture/m4-validation.md).
 Reading/publication creates no enrollment, source grant, learning project or private learning event in project notification groups.

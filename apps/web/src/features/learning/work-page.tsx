@@ -15,6 +15,11 @@ import { useIdentity } from '../auth/session.ts';
 import { ProjectDiscussion } from '../discussion/panel.tsx';
 import { loadEditorProject } from '../editor/api.ts';
 import { EditorWorkbench, type WorkbenchPane } from '../editor/workbench.tsx';
+import {
+  LearningUpdatesProvider,
+  LearningQueryRead,
+  LearningUpdateStatus,
+} from '../learning-events/provider.tsx';
 import { learningApi } from './api.ts';
 import { participationApi } from './participation-api.ts';
 import { formatPublicationTime } from './presentation.ts';
@@ -28,6 +33,7 @@ import {
   type TaskPracticeControls,
 } from './task-practice.tsx';
 import type { WorkExecutionContext } from '../execution/practice.ts';
+import { OwnProgress } from './progress.tsx';
 import { TaskHints } from './task-hints.tsx';
 import { SubmissionPanel } from '../submissions/panel.tsx';
 import { SubmissionList } from '../submissions/list.tsx';
@@ -67,6 +73,15 @@ function WorkDetail({
     queryKey: ['assignment-work', accountId, assignmentId, workId],
     queryFn: ({ signal }) =>
       participationApi.work(assignmentId, workId, signal),
+  });
+  const assignment = useQuery({
+    queryKey: ['assignment', accountId, assignmentId],
+    queryFn: ({ signal }) => learningApi.summary(assignmentId, signal),
+  });
+  const own = useQuery({
+    queryKey: ['assignment-participation', accountId, assignmentId],
+    queryFn: ({ signal }) => participationApi.own(assignmentId, signal),
+    enabled: Boolean(assignment.data && !assignment.data.can_author),
   });
   const [opened, setOpened] = useState<{
     projectId: string;
@@ -112,68 +127,94 @@ function WorkDetail({
     if (versionId) await version.refetch({ throwOnError: true });
   }
   return (
-    <div className="page project-page">
-      <Link to={`/assignments/${assignmentId}#my-work`}>
-        ← Assignment and My work
-      </Link>
-      {work.data && !work.data.can_continue && (
-        <Notice>
-          This work is no longer eligible for learning actions. Any project
-          access you still have is separate. {OLD_WORK_NOTICE}
-        </Notice>
-      )}
-      {work.error && <Failure error={work.error} />}
-      {version.error && <Failure error={version.error} />}
-      {(work.error || version.error) && (
-        <Notice>
-          Work access could not be checked. Your open code remains available for
-          export; editing is paused until access is checked again.
-        </Notice>
-      )}
-      {!opened && (
-        <Button
-          type="button"
-          variant="secondary"
-          busy={work.isFetching || version.isFetching}
-          onClick={() => {
-            void recheck().catch(() => undefined);
-          }}
-        >
-          Refresh work access
-        </Button>
-      )}
-      {opened && version.data ? (
-        <WorkSource
-          key={opened.projectId}
-          accountId={accountId}
-          workId={workId}
-          projectId={opened.projectId}
-          work={work.data}
-          version={version.data}
-          paused={workPaused}
-          rechecking={work.isFetching || version.isFetching}
-          onRecheckWork={recheck}
-        />
-      ) : work.data?.project === null ? (
-        <section className="content-section">
-          <h1>Assignment work</h1>
-          <p>
-            This work belongs to published version {version.data?.number ?? '…'}
-            . This account does not currently have access to its source project.
-            No source project has been opened.
-          </p>
-          {version.data && <TaskGuide version={version.data} />}
-          <SubmissionList
+    <LearningUpdatesProvider
+      scope={{
+        accountId,
+        assignmentId,
+        audience: assignment.data?.can_author ? 'teaching' : 'participant',
+      }}
+      streaming={Boolean(assignment.data?.can_author || own.data)}
+    >
+      <LearningQueryRead
+        queryKey={['assignment-work', accountId, assignmentId, workId]}
+        query={work}
+        expiry={version.data?.submission_policy.due_at ?? null}
+      />
+      <LearningQueryRead
+        queryKey={['assignment', accountId, assignmentId]}
+        query={assignment}
+      />
+      <LearningQueryRead
+        queryKey={['assignment-participation', accountId, assignmentId]}
+        query={own}
+        active={Boolean(assignment.data && !assignment.data.can_author)}
+      />
+      <div className="page project-page">
+        <Link to={`/assignments/${assignmentId}#my-work`}>
+          ← Assignment and My work
+        </Link>
+        {work.data && !work.data.can_continue && (
+          <Notice>
+            This work is no longer eligible for learning actions. Any project
+            access you still have is separate. {OLD_WORK_NOTICE}
+          </Notice>
+        )}
+        {work.error && <Failure error={work.error} />}
+        {version.error && <Failure error={version.error} />}
+        {(work.error || version.error) && (
+          <Notice>
+            Work access could not be checked. Your open code remains available
+            for export; editing is paused until access is checked again.
+          </Notice>
+        )}
+        {!opened && (
+          <Button
+            type="button"
+            variant="secondary"
+            busy={work.isFetching || version.isFetching}
+            onClick={() => {
+              void recheck().catch(() => undefined);
+            }}
+          >
+            Refresh work access
+          </Button>
+        )}
+        {opened && version.data ? (
+          <WorkSource
+            key={opened.projectId}
             accountId={accountId}
-            assignmentId={assignmentId}
             workId={workId}
-            active
+            projectId={opened.projectId}
+            work={work.data}
+            version={version.data}
+            paused={workPaused}
+            rechecking={work.isFetching || version.isFetching}
+            onRecheckWork={recheck}
           />
-        </section>
-      ) : !work.error && !version.error ? (
-        <Notice>Verifying work and its published task…</Notice>
-      ) : null}
-    </div>
+        ) : work.data?.project === null ? (
+          <section className="content-section">
+            <h1>Assignment work</h1>
+            <p>
+              This work belongs to published version{' '}
+              {version.data?.number ?? '…'}. This account does not currently
+              have access to its source project. No source project has been
+              opened.
+            </p>
+            {version.data && (
+              <TaskGuide version={version.data} accountId={accountId} />
+            )}
+            <SubmissionList
+              accountId={accountId}
+              assignmentId={assignmentId}
+              workId={workId}
+              active
+            />
+          </section>
+        ) : !work.error && !version.error ? (
+          <Notice>Verifying work and its published task…</Notice>
+        ) : null}
+      </div>
+    </LearningUpdatesProvider>
   );
 }
 
@@ -394,6 +435,8 @@ function WorkSource({
             <>
               <TaskGuide
                 version={version}
+                accountId={accountId}
+                active={visible}
                 projectId={project.id}
                 practice={{
                   state: checkCopy,
@@ -427,13 +470,18 @@ function WorkSource({
 
 function TaskGuide({
   version,
+  accountId,
+  active = true,
   projectId,
   practice,
 }: {
   version: AssignmentVersion;
+  accountId: string;
+  active?: boolean;
   projectId?: string;
   practice?: TaskPracticeControls;
 }) {
+  const [progressOpen, setProgressOpen] = useState(false);
   const environment = runtimeProfile(version.runtime.runtime_id);
   const policy = version.submission_policy;
   return (
@@ -443,8 +491,23 @@ function TaskGuide({
         Published version {version.number}. New publications do not replace this
         task or project.
       </p>
+      <LearningUpdateStatus />
       <div className="assignment-prose">{version.instructions}</div>
       <TaskHints hints={version.hints} />
+      <details
+        className="task-disclosure"
+        open={progressOpen}
+        onToggle={(event) => setProgressOpen(event.currentTarget.open)}
+      >
+        <summary>Your progress</summary>
+        <OwnProgress
+          assignmentId={version.assignment_id}
+          versionId={version.id}
+          versionNumber={version.number}
+          accountId={accountId}
+          active={active && progressOpen}
+        />
+      </details>
       <details className="task-disclosure">
         <summary>Task rules and environment</summary>
         <p>

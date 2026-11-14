@@ -1499,6 +1499,158 @@
         "enum": ["reject"],
         "type": "string"
       },
+      "LearnerProgressPage": {
+        "properties": {
+          "count": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LearnerProgressRow"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["count", "items"],
+        "type": "object"
+      },
+      "LearnerProgressRow": {
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "assignment_version_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "eligibility_state": {
+            "$ref": "#/components/schemas/LearningEligibilityState"
+          },
+          "latest_assessment": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProgressAssessment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_submission": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProgressSubmission"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/LearningProgressState"
+          },
+          "user": {
+            "$ref": "#/components/schemas/LearningUser"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "assignment_version_id",
+          "eligibility_state",
+          "latest_assessment",
+          "latest_submission",
+          "state",
+          "user",
+          "user_id"
+        ],
+        "type": "object"
+      },
+      "LearningAudience": {
+        "description": "* `teaching` - teaching\n* `participant` - participant",
+        "enum": ["teaching", "participant"],
+        "type": "string"
+      },
+      "LearningEligibilityState": {
+        "description": "* `not_offered` - not_offered\n* `invited` - invited\n* `expired` - expired\n* `declined` - declined\n* `withdrawn` - withdrawn\n* `revoked` - revoked\n* `unavailable` - unavailable\n* `team_pending` - team_pending\n* `policy_ineligible` - policy_ineligible\n* `eligible` - eligible\n* `archived` - archived",
+        "enum": [
+          "not_offered",
+          "invited",
+          "expired",
+          "declined",
+          "withdrawn",
+          "revoked",
+          "unavailable",
+          "team_pending",
+          "policy_ineligible",
+          "eligible",
+          "archived"
+        ],
+        "type": "string"
+      },
+      "LearningHeadOutput": {
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "audience": {
+            "$ref": "#/components/schemas/LearningAudience"
+          },
+          "head_generation": {
+            "pattern": "^(0|[1-9][0-9]{0,18})$",
+            "type": "string"
+          },
+          "protocol": {
+            "$ref": "#/components/schemas/LearningHeadProtocol"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/LearningHeadScope"
+          },
+          "version": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "audience",
+          "head_generation",
+          "protocol",
+          "scope",
+          "version"
+        ],
+        "type": "object"
+      },
+      "LearningHeadProtocol": {
+        "description": "* `code-along.learning-events` - code-along.learning-events",
+        "enum": ["code-along.learning-events"],
+        "type": "string"
+      },
+      "LearningHeadScope": {
+        "description": "* `assignment` - assignment",
+        "enum": ["assignment"],
+        "type": "string"
+      },
+      "LearningProgressState": {
+        "description": "* `not_started` - not_started\n* `in_progress` - in_progress\n* `submitted` - submitted\n* `reviewed` - reviewed\n* `needs_changes` - needs_changes\n* `complete` - complete",
+        "enum": [
+          "not_started",
+          "in_progress",
+          "submitted",
+          "reviewed",
+          "needs_changes",
+          "complete"
+        ],
+        "type": "string"
+      },
       "LearningUser": {
         "properties": {
           "display_name": {
@@ -1699,6 +1851,62 @@
       "NullEnum": {
         "type": "null"
       },
+      "OwnProgress": {
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "assignment_version_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "can_submit": {
+            "type": "boolean"
+          },
+          "eligibility_state": {
+            "$ref": "#/components/schemas/LearningEligibilityState"
+          },
+          "latest_assessment": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProgressAssessment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_submission": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProgressSubmission"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/LearningProgressState"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "assignment_version_id",
+          "can_submit",
+          "eligibility_state",
+          "latest_assessment",
+          "latest_submission",
+          "state",
+          "user_id"
+        ],
+        "type": "object"
+      },
       "Participation": {
         "properties": {
           "accepted_at": {
@@ -1806,6 +2014,54 @@
         "description": "* `invited` - invited\n* `accepted` - accepted\n* `declined` - declined\n* `withdrawn` - withdrawn\n* `revoked` - revoked",
         "enum": ["invited", "accepted", "declined", "withdrawn", "revoked"],
         "type": "string"
+      },
+      "ProgressAssessment": {
+        "properties": {
+          "assessment_kind": {
+            "$ref": "#/components/schemas/AssessmentKindEnum"
+          },
+          "assessment_status": {
+            "$ref": "#/components/schemas/ManualAssessmentStatus"
+          },
+          "publication_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment_kind",
+          "assessment_status",
+          "publication_id",
+          "published_at"
+        ],
+        "type": "object"
+      },
+      "ProgressSubmission": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "number": {
+            "maximum": 256,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "source_manifest_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": ["id", "number", "source_manifest_sha256", "submitted_at"],
+        "type": "object"
       },
       "ProjectBodyRequest": {
         "properties": {
@@ -4200,6 +4456,49 @@
         "tags": ["assignments"]
       }
     },
+    "/api/v1/assignments/{assignment_id}/learning-head/": {
+      "get": {
+        "operationId": "get_learning_head",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "audience",
+            "required": true,
+            "schema": {
+              "enum": ["participant", "teaching"],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningHeadOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
     "/api/v1/assignments/{assignment_id}/participation/": {
       "get": {
         "operationId": "get_own_assignment_participation",
@@ -4902,6 +5201,112 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/progress/": {
+      "get": {
+        "operationId": "get_own_learning_progress",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "assignment_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnProgress"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/progress/learners/": {
+      "get": {
+        "operationId": "list_learner_progress",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "assignment_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnerProgressPage"
                 }
               }
             },
