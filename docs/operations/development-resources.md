@@ -18,9 +18,13 @@ If headroom becomes inadequate, pause disk-heavy work and inspect verified dispo
 
 Each coherent feature bundle receives relevant local tests, type/lint checks and diff review. Repeat broader suites when the changed behavior, failures or unresolved risks require them. The milestone gate still includes the complete integration/browser regression; focused local checks do not replace it.
 
-CI preserves the existing `foundation` and `compose` job names. Both classify the complete immutable push diff or pull-request merge-base diff. Only a nonempty change containing ordinary root README/tracker or `docs/**/*.md` prose selects lightweight verification. Protocol/security specifications, architecture decisions, application source, configuration, dependencies, symlinks, executable files, unknown paths and ambiguous/missing history retain full checks. Manual runs always use full verification.
+CI preserves the existing required `foundation` and `compose` job names. One shared `changes` job classifies the complete immutable push diff or pull-request merge-base diff. Only a nonempty change containing ordinary root README/tracker or `docs/**/*.md` prose selects lightweight verification. Protocol/security specifications, architecture decisions, application source, configuration, dependencies, symlinks, executable files, unknown paths and ambiguous/missing history retain full checks. Manual runs always use full verification.
 
-The lightweight path installs only locked root tooling, checks Markdown formatting and local file-link targets, and tests the conservative classifier. Its Compose job explicitly records why no container validation is needed. It does not report browser/database tests as executed. Heading anchors and remote website availability are outside the local link check.
+The lightweight path installs only locked root tooling, checks Markdown formatting and local file-link targets, and tests the conservative classifier. Browser and Compose work is explicitly skipped for that verified prose classification; it is not reported as executed. Heading anchors and remote website availability are outside the local link check.
+
+Full verification runs source/backend/transport/build checks, Compose and a Chromium/WebKit browser matrix independently. Each browser job retains its engine's isolation, foundation and complete product cases, using a private disposable database and the same assertions and per-test deadlines. The `foundation` aggregate succeeds only when all required full-source results succeed; missing, failed or cancelled results fail it. Prose-only skipped browser/Compose jobs are accepted only after successful exact prose classification and source/document checks.
+
+This separation follows a measured cancellation of the old combined job at its 35-minute budget as the browser matrix grew. It reduces the critical path and keeps one stable complete result without dropping tests or increasing their timeouts. Each browser engine retains separately named failure evidence.
 
 Run the same prose check locally with the documented project-local cache environment:
 

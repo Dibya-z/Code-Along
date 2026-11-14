@@ -14,13 +14,31 @@ env:
   UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache
   STORYBOOK_DISABLE_TELEMETRY: '1'
 jobs:
-  foundation:
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.diff.outputs.mode }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: 3.13.12
+      - name: Classify the complete event diff
+        id: diff
+        run: python tools/ci/check_changes.py
+      - name: Test conservative classification, documentation and aggregate checks
+        run: python -m unittest discover -s tests/python -p 'test_ci_*.py' -v
+  source:
+    needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -29,18 +47,13 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.13.12
-      - name: Classify the complete event diff
-        id: changes
-        run: python tools/ci/check_changes.py
-      - name: Test conservative CI classification and documentation checks
-        run: python -m unittest discover -s tests/python -p test_ci_changes.py -v
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-        if: steps.changes.outputs.mode != 'docs'
+        if: needs.changes.outputs.mode != 'docs'
         with:
           version: 0.10.9
           enable-cache: false
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: steps.changes.outputs.mode != 'docs'
+        if: needs.changes.outputs.mode != 'docs'
         with:
           path: |
             .pnpm-store
@@ -48,42 +61,42 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-deps-${{ hashFiles('pnpm-lock.yaml', 'uv.lock') }}
           restore-keys: ${{ runner.os }}-${{ runner.arch }}-deps-
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: steps.changes.outputs.mode == 'docs'
+        if: needs.changes.outputs.mode == 'docs'
         with:
           path: .pnpm-store
           key: ${{ runner.os }}-${{ runner.arch }}-docs-deps-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-${{ runner.arch }}-docs-deps-
       - name: Check prose with only locked root tooling
-        if: steps.changes.outputs.mode == 'docs'
+        if: needs.changes.outputs.mode == 'docs'
         run: |
           npm install --global corepack@0.36.0
           corepack pnpm --filter code-along --fail-if-no-match install --frozen-lockfile
           python tools/ci/check_changes.py --check-docs
       - name: Install locked tooling
-        if: steps.changes.outputs.mode != 'docs'
+        if: needs.changes.outputs.mode != 'docs'
         run: |
           npm install --global corepack@0.36.0
           corepack pnpm install --frozen-lockfile
           uv sync --locked --no-python-downloads
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: steps.changes.outputs.mode != 'docs'
+        if: needs.changes.outputs.mode != 'docs'
         with:
           path: .runtime/ci-services
           key: ${{ runner.os }}-${{ runner.arch }}-pg18.7-redis8.4.5-v1
       - name: Build owned native service tools
-        if: steps.changes.outputs.mode != 'docs'
+        if: needs.changes.outputs.mode != 'docs'
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends build-essential bison flex
           tools/ci/setup_native_services.sh
       - name: Show owned native build failures
-        if: failure() && steps.changes.outputs.mode != 'docs'
+        if: failure() && needs.changes.outputs.mode != 'docs'
         run: |
           for ca_log in .runtime/ci-services/*-build.log; do
             [ ! -f "$ca_log" ] || tail -n 50 "$ca_log"
           done
       - name: Quality, locks and generated contract drift
-        if: steps.changes.outputs.mode != 'docs'
+        if: needs.changes.outputs.mode != 'docs'
         run: |
           corepack pnpm check
           corepack pnpm api:check
@@ -92,12 +105,12 @@ jobs:
           uv run --locked --offline ruff format --check .
           uv run --locked --offline mypy
       - name: Published dependency advisories
-        if: steps.changes.outputs.mode != 'docs'
+        if: needs.changes.outputs.mode != 'docs'
         run: |
           corepack pnpm audit --audit-level moderate
           uv run --locked --offline python tools/ci/check_python_advisories.py
       - name: Backend, protocol and durable transport tests
-        if: steps.changes.outputs.mode != 'docs'
+        if: needs.changes.outputs.mode != 'docs'
         run: |
           uv run --locked --offline python -m pytest -q
           corepack pnpm test
@@ -105,59 +118,123 @@ jobs:
           uv run --locked --offline python tools/dev/postgres_cluster.py -- corepack pnpm --filter @code-along/collaboration test:transport
           uv run --locked --offline python tools/dev/postgres_cluster.py -- corepack pnpm --filter @code-along/collaboration test:product
       - name: Build frontend, runner and component stories
-        if: steps.changes.outputs.mode != 'docs'
+        if: needs.changes.outputs.mode != 'docs'
         run: |
           corepack pnpm --filter @code-along/web build
           corepack pnpm --filter @code-along/runner-web build
           corepack pnpm --filter @code-along/browser-proofs build
           corepack pnpm --filter @code-along/design-system build-storybook
-      - name: Browser isolation, UI and two-user foundation flows
-        if: steps.changes.outputs.mode != 'docs'
+  browser:
+    needs: changes
+    if: needs.changes.outputs.mode != 'docs'
+    name: Browser (${{ matrix.browser }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.3
+          package-manager-cache: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: 3.13.12
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: 0.10.9
+          enable-cache: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .pnpm-store
+            .uv-cache
+          key: ${{ runner.os }}-${{ runner.arch }}-deps-${{ hashFiles('pnpm-lock.yaml', 'uv.lock') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-deps-
+      - name: Install locked tooling
         run: |
-          corepack pnpm --filter @code-along/browser-proofs exec playwright install --with-deps chromium webkit
-          corepack pnpm --filter @code-along/browser-proofs test:browser
-          corepack pnpm --filter @code-along/browser-proofs test:foundation
+          npm install --global corepack@0.36.0
+          corepack pnpm install --frozen-lockfile
+          uv sync --locked --no-python-downloads
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .runtime/ci-services
+          key: ${{ runner.os }}-${{ runner.arch }}-pg18.7-redis8.4.5-v1
+      - name: Build owned native service tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends build-essential bison flex
+          tools/ci/setup_native_services.sh
+      - name: Show owned native build failures
+        if: failure()
+        run: |
+          for ca_log in .runtime/ci-services/*-build.log; do
+            [ ! -f "$ca_log" ] || tail -n 50 "$ca_log"
+          done
+      - name: Build frontend, runner and component stories
+        run: |
+          corepack pnpm --filter @code-along/web build
+          corepack pnpm --filter @code-along/runner-web build
+          corepack pnpm --filter @code-along/browser-proofs build
+          corepack pnpm --filter @code-along/design-system build-storybook
+      - name: Install the selected supported engine
+        run: corepack pnpm --filter @code-along/browser-proofs exec playwright install --with-deps ${{ matrix.browser }}
+      - name: Browser isolation
+        shell: bash
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/isolation-${{ matrix.browser }}.json
+        run: |
+          mkdir -p tests/browser/test-results
+          corepack pnpm --filter @code-along/browser-proofs exec playwright test --project=${{ matrix.browser }} --workers=1 --retries=0 --reporter=list,github,json --output=test-results/isolation-${{ matrix.browser }} 2>&1 | tee tests/browser/test-results/isolation-${{ matrix.browser }}.log
+      - name: Foundation UI
+        shell: bash
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/foundation-${{ matrix.browser }}.json
+        run: |
+          corepack pnpm --filter @code-along/browser-proofs exec playwright test --config foundation/playwright.config.ts --project=${{ matrix.browser }} --workers=1 --retries=0 --reporter=list,github,json --output=test-results/foundation-${{ matrix.browser }} 2>&1 | tee tests/browser/test-results/foundation-${{ matrix.browser }}.log
+      - name: Product with one owned native fixture
+        shell: bash
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/product-${{ matrix.browser }}.json
+        run: |
           uv run --locked --offline python tools/dev/init_development.py
-          corepack pnpm --filter @code-along/browser-proofs test:product
-      - name: Keep failed owned browser evidence
-        if: failure() && steps.changes.outputs.mode != 'docs'
+          corepack pnpm --filter @code-along/browser-proofs exec playwright test --config product/playwright.config.ts --project=${{ matrix.browser }} --workers=1 --retries=0 --reporter=list,github,json --output=test-results/product-${{ matrix.browser }} 2>&1 | tee tests/browser/test-results/product-${{ matrix.browser }}.log
+      - name: Keep per-engine browser results and partial logs
+        if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: owned-browser-failures
+          name: owned-browser-${{ matrix.browser }}-${{ github.run_attempt }}
           path: tests/browser/test-results
           retention-days: 3
           if-no-files-found: ignore
   compose:
+    needs: changes
+    if: needs.changes.outputs.mode != 'docs'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.13.12
-      - name: Classify the complete event diff
-        id: changes
-        run: python tools/ci/check_changes.py
-      - name: Record prose-only Compose decision
-        if: steps.changes.outputs.mode == 'docs'
-        run: echo "Prose-only diff; foundation checks pinned formatting and local file links."
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        if: steps.changes.outputs.mode != 'docs'
         with:
           node-version: 24.22.3
           package-manager-cache: false
       - name: Build and start only the owned CI stack
-        if: steps.changes.outputs.mode != 'docs'
         run: |
           python tools/dev/init_development.py
           docker compose -p code-along-ci --env-file .env -f infra/compose.yaml config --quiet
           docker compose -p code-along-ci --env-file .env -f infra/compose.yaml up --build -d
           python tools/ci/compose_smoke.py
       - name: Verify connected frontend development and live updates
-        if: steps.changes.outputs.mode != 'docs'
         run: |
           docker compose -p code-along-ci --env-file .env -f infra/compose.yaml -f infra/compose.development.yaml -f infra/compose.development-test.yaml up --build -d
           npm install --global corepack@0.36.0
@@ -165,8 +242,24 @@ jobs:
           corepack pnpm --filter @code-along/browser-proofs exec playwright install --with-deps chromium webkit
           CODE_ALONG_DEVELOPMENT_PROOF=true corepack pnpm --filter @code-along/browser-proofs test:development
       - name: Show bounded service failures
-        if: failure() && steps.changes.outputs.mode != 'docs'
+        if: failure()
         run: docker compose -p code-along-ci --env-file .env -f infra/compose.yaml -f infra/compose.development.yaml -f infra/compose.development-test.yaml logs --no-color --tail 80
       - name: Remove only disposable CI services and volumes
-        if: always() && steps.changes.outputs.mode != 'docs'
+        if: always()
         run: docker compose -p code-along-ci --env-file .env -f infra/compose.yaml -f infra/compose.development.yaml -f infra/compose.development-test.yaml down --volumes --remove-orphans
+  foundation:
+    needs: [changes, source, browser, compose]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: 3.13.12
+      - name: Require every applicable check to finish successfully
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python tools/ci/check_results.py

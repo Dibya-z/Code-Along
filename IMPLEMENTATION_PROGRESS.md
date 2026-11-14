@@ -2,7 +2,7 @@
 
 Updated: 14 November 2026 (Asia/Kolkata).
 
-Current position: **M0–M3 Completed; M4 In Progress (assignment authoring, participation/work and learning practice committed; submission privacy boundary committed; CI repair passes all 106 local product cases; exact submissions locally verified; feedback and progress not started); post-M2 maintenance Completed**. The owner authorized safe storage cleanup, CI efficiency, an autonomous local M2 review and then full M3 on 14 November 2026, including commits/pushes in coherent related feature bundles. Preserve the approved architecture, user data and deferred OS trust decision. See the current M4 authorization/record at the end and the [M4 validation report](docs/architecture/m4-validation.md).
+Current position: **M0–M3 Completed; M4 In Progress (assignments, participation/work, learning practice and exact submissions locally verified/committed; CI job-budget repair and manual feedback in progress; progress/private updates not started); post-M2 maintenance Completed**. The owner authorized safe storage cleanup, CI efficiency, an autonomous local M2 review and then full M3 on 14 November 2026, including commits/pushes in coherent related feature bundles. Preserve the approved architecture, user data and deferred OS trust decision. See the current M4 authorization/record at the end and the [M4 validation report](docs/architecture/m4-validation.md).
 
 ## Approved baseline and tracking rules
 
@@ -110,7 +110,7 @@ Milestone status: **In Progress**. The owner authorized the current UI clarity w
 | M4.2 | Assignment participation/teams, invitations/consent and instructor-controlled eligibility               | M4.1       | Completed   | No arbitrary participant lists or automatic inclusion of project viewers/mentors              |
 | M4.3 | Learning session UI, staged hints and visible checks                                                    | M4.2       | Completed   | Accessible instructions/hints; practice results labeled untrusted and tied to manifest        |
 | M4.4 | Exact-version immutable submission transaction, frozen participants, deadlines, budgets and idempotency | M4.3       | Completed   | Submit tested H after live H2; server hashes bytes and rechecks eligibility/access at commit  |
-| M4.5 | Submission-owned artifact access, review/source viewer and instructor feedback                          | M4.4       | Not Started | Project owners/shares gain no implicit submission access; reviewer sees frozen source         |
+| M4.5 | Submission-owned artifact access, review/source viewer and instructor feedback                          | M4.4       | In Progress | Project owners/shares gain no implicit submission access; reviewer sees frozen source         |
 | M4.6 | Derived progress, assessment status and notifications                                                   | M4.5       | Not Started | Client cannot assign trusted scores; feedback/progress recover from missed events             |
 
 ## M5 — Pilot and operational readiness
@@ -796,3 +796,28 @@ Final workspace lint/format/types pass, together with **608 JavaScript tests / 5
 The affected existing **8/8** ordinary execution, console/input/EOF, navigation/state and practice cases then pass in **136.668s** on the same 24-file web build. Root independently inspects desktop, phone choice/focus and both narrow dark static viewers, plus the final JSON reports. Local M4.4 implementation and acceptance are complete. README and the submission protocol document actual use and in-memory retry limits. M4.5 instructor feedback and M4.6 progress/private notifications remain Not Started.
 
 Proposed coherent commit: `feat: add code submissions`. Commit locally after explicit diff/staging/secret/preservation review; queue its push until the active `4220f6e` Linux run finishes so a new push cannot cancel that baseline check. Full milestone CI and normal primary startup/database preservation remain final M4 gates. No M5, deployment, merge or OS trust action is authorized.
+
+M4.4 is committed locally as `a3d3b286344220e971410efe52142df612636195` (`feat: add code submissions`). All 60 explicit staged paths, final tested source/API/Nginx fingerprints, final 18 browser results, 36-document links/formatting and known-secret/protected-path checks pass. Static preservation comparisons remain true; final owned test processes and seven listeners are stopped, with about 4.3GiB free at handoff. The push is queued behind the active repair CI; this hash record belongs in the next meaningful unit rather than a bookkeeping commit.
+
+### CI job-budget cancellation and next verified unit
+
+The `4220f6e` run completes as **Cancelled**: public GitHub run/job HTML explicitly reports **“The job has exceeded the maximum execution time of 35m0s”**. Quality/contracts/advisories, backend/protocol/transport and all builds pass. The combined browser step runs from **15:06:04 to 15:35:08 UTC** before job cancellation; this is not a completed browser assertion-failure result. Public API rate limiting delays metadata observation, so the exact public run/step HTML supplies this evidence. No claim is made that unfinished remote browser cases passed.
+
+The CI repair separates source/backend work and an independent Chromium/WebKit browser matrix while retaining every isolation/foundation/product case, assertions and per-test timeouts. A shared conservative classification gate preserves the prose-only path. The existing required foundation check will aggregate all required source/browser/Compose outcomes and reject missing, failed or cancelled results. This addresses the measured 35-minute combined-job ceiling without dropping coverage or simply raising it. Workflow implementation and independent review are in progress; the submission push waits for that coherent CI configuration unit.
+
+M4.5 manual feedback now starts from the locally verified/committed submission feature. This independent work can proceed while the known CI scheduling defect is corrected; M4 remains In Progress until exact final Linux and primary preservation acceptance pass. Scope: private draft CAS, explicit immutable manual publication/corrections, no own-participant review, existing frozen-source authority, strict capacities and static review UI. No M4.6 streams/progress or M5 work starts in this unit.
+
+### M4.5 implementation breakdown
+
+| Task                                                                                                          | Dependencies                                     | Status      |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------- |
+| M4.5a — Private draft/publication schema, current teaching policies, CAS/idempotency, budgets and strict APIs | Verified M4.4; accepted manual-feedback contract | In Progress |
+| M4.5b — Generated contracts and learner/instructor feedback UI on the frozen submission page                  | Stable M4.5a DTOs; independent source authority  | Not Started |
+| M4.5c — Actual database/security/concurrency and browser/plaintext/keyboard acceptance                        | M4.5a–b; one reserved heavy local stack          | Not Started |
+| M4.5d — Independent review, documentation, explicit staging and coherent commit/push                          | Verified M4.5c                                   | Not Started |
+
+The backend owns only submission feedback modules, its next migration and private accounting/denial tests. The frontend composes review controls with the static source viewer after generated DTOs are stable. Feedback publication is an explicit manual decision; draft saves expose no learner timestamp/event/draft metadata. Source owners, mentors and shares gain no authority, and a teacher cannot draft/review their own frozen-participant submission. No new dependency, process or service is planned.
+
+### CI split verified locally
+
+The focused CI configuration unit passes **32 tests** (26 existing complete-diff/prose checks and six new aggregate tests), actionlint, scoped mypy/Ruff/Prettier and whitespace checks. Six actual Playwright list commands confirm **15 isolation + two foundation + 58 product cases per engine**, **150 total cases** across Chromium/WebKit, preserving workers1/retries0 and existing assertions/deadlines. Independent review accepts the fail-closed aggregate, exact docs-only skips, action/tool pins and per-engine logs/reports. No app/browser test execution, VM, service or dependency change is needed for this workflow-only unit. Proposed commit: `ci: split browser checks`, followed by one push of it and the already verified submission commit; remote execution is still required.
