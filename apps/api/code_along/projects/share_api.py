@@ -19,6 +19,7 @@ from . import revision_dto as dto
 from . import share_services as services
 from .models import ShareGrant
 from .policies import project_role, visible_projects
+from .revision_scopes import public_shares, require_public_share
 
 
 class CreateShareBody(BodySerializer):
@@ -34,6 +35,7 @@ class ResolveShareBody(BodySerializer):
 
 
 def share_data(share: ShareGrant) -> dict[str, Any]:
+    require_public_share(share)
     return {
         "id": str(share.id),
         "project_id": str(share.project_id),
@@ -58,7 +60,7 @@ class ShareListView(APIView):
         project = get_object_or_404(visible_projects(actor(request)), id=project_id)
         project_role(project, actor(request), owner=True)
         offset, limit = page_values(request)
-        query = project.shares.all()
+        query = public_shares().filter(project=project)
         return Response(
             {
                 "items": [

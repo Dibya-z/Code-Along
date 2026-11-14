@@ -20,7 +20,6 @@ from .models import (
     Assignment,
     AssignmentParticipation,
     AssignmentTeam,
-    AssignmentVersion,
     AssignmentWork,
     AssignmentWorkMember,
 )
@@ -34,6 +33,7 @@ from .participation_services import (
     retire_work,
 )
 from .policies import is_teacher, require_assignment_mutable
+from .selectors import public_versions, require_public_version
 from .services import AssignmentCapacity, AssignmentConflict, verify_runtime
 from .team_services import consent_ready, roster, version_eligible
 
@@ -169,7 +169,7 @@ def create_work(
         return readable_work(assignment, previous.id, current), False
     require_assignment_mutable(assignment)
     version = get_object_or_404(
-        AssignmentVersion, assignment=assignment, id=assignment_version_id
+        public_versions(), assignment=assignment, id=assignment_version_id
     )
     if assignment.current_version_id != version.id:
         raise AssignmentConflict(
@@ -239,6 +239,7 @@ def create_work(
             "This assignment has reached its 200 lifetime work limit.",
         )
     starter = version.starter_revision
+    require_public_version(version)
     starter.runtime_profile = RuntimeProfile.objects.select_for_update().get(
         id=version.runtime_profile_id
     )

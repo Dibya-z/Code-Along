@@ -2,6 +2,8 @@
 
 Named revisions retain a complete immutable source bundle. They are separate from latest-state checkpoint receipts: a receipt confirms a durable current document but is not a historical source retrieval key. The [collaboration protocol](product-collaboration.md) continues to govern live rooms and Saved.
 
+Named history and source shares expose only project-scoped shared-room captures. The [artifact-scope boundary](artifact-scopes.md) excludes private submission artifacts from all history/read/copy/share counts, quotas and targets, independently of live source ownership.
+
 ## Capture and integrity
 
 An ordinary project owner/editor posts a name, current `expected_version` and `client_request_id` to `/api/v1/projects/{project}/revisions/`. Django authorizes the real verified session and copies authoritative metadata under the workspace/project locks, then releases those locks before requesting Node's private capture. Node pins every room before asynchronous loading and copies all source values in one synchronous turn. A cold room loads durable binary state, including deletions; it does not reseed an existing document from starter text.

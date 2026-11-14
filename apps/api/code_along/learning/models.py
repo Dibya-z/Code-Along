@@ -42,6 +42,7 @@ class Assignment(models.Model):
     draft_starter_revision = models.ForeignKey(
         "projects.ProjectRevision", on_delete=models.PROTECT, null=True, blank=True
     )
+    draft_starter_scope = models.CharField(max_length=10, default="project")
     draft_submission_mode = models.CharField(max_length=10, default="individual")
     draft_max_attempts = models.PositiveSmallIntegerField(default=10)
     draft_max_team_size = models.PositiveSmallIntegerField(default=1)
@@ -74,6 +75,10 @@ class Assignment(models.Model):
             ),
             models.CheckConstraint(
                 condition=submission_policy("draft_"), name="assignment_draft_policy"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(draft_starter_scope="project"),
+                name="assignment_draft_public_scope",
             ),
             models.CheckConstraint(
                 condition=(
@@ -116,6 +121,7 @@ class AssignmentVersion(models.Model):
     starter_revision = models.ForeignKey(
         "projects.ProjectRevision", on_delete=models.PROTECT
     )
+    starter_scope = models.CharField(max_length=10, default="project")
     starter_manifest_sha256 = models.CharField(max_length=64)
     runtime_profile = models.ForeignKey(
         "projects.RuntimeProfile", on_delete=models.PROTECT
@@ -159,6 +165,10 @@ class AssignmentVersion(models.Model):
             models.CheckConstraint(
                 condition=submission_policy() & models.Q(late_policy="reject"),
                 name="assignment_version_policy",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(starter_scope="project"),
+                name="assignment_version_public_scope",
             ),
             models.CheckConstraint(
                 condition=models.Q(
@@ -423,6 +433,16 @@ class AssignmentWork(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["id", "assignment"], name="assignment_work_parent"
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    "id",
+                    "assignment",
+                    "workspace",
+                    "assignment_version",
+                    "project",
+                ],
+                name="work_submission_parent",
             ),
             models.UniqueConstraint(
                 fields=["assignment", "created_by", "client_request_id"],

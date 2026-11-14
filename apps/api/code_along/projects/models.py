@@ -162,7 +162,8 @@ class ProjectRevision(models.Model):
     author_display_name = models.CharField(max_length=80)
     client_request_id = models.UUIDField()
     name = models.CharField(max_length=120)
-    provenance = models.CharField(max_length=24, default="shared_room_capture")
+    artifact_scope = models.CharField(max_length=10, default="project")
+    provenance = models.CharField(max_length=32, default="shared_room_capture")
     manifest_version = models.PositiveSmallIntegerField(default=1)
     manifest_sha256 = models.CharField(max_length=64)
     metadata_version = models.PositiveBigIntegerField()
@@ -178,15 +179,24 @@ class ProjectRevision(models.Model):
         ordering = ["-created_at", "id"]
         constraints = [
             models.UniqueConstraint(
-                fields=["project", "author", "client_request_id"],
+                fields=["project", "author", "client_request_id", "artifact_scope"],
                 name="revision_request_identity",
             ),
             models.UniqueConstraint(
                 fields=["id", "project"], name="revision_project_pair"
             ),
+            models.UniqueConstraint(
+                fields=["id", "project", "artifact_scope"],
+                name="revision_project_artifact_scope",
+            ),
             models.CheckConstraint(
-                condition=models.Q(
-                    provenance="shared_room_capture", manifest_version=1
+                condition=models.Q(manifest_version=1)
+                & (
+                    models.Q(artifact_scope="project", provenance="shared_room_capture")
+                    | models.Q(
+                        artifact_scope="submission",
+                        provenance="client_submitted_snapshot",
+                    )
                 ),
                 name="revision_provenance_version",
             ),
@@ -252,6 +262,7 @@ class ShareGrant(models.Model):
     revision = models.ForeignKey(
         ProjectRevision, on_delete=models.PROTECT, null=True, blank=True
     )
+    revision_scope = models.CharField(max_length=10, default="project")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -280,6 +291,10 @@ class ShareGrant(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["id", "project"], name="share_project_pair"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(revision_scope="project"),
+                name="share_revision_public_scope",
             ),
             models.CheckConstraint(
                 condition=(

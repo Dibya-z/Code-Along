@@ -94,6 +94,9 @@ def test_product_schema_and_real_restricted_role_preserve_binary_receipt_boundar
             assert stored and stored[0] == binary and stored[1].tzinfo is not None
             for statement in (
                 "SELECT initial_source FROM projects_projectfile",
+                "SELECT * FROM projects_projectrevision",
+                "SELECT artifact_scope FROM projects_projectrevision",
+                "SELECT * FROM projects_revisionfile",
                 "SELECT * FROM django_session",
                 "SELECT * FROM accounts_user",
                 "SELECT * FROM events_outboxevent",

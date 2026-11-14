@@ -18,6 +18,7 @@ from . import revision_services as services
 from .api import VersionBody, project_data
 from .models import ProjectRevision
 from .policies import project_role, visible_projects
+from .revision_scopes import project_revisions, require_project_revision
 
 
 class CreateRevisionBody(VersionBody):
@@ -31,6 +32,7 @@ class CopyRevisionBody(BodySerializer):
 
 
 def revision_data(revision: ProjectRevision) -> dict[str, Any]:
+    require_project_revision(revision)
     return {
         "id": str(revision.id),
         "project_id": str(revision.project_id),
@@ -66,7 +68,7 @@ class RevisionListView(APIView):
         project = get_object_or_404(visible_projects(actor(request)), id=project_id)
         project_role(project, actor(request))
         offset, limit = page_values(request)
-        query = project.revisions.all()
+        query = project_revisions().filter(project=project)
         return Response(
             {
                 "items": [

@@ -45,6 +45,7 @@ class AssignmentView(APIView):
 
 
 def version_summary(version: AssignmentVersion) -> dict[str, Any]:
+    selectors.require_public_version(version)
     return {
         "id": str(version.id),
         "number": version.number,
@@ -77,6 +78,7 @@ def summary_data(assignment: Assignment, teacher: bool) -> dict[str, Any]:
 
 
 def draft_data(assignment: Assignment) -> dict[str, Any]:
+    selectors.require_public_draft(assignment)
     origin: dict[str, Any] | None = None
     if assignment.draft_starter_revision_id is not None:
         prior = services.prior_starter(assignment, assignment.draft_starter_revision_id)
@@ -111,6 +113,7 @@ def draft_data(assignment: Assignment) -> dict[str, Any]:
 
 
 def version_data(version: AssignmentVersion) -> dict[str, Any]:
+    selectors.require_public_version(version)
     return {
         "id": str(version.id),
         "assignment_id": str(version.assignment_id),
@@ -258,7 +261,7 @@ class AssignmentVersionListView(AssignmentView):
     def get(self, request: Request, assignment_id: uuid.UUID) -> Response:
         assignment = selectors.readable_assignment(assignment_id, actor(request))
         offset, limit = page_values(request)
-        query = assignment.versions.all()
+        query = selectors.public_versions().filter(assignment=assignment)
         return Response(
             {
                 "items": [

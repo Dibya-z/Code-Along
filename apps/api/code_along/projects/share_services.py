@@ -14,8 +14,9 @@ from code_along.collaboration.services import revoke_leases
 from code_along.workspaces.models import WorkspaceMembership
 
 from .api import file_data
-from .models import ProjectRevision, ShareGrant
+from .models import ShareGrant
 from .policies import project_role
+from .revision_scopes import project_revisions, public_shares, require_public_share
 from .revision_services import RevisionLimit, current_actor, revision_manifest
 from .services import lock_project, require_editable
 from .source_access import source_share
@@ -44,7 +45,7 @@ def create_share(
             }
         )
     revision = (
-        get_object_or_404(ProjectRevision, project=project, id=revision_id)
+        get_object_or_404(project_revisions(), project=project, id=revision_id)
         if kind == "snapshot"
         else None
     )
@@ -59,9 +60,9 @@ def create_share(
     ):
         raise ValidationError({"recipient_id": "Choose an active workspace member."})
     if (
-        project.shares.filter(
-            revoked_at__isnull=True, expires_at__gt=timezone.now()
-        ).count()
+        public_shares()
+        .filter(project=project, revoked_at__isnull=True, expires_at__gt=timezone.now())
+        .count()
         >= 100
     ):
         raise RevisionLimit("This project's active share limit was reached.")
@@ -69,6 +70,7 @@ def create_share(
     share = ShareGrant.objects.create(
         project=project,
         revision=revision,
+        revision_scope="project",
         created_by=user,
         recipient_id=recipient_id,
         kind=kind,
@@ -101,11 +103,14 @@ def resolve_share(
     token: str, user: User | None, session_key: str | None
 ) -> dict[str, Any]:
     digest = hashlib.sha256(token.encode("ascii")).hexdigest()
-    candidate = ShareGrant.objects.filter(token_digest=digest).first()
+    candidate = public_shares().filter(token_digest=digest).first()
     if candidate is None:
         raise PermissionDenied("Shared source unavailable.")
     project = lock_project(candidate.project_id)
-    share = ShareGrant.objects.select_related("revision").get(id=candidate.id)
+    share = public_shares().filter(id=candidate.id).first()
+    if share is None:
+        raise PermissionDenied("Shared source unavailable.")
+    require_public_share(share)
     if share.revoked_at is not None or share.expires_at <= timezone.now():
         raise PermissionDenied("Shared source unavailable.")
     if share.kind == "live" or share.recipient_id is not None:

@@ -21,6 +21,7 @@ from code_along.projects.revision_contract import (
     RevisionContractError,
     runtime_identity,
 )
+from code_along.projects.revision_scopes import project_revisions
 from code_along.projects.revision_services import (
     RevisionUnavailable,
     current_actor,
@@ -31,6 +32,7 @@ from code_along.workspaces.services import lock_workspace, require_open
 from . import contracts
 from .models import Assignment, AssignmentVersion
 from .policies import require_assignment_mutable, require_assignment_teacher
+from .selectors import public_versions
 
 
 class AssignmentConflict(APIException):
@@ -66,9 +68,8 @@ def prior_starter(
     assignment: Assignment, revision_id: uuid.UUID
 ) -> AssignmentVersion | None:
     return (
-        AssignmentVersion.objects.filter(
-            assignment=assignment, starter_revision_id=revision_id
-        )
+        public_versions()
+        .filter(assignment=assignment, starter_revision_id=revision_id)
         .order_by("number")
         .first()
     )
@@ -82,7 +83,7 @@ def authorize_starter_selection(
     published = prior_starter(assignment, revision_id)
     if published is not None:
         revision = get_object_or_404(
-            ProjectRevision.objects.select_related("runtime_profile"),
+            project_revisions().select_related("runtime_profile"),
             id=revision_id,
             project_id=published.starter_project_id,
         )
@@ -98,7 +99,7 @@ def authorize_starter_selection(
     else:
         # First disclosure must be a currently owned same-workspace project.
         revision = get_object_or_404(
-            ProjectRevision.objects.select_related("runtime_profile"), id=revision_id
+            project_revisions().select_related("runtime_profile"), id=revision_id
         )
         source = get_object_or_404(
             Project.objects.select_for_update(),
@@ -278,6 +279,7 @@ def publish_version(
         hints=copy.deepcopy(assignment.draft_hints),
         starter_project_id=starter.project_id,
         starter_revision=starter,
+        starter_scope="project",
         starter_manifest_sha256=starter.manifest_sha256,
         runtime_profile=starter.runtime_profile,
         runtime_identity=copy.deepcopy(starter.runtime_identity),

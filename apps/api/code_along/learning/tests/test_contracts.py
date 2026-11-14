@@ -116,14 +116,16 @@ def test_metadata_encoding_covers_every_original_field_and_is_stable_against_fut
         content_sha256="b" * 64,
     )
     original = {field.attname for field in version._meta.concrete_fields} - {
-        "metadata_bytes"
+        "metadata_bytes",
+        "starter_scope",
     }
     assert set(contracts.METADATA_V1_FIELDS) == original
     encoded = contracts.canonical(contracts.version_metadata(version), sorted_keys=True)
     assert contracts.metadata_size(version) == len(encoded)
     assert json.loads(encoded)["instructions"] == "exact\r\n"
     version.metadata_bytes = 42
-    version.__dict__["starter_scope"] = "project"
+    # Unsaved encoding probe only: database scope policy is tested separately.
+    version.starter_scope = "submission"
     assert (
         contracts.canonical(contracts.version_metadata(version), sorted_keys=True)
         == encoded

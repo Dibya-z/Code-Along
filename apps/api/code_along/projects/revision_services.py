@@ -23,6 +23,7 @@ from .revision_contract import (
     source_digest,
     validate_manifest,
 )
+from .revision_scopes import project_revisions
 from .services import check_version, lock_project, require_editable
 
 MAX_REVISIONS = 100
@@ -91,9 +92,11 @@ def existing_request(
     name: str,
     expected_version: int,
 ) -> ProjectRevision | None:
-    revision = ProjectRevision.objects.filter(
-        project=project, author=user, client_request_id=request_id
-    ).first()
+    revision = (
+        project_revisions()
+        .filter(project=project, author=user, client_request_id=request_id)
+        .first()
+    )
     if revision is not None and (
         revision.name != name or revision.metadata_version != expected_version
     ):
@@ -194,13 +197,13 @@ def create_revision(
         if project.runtime_profile.manifest != frozen_runtime:
             raise RevisionConflict()
         total = sum(source_digest(file["source"])[0] for file in manifest["files"])
-        stored = project.revisions.aggregate(total=Sum("source_bytes"))["total"] or 0
-        if (
-            project.revisions.count() >= MAX_REVISIONS
-            or stored + total > MAX_REVISION_BYTES
-        ):
+        history = project_revisions().filter(project=project)
+        stored = history.aggregate(total=Sum("source_bytes"))["total"] or 0
+        if history.count() >= MAX_REVISIONS or stored + total > MAX_REVISION_BYTES:
             raise RevisionLimit()
         revision = ProjectRevision.objects.create(
+            artifact_scope="project",
+            provenance="shared_room_capture",
             project=project,
             author=current,
             author_display_name=public_display_name(current.display_name),
@@ -239,6 +242,7 @@ def create_revision(
 
 
 def revision_manifest(revision: ProjectRevision) -> dict[str, Any]:
+    """Internal serialization only; the caller separately authorizes this artifact."""
     try:
         return validate_manifest(
             {
@@ -273,7 +277,7 @@ def readable_revision(
     project = get_object_or_404(visible_projects(user), id=project_id)
     project_role(project, user)
     return get_object_or_404(
-        ProjectRevision.objects.select_related("project", "runtime_profile"),
+        project_revisions().select_related("project", "runtime_profile"),
         project=project,
         id=revision_id,
     )
@@ -294,7 +298,7 @@ def copy_revision(
     require_membership(source.workspace, current)
     require_open(source.workspace)
     revision = get_object_or_404(
-        ProjectRevision.objects.select_related("runtime_profile"),
+        project_revisions().select_related("runtime_profile"),
         project=source,
         id=revision_id,
     )

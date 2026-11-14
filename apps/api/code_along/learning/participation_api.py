@@ -30,6 +30,7 @@ from .models import (
     AssignmentWork,
 )
 from .policies import is_teacher, require_assignment_teacher
+from .selectors import public_versions
 
 
 def values(
@@ -97,7 +98,7 @@ def selected_version(
 ) -> AssignmentVersion | None:
     identifier = params.get("assignment_version_id")
     return (
-        get_object_or_404(AssignmentVersion, assignment=assignment, id=identifier)
+        get_object_or_404(public_versions(), assignment=assignment, id=identifier)
         if identifier is not None
         else None
     )
