@@ -14,10 +14,12 @@ export function ProjectHistory({
   project,
   accountId,
   paused,
+  active = true,
 }: {
   project: Project;
   accountId: string;
   paused: boolean;
+  active?: boolean;
 }) {
   const [offset, setOffset] = useState(0),
     [selected, setSelected] = useState('');
@@ -27,11 +29,12 @@ export function ProjectHistory({
   const list = useQuery({
     queryKey: [...key, offset],
     queryFn: () => revisionApi.list(project.id, offset),
+    enabled: active,
   });
   const detail = useQuery({
     queryKey: ['revision', accountId, project.id, selected],
     queryFn: ({ signal }) => revisionApi.detail(project.id, selected, signal),
-    enabled: Boolean(selected),
+    enabled: active && Boolean(selected),
   });
   const create = useMutation({
     mutationFn: (request: RevisionRequest) =>

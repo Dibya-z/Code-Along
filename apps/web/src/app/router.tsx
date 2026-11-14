@@ -40,6 +40,9 @@ function Shell() {
   const location = useLocation();
   const identity = useIdentity();
   const actor = identity.data?.id;
+  const workspaceActive =
+    /^\/(workspaces|projects)(\/|$)/.test(location.pathname) ||
+    (location.pathname === '/' && Boolean(actor));
   useEffect(
     () =>
       actor
@@ -63,7 +66,13 @@ function Shell() {
         </Link>
         <p className="rail-label">YOUR WORKBENCH</p>
         <nav aria-label="Main navigation">
-          <NavLink to="/workspaces">Workspaces</NavLink>
+          <Link
+            to="/workspaces"
+            className={workspaceActive ? 'active' : undefined}
+            aria-current={workspaceActive ? 'page' : undefined}
+          >
+            Workspaces
+          </Link>
           <NavLink to="/drafts">Local drafts</NavLink>
         </nav>
         <div className="rail-footer">
@@ -73,7 +82,7 @@ function Shell() {
       </aside>
       <div className="app-body">
         <header className="topbar">
-          <span>Python, with company.</span>
+          <span>Python workbench</span>
           {identity.data ? (
             <div className="actions">
               <span>{identity.data.display_name}</span>

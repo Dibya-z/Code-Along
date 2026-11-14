@@ -9,12 +9,19 @@ import type { Member, Page } from '../workspaces/types.ts';
 import type { Project } from './types.ts';
 type Grant = components['schemas']['GrantOutput'];
 type Invitation = components['schemas']['InvitationOutput'];
-export function ProjectSharing({ project }: { project: Project }) {
+export function ProjectSharing({
+  project,
+  active = true,
+}: {
+  project: Project;
+  active?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [link, setLink] = useState('');
   const readOnly = project.archived || project.workspace_archived;
   const base = `/api/v1/projects/${project.id}/`;
   const members = useQuery({
+    enabled: active,
     queryKey: ['members', project.workspace_id, 'sharing'],
     queryFn: () =>
       api<Page<Member>>(
@@ -22,10 +29,12 @@ export function ProjectSharing({ project }: { project: Project }) {
       ),
   });
   const grants = useQuery({
+    enabled: active,
     queryKey: ['grants', project.id],
     queryFn: () => api<Page<Grant>>(base + 'grants/?limit=100'),
   });
   const invitations = useQuery({
+    enabled: active,
     queryKey: ['project-invitations', project.id],
     queryFn: () => api<Page<Invitation>>(base + 'invitations/?limit=100'),
   });

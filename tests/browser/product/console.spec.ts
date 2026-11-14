@@ -4,6 +4,7 @@ import {
   createEditorProject,
   runtimeDiagnostics,
   finishedRun,
+  openRunOptions,
 } from './helpers.ts';
 test('safe coalesced console, output paging, immutable source and interactive input', async ({
   page,
@@ -48,6 +49,7 @@ test('safe coalesced console, output paging, immutable source and interactive in
   await expect(output).toContainText('line 599');
   await page.getByRole('button', { name: 'Clear output', exact: true }).click();
   await expect(output.locator('.console-line')).toHaveCount(0);
+  await openRunOptions(page);
   await page.getByLabel('Python input mode').selectOption('interactive');
   await editor.fill(
     'name = input("Name: ")\nprint("Hello", name)\ntry:\n    input("Next: ")\nexcept EOFError:\n    print("EOF received")\n',

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { register } from './helpers.ts';
+import { openWorkspaceMembers, register } from './helpers.ts';
 test('a recipient joins by invitation and removal invalidates the old link', async ({
   page,
   browser,
@@ -30,6 +30,7 @@ test('a recipient joins by invitation and removal invalidates the old link', asy
     await expect(
       page.getByRole('heading', { name: 'Shared learning', exact: true }),
     ).toBeVisible();
+    await openWorkspaceMembers(page);
     await page
       .getByRole('button', { name: 'Invite member', exact: true })
       .click();
@@ -58,6 +59,7 @@ test('a recipient joins by invitation and removal invalidates the old link', asy
       recipient.getByRole('button', { name: 'Open workspace', exact: true }),
     ).toBeVisible();
     await page.reload();
+    await openWorkspaceMembers(page);
     await page
       .getByRole('button', { name: 'Remove member', exact: true })
       .click();

@@ -62,6 +62,55 @@ export async function login(page: Page, email: string, secret = password) {
   ).toBeVisible();
 }
 
+export async function openProjectSection(
+  page: Page,
+  name: 'Code' | 'Discussion' | 'History' | 'Sharing' | 'Settings',
+) {
+  if (!new URL(page.url()).pathname.startsWith('/projects/')) return;
+  const navigation = page.getByRole('navigation', {
+    name: 'Project sections',
+    exact: true,
+  });
+  await expect(navigation).toBeVisible();
+  const link = navigation.getByRole('link', { name, exact: true });
+  if ((await link.getAttribute('aria-current')) === 'page') return;
+  await link.click();
+  await expect(link).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator(`#${name.toLowerCase()}`)).toBeFocused();
+}
+
+async function openDisclosure(page: Page, name: string | RegExp) {
+  const summary = page.locator('summary').filter({ hasText: name });
+  await expect(summary).toBeVisible();
+  if (
+    !(await summary.evaluate(
+      (element) => (element.parentElement as HTMLDetailsElement).open,
+    ))
+  )
+    await summary.click();
+}
+
+export const openWorkspaceMembers = (page: Page) =>
+  openDisclosure(page, /^Members$/);
+export const openWorkspaceAdministration = (page: Page) =>
+  openDisclosure(page, /^Workspace administration$/);
+export const openStartDraft = (page: Page) =>
+  openDisclosure(page, /^Start a draft$/);
+export async function openRecovery(page: Page) {
+  if (!/^\/(projects|drafts)\//.test(new URL(page.url()).pathname)) return;
+  await openDisclosure(page, /^Local recovery & export/);
+}
+export const openRunOptions = (page: Page) =>
+  openDisclosure(page, /^Run options$/);
+export const openPeople = (page: Page) =>
+  openDisclosure(page, /^People and save options/);
+export const openEditorOptions = (page: Page) =>
+  openDisclosure(page, /^Editor options$/);
+export async function showFiles(page: Page) {
+  const toggle = page.getByRole('button', { name: 'Show files', exact: true });
+  if (await toggle.isVisible()) await toggle.click();
+}
+
 export async function createEditorProject(page: Page) {
   await page
     .getByRole('button', { name: 'Create workspace', exact: true })

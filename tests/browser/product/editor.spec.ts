@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { register, createEditorProject } from './helpers.ts';
+import {
+  register,
+  createEditorProject,
+  openProjectSection,
+  openEditorOptions,
+} from './helpers.ts';
 
 for (const keyboardPlatform of ['native', 'linux']) {
   test(`editing survives tab switches, rename/refetch and read-only transitions (${keyboardPlatform} keys)`, async ({
@@ -70,6 +75,7 @@ for (const keyboardPlatform of ['native', 'linux']) {
     await expect(source).toHaveText(draft, { useInnerText: true });
     await source.press('Tab');
     await expect(source).not.toBeFocused();
+    await openEditorOptions(page);
     await page.getByLabel('Editor text size').selectOption('1.125rem');
     await expect(page.locator('.cm-editor')).toHaveCSS('font-size', '18px');
     for (const width of [1440, 1024, 768, 390, 320]) {
@@ -100,17 +106,21 @@ for (const keyboardPlatform of ['native', 'linux']) {
       path: test.info().outputPath('editor-dark.png'),
       fullPage: true,
     });
+    await openProjectSection(page, 'Settings');
     await page
       .getByRole('button', { name: 'Archive project', exact: true })
       .click();
     await page
       .getByRole('button', { name: 'Confirm project archive', exact: true })
       .click();
+    await openProjectSection(page, 'Code');
     await expect(source).toHaveAttribute('aria-readonly', 'true');
     await expect(source).toHaveText(draft, { useInnerText: true });
+    await openProjectSection(page, 'Settings');
     await page
       .getByRole('button', { name: 'Restore project', exact: true })
       .click();
+    await openProjectSection(page, 'Code');
     await expect(source).toHaveAttribute('aria-readonly', 'true');
     await page
       .getByRole('button', { name: 'Recheck access', exact: true })

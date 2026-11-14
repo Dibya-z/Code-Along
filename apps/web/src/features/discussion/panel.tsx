@@ -17,6 +17,7 @@ export function ProjectDiscussion(props: {
   project: Project;
   accountId: string;
   paused: boolean;
+  active?: boolean;
 }) {
   return (
     <DiscussionPanel
@@ -29,10 +30,12 @@ function DiscussionPanel({
   project,
   accountId,
   paused,
+  active = true,
 }: {
   project: Project;
   accountId: string;
   paused: boolean;
+  active?: boolean;
 }) {
   const [resource] = useState(() => {
     async function refresh(kind: RefreshKind) {
@@ -96,7 +99,7 @@ function DiscussionPanel({
   }, [resource, model]);
   useEffect(() => model.setWritable(writable), [model, writable]);
   const bytes = new TextEncoder().encode(body).length;
-  const reading = useDiscussionReading(snapshot, accountId);
+  const reading = useDiscussionReading(snapshot, accountId, active);
   const canRetry =
     writable &&
     snapshot.ready &&

@@ -1,7 +1,14 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { createEditorProject, finishedRun, register } from './helpers.ts';
+import {
+  createEditorProject,
+  finishedRun,
+  openProjectSection,
+  openRecovery,
+  openWorkspaceMembers,
+  register,
+} from './helpers.ts';
 
 const editor = (page: Page) =>
   page.getByRole('textbox', { name: 'Python source for main.py', exact: true });
@@ -10,14 +17,25 @@ const saved = (page: Page) =>
     timeout: 15000,
   });
 async function replace(page: Page, source: string) {
+  await openProjectSection(page, 'Code');
   const modifier = await page.evaluate(() =>
     /Mac|iPhone|iPad/.test(navigator.platform) ? 'Meta' : 'Control',
   );
   await editor(page).press(`${modifier}+a`);
-  if (source) await page.keyboard.insertText(source);
+  const terminalLines = source.match(/\n+$/)?.[0].length ?? 0;
+  const body = terminalLines ? source.slice(0, -terminalLines) : source;
+  if (body) await page.keyboard.insertText(body);
   else await page.keyboard.press('Backspace');
+  // Use real Enter actions for terminal line breaks rather than native contenteditable placeholder BRs.
+  for (let line = 0; line < terminalLines; line++)
+    await page.keyboard.press('Enter');
 }
 async function exported(page: Page, name = 'Export current code') {
+  if (name === 'Export current code') {
+    await openProjectSection(page, 'Code');
+    await openRecovery(page);
+  } else if (name === 'Export revision source')
+    await openProjectSection(page, 'History');
   const pending = page.waitForEvent('download');
   await page.getByRole('button', { name, exact: true }).click();
   return JSON.parse(
@@ -39,6 +57,7 @@ async function exactSource(page: Page, source: string) {
     .toBe(source);
 }
 async function capture(page: Page, name: string) {
+  await openProjectSection(page, 'History');
   await page.getByLabel('Revision name', { exact: true }).fill(name);
   await page
     .getByRole('button', { name: 'Capture shared revision', exact: true })
@@ -56,6 +75,7 @@ async function share(
     recipient?: string;
   } = {},
 ) {
+  await openProjectSection(page, 'Sharing');
   await page.getByLabel('Link type', { exact: true }).selectOption(kind);
   if (kind === 'snapshot')
     await page
@@ -112,6 +132,7 @@ async function memberWithoutGrant(
     await register(peer, email, 'River');
     const url = owner.url();
     await owner.getByRole('link', { name: '← Workspace', exact: true }).click();
+    await openWorkspaceMembers(owner);
     await owner
       .getByRole('button', { name: 'Invite member', exact: true })
       .click();
@@ -189,6 +210,7 @@ test('named shared revisions survive a lost response, later edits, and create a 
       await route.abort('failed');
     },
   );
+  await openProjectSection(page, 'History');
   await page
     .getByLabel('Revision name', { exact: true })
     .fill('Before refactoring');
@@ -215,6 +237,7 @@ test('named shared revisions survive a lost response, later edits, and create a 
   expect(revisions.count).toBe(1);
   await replace(page, 'print("later live source")\n');
   await saved(page);
+  await openProjectSection(page, 'History');
   expect(
     await page
       .getByLabel('Frozen Python source for main.py', { exact: true })
@@ -261,8 +284,13 @@ test('snapshot links open anonymously without live transport, enforce recipients
   const original = await ownerProject(page, 'snapshot', browserName),
     frozen = 'print("snapshot only")\n';
   await replace(page, frozen);
+  const liveBefore = (await exported(page)).files[0]!.source;
+  expect(liveBefore).toBe(frozen);
   await saved(page);
   await capture(page, 'For review');
+  const frozenBefore = (await exported(page, 'Export revision source'))
+    .files[0]!.source;
+  expect(frozenBefore).toBe(frozen);
   const link = await share(page, 'snapshot', { revision: 'For review' });
   const context = await browser.newContext({
     baseURL: new URL(page.url()).origin,
@@ -404,6 +432,7 @@ test('live read links grant only source capability to workspace members, run loc
       'shared read run',
     );
     expect(privatePaths).toEqual([]);
+    await openProjectSection(page, 'Sharing');
     await page
       .getByRole('button', { name: 'Revoke live link', exact: true })
       .click();
@@ -447,6 +476,7 @@ test('live write links sync Saved without permanent project access or automatic 
     await saved(pair.peer);
     await noStoredCapability(pair.peer, new URL(link).hash.slice(1));
     expect(privatePaths).toEqual([]);
+    await openProjectSection(page, 'Sharing');
     await page
       .getByRole('button', { name: 'Revoke live link', exact: true })
       .click();

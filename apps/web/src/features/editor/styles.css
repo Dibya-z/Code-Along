@@ -22,6 +22,9 @@
 .editor-explorer h2 {
   font-size: var(--text-heading-sm);
 }
+.files-toggle {
+  display: none;
+}
 .editor-file-tree {
   list-style: none;
   padding: 0;
@@ -202,7 +205,21 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-4);
+  padding: 0 var(--space-2);
+  justify-content: flex-end;
+}
+.editor-options > summary {
+  cursor: pointer;
+  min-height: var(--target-min);
+  padding-block: var(--space-3);
+  font-size: var(--text-meta);
+}
+.editor-options[open] {
+  width: 100%;
+}
+.editor-options .editor-size {
+  margin: 0 0 var(--space-3);
+  justify-content: flex-end;
 }
 .editor-pane-head h2 {
   font: 500 var(--text-meta)/1.5 var(--font-code);
@@ -295,13 +312,30 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .editor-explorer {
+    padding: var(--space-2);
     border-right: 0;
     border-bottom: 1px solid var(--color-separator);
+  }
+  .editor-explorer .section-head {
+    align-items: center;
+  }
+  .editor-explorer h2 {
+    margin: 0;
+  }
+  .files-toggle {
+    display: inline-flex;
+  }
+  .editor-explorer[data-open='false'] .editor-files-content {
+    display: none;
+  }
+  .editor-explorer[data-open='false'] {
+    display: none;
   }
   .pane-switch {
     display: flex;
     width: 100%;
     padding-top: 0;
+    padding: var(--space-2);
   }
   .workbench-controls > div {
     flex-basis: 100%;

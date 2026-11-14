@@ -8,7 +8,16 @@ import {
 import { createHash, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import * as Y from 'yjs';
-import { createEditorProject, finishedRun, register } from './helpers.ts';
+import {
+  createEditorProject,
+  finishedRun,
+  openPeople,
+  openProjectSection,
+  openRecovery,
+  openWorkspaceMembers,
+  register,
+  showFiles,
+} from './helpers.ts';
 
 const source = (page: Page, path = 'main.py') =>
   page.getByLabel(`Python source for ${path}`);
@@ -40,6 +49,7 @@ async function projectPair(
     await createEditorProject(owner);
     const url = owner.url();
     await owner.getByRole('link', { name: '← Workspace', exact: true }).click();
+    await openWorkspaceMembers(owner);
     await owner
       .getByRole('button', { name: 'Invite member', exact: true })
       .click();
@@ -56,6 +66,7 @@ async function projectPair(
       .getByRole('button', { name: 'Join workspace', exact: true })
       .click();
     await owner.goto(url);
+    await openProjectSection(owner, 'Sharing');
     await owner
       .getByLabel('Workspace member', { exact: true })
       .selectOption({ label: 'River' });
@@ -63,6 +74,7 @@ async function projectPair(
     await owner
       .getByRole('button', { name: 'Grant project access', exact: true })
       .click();
+    await openProjectSection(owner, 'Code');
     await peer.goto(url);
     await expect(source(peer)).toBeVisible();
     await expect(source(peer)).toHaveAttribute(
@@ -76,6 +88,7 @@ async function projectPair(
   }
 }
 async function downloadText(page: Page, name: string): Promise<string> {
+  if (name === 'Export current code') await openRecovery(page);
   const pending = page.waitForEvent('download');
   await page.getByRole('button', { name, exact: true }).click();
   return readFile((await (await pending).path())!, 'utf8');
@@ -114,6 +127,8 @@ test('two accounts converge on empty/short text, show real multi-tab presence, a
   const pair = await projectPair(page, browser, browserName),
     peer = pair.peer;
   try {
+    await openPeople(page);
+    await openPeople(peer);
     const ownerPeople = page.getByRole('list', { name: 'People in this file' });
     await expect(ownerPeople).toContainText('Mira (you)');
     await expect(ownerPeople).toContainText('River');
@@ -123,6 +138,7 @@ test('two accounts converge on empty/short text, show real multi-tab presence, a
     const idleTab = await page.context().newPage();
     try {
       await idleTab.goto(pair.url);
+      await openPeople(idleTab);
       await expect(
         idleTab.getByRole('list', { name: 'People in this file' }),
       ).toContainText('Mira (you)');
@@ -368,6 +384,7 @@ test('viewer write tickets are denied and revocation freezes the editor while pr
       },
     );
     expect(denied.status()).toBe(403);
+    await openProjectSection(page, 'Sharing');
     await page
       .getByLabel('Workspace member', { exact: true })
       .selectOption({ label: 'River' });
@@ -526,6 +543,7 @@ test('legacy independently seeded M2 recovery forks to fresh local identities wi
     legacy = 'print("legacy device copy")\n';
   await source(page).fill(canonical);
   await settled(page);
+  await openRecovery(page);
   await expect(page.locator('.recovery-status')).toHaveText(
     /^Local recovery updated/,
   );
@@ -559,6 +577,7 @@ test('a removed file preserves its offline text for export after generation admi
     'Mira',
   );
   await createEditorProject(page);
+  await showFiles(page);
   await page.getByRole('button', { name: 'Add file', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Add a Python file' });
   await dialog.getByLabel('File path').fill('helper.py');
@@ -599,6 +618,7 @@ test('a removed file preserves its offline text for export after generation admi
     });
     const remover = await other.newPage();
     await remover.goto(page.url());
+    await showFiles(remover);
     await remover
       .getByRole('button', { name: 'helper.py', exact: true })
       .click();

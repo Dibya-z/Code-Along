@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { register } from './helpers.ts';
+import {
+  openProjectSection,
+  openWorkspaceMembers,
+  register,
+  showFiles,
+} from './helpers.ts';
 test('private project, scoped invitation, viewer/editor permissions and ownership', async ({
   page,
   browser,
@@ -35,6 +40,7 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
     await expect(
       page.getByRole('heading', { name: 'Python studio', exact: true }),
     ).toBeVisible();
+    await openWorkspaceMembers(page);
     await page
       .getByRole('button', { name: 'Invite member', exact: true })
       .click();
@@ -79,6 +85,7 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
         exact: true,
       }),
     ).toBeVisible();
+    await showFiles(page);
     await page.getByRole('button', { name: 'Add file', exact: true }).click();
     let dialog = page.getByRole('dialog', { name: 'Add a Python file' });
     await dialog.getByLabel('File path').fill('helper.py');
@@ -87,7 +94,10 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
       .getByRole('button', { name: 'Add Python file', exact: true })
       .click();
     await expect(
-      page.getByRole('heading', { name: 'helper.py', exact: true }),
+      page.getByRole('tab', { name: 'helper.py', exact: true }),
+    ).toHaveAttribute('aria-selected', 'true');
+    await expect(
+      page.getByLabel('Python source for helper.py', { exact: true }),
     ).toBeVisible();
     await page
       .getByRole('button', { name: 'Rename file', exact: true })
@@ -98,9 +108,13 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
       .getByRole('button', { name: 'Save file path', exact: true })
       .click();
     await expect(
-      page.getByRole('heading', { name: 'lessons/helper.py', exact: true }),
+      page.getByRole('tab', { name: 'lessons/helper.py', exact: true }),
+    ).toHaveAttribute('aria-selected', 'true');
+    await expect(
+      page.getByLabel('Python source for lessons/helper.py', { exact: true }),
     ).toBeVisible();
     await page.keyboard.press('Escape');
+    await openProjectSection(page, 'Sharing');
     await page
       .getByRole('button', { name: 'Create project invitation', exact: true })
       .click();
@@ -116,7 +130,12 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
     await recipient
       .getByRole('button', { name: 'Join project', exact: true })
       .click();
-    await expect(recipient.getByText('PYTHON PROJECT · VIEWER')).toBeVisible();
+    await expect(
+      recipient
+        .locator('.project-heading')
+        .getByText('Viewer', { exact: true }),
+    ).toBeVisible();
+    await showFiles(recipient);
     await expect(
       recipient.getByRole('button', { name: 'Add file', exact: true }),
     ).toHaveCount(0);
@@ -152,7 +171,12 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
         .getByText('editor', { exact: true }),
     ).toBeVisible();
     await recipient.reload();
-    await expect(recipient.getByText('PYTHON PROJECT · EDITOR')).toBeVisible();
+    await expect(
+      recipient
+        .locator('.project-heading')
+        .getByText('Editor', { exact: true }),
+    ).toBeVisible();
+    await showFiles(recipient);
     await expect(
       recipient.getByRole('button', { name: 'Add file', exact: true }),
     ).toBeVisible();
@@ -196,9 +220,13 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
     await dialog
       .getByRole('button', { name: 'Confirm project transfer', exact: true })
       .click();
-    await expect(page.getByText('PYTHON PROJECT · EDITOR')).toBeVisible();
+    await expect(
+      page.locator('.project-heading').getByText('Editor', { exact: true }),
+    ).toBeVisible();
     await recipient.goto(projectUrl);
-    await expect(recipient.getByText('PYTHON PROJECT · OWNER')).toBeVisible();
+    await expect(
+      recipient.locator('.project-heading').getByText('Owner', { exact: true }),
+    ).toBeVisible();
     expect(errors).toEqual([]);
   } finally {
     await context.close();

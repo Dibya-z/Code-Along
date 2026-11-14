@@ -1,18 +1,27 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { login, register } from './helpers.ts';
+import {
+  login,
+  openProjectSection,
+  openRecovery,
+  register,
+  showFiles,
+} from './helpers.ts';
 
 const discussion = (page: Page) =>
   page.getByRole('region', { name: 'Discussion', exact: true });
 const rows = (page: Page) => discussion(page).locator('li[data-message-id]');
 const row = (page: Page, text: string) => rows(page).filter({ hasText: text });
-const ready = (page: Page) =>
-  expect(page.locator('.discussion-status')).toHaveText(
+async function ready(page: Page) {
+  await openProjectSection(page, 'Discussion');
+  await expect(page.locator('.discussion-status')).toHaveText(
     'Discussion is up to date.',
     { timeout: 20000 },
   );
+}
 async function send(page: Page, body: string) {
+  await openProjectSection(page, 'Discussion');
   const input = discussion(page).getByLabel('Message to project'),
     button = discussion(page).getByRole('button', {
       name: 'Send message',
@@ -148,6 +157,7 @@ function deferred() {
   return { promise, resolve };
 }
 async function openFileDownload(page: Page) {
+  await openRecovery(page);
   const download = page.waitForEvent('download');
   await page
     .getByRole('button', { name: 'Download open file', exact: true })
@@ -318,6 +328,8 @@ test('bootstrap buffers concurrent chat and authenticated heads repair a final d
     await discussion(p.peer)
       .getByLabel('Message to project')
       .fill('Keep this composer draft');
+    await openProjectSection(p.peer, 'Code');
+    await showFiles(p.peer);
     const source = await openFileDownload(p.peer),
       editor = p.peer.getByRole('textbox', {
         name: 'Python source for main.py',
@@ -325,6 +337,8 @@ test('bootstrap buffers concurrent chat and authenticated heads repair a final d
       });
     await editor.focus();
     await expect(editor).toBeFocused();
+    await openProjectSection(page, 'Code');
+    await showFiles(page);
     await page.getByRole('button', { name: 'Add file', exact: true }).click();
     const add = page.getByRole('dialog', { name: 'Add a Python file' });
     await add.getByLabel('File path', { exact: true }).fill('helper.py');
@@ -335,10 +349,11 @@ test('bootstrap buffers concurrent chat and authenticated heads repair a final d
       p.peer.getByRole('button', { name: 'helper.py', exact: true }),
     ).toBeVisible({ timeout: 15000 });
     await expect(editor).toBeFocused();
+    expect(await openFileDownload(p.peer)).toBe(source);
+    await openProjectSection(p.peer, 'Discussion');
     await expect(
       discussion(p.peer).getByLabel('Message to project'),
     ).toHaveValue('Keep this composer draft');
-    expect(await openFileDownload(p.peer)).toBe(source);
   } finally {
     release.resolve();
     await p.context.close();
@@ -506,6 +521,7 @@ test('viewer history loads older UTC messages, denies writes, and a live capabil
   );
   try {
     await ready(p.peer);
+    await openProjectSection(p.peer, 'Code');
     const discussionLink = p.peer.getByRole('link', {
       name: 'Discussion',
       exact: true,
@@ -590,6 +606,26 @@ test('viewer history loads older UTC messages, denies writes, and a live capabil
         ),
       )
       .toBeLessThan(48);
+    await log.evaluate((element) => {
+      element.scrollTop = 0;
+      element.dispatchEvent(new Event('scroll'));
+    });
+    await openProjectSection(p.peer, 'Code');
+    await send(page, 'Incoming while the reader checks code');
+    await expect(
+      row(page, 'Incoming while the reader checks code'),
+    ).toHaveCount(1);
+    await openProjectSection(p.peer, 'Discussion');
+    await expect(
+      row(p.peer, 'Incoming while the reader checks code'),
+    ).toHaveCount(1);
+    await expect(
+      discussion(p.peer).getByText('1 new message loaded.', { exact: true }),
+    ).toBeVisible();
+    expect(
+      await log.evaluate((element) => element.scrollTop),
+    ).toBeLessThanOrEqual(1);
+    await jump.click();
     await expect(
       discussion(p.peer).getByRole('button', {
         name: 'Send message',
@@ -610,6 +646,7 @@ test('viewer history loads older UTC messages, denies writes, and a live capabil
       },
     );
     expect(denied.status()).toBe(403);
+    await openProjectSection(page, 'Sharing');
     await page.getByLabel('Link type', { exact: true }).selectOption('live');
     await page
       .getByRole('button', { name: 'Create shared link', exact: true })

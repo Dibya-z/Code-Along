@@ -226,40 +226,162 @@ function WorkspaceDetail() {
         </Notice>
       )}
       <ProjectsPanel workspace={workspace} />
-      <section className="content-section" aria-labelledby="members-heading">
-        <h2 id="members-heading">Members</h2>
-        {members.error && <Failure error={members.error} />}
-        {members.isPending ? (
-          <Notice>Loading members…</Notice>
-        ) : (
-          <div className="list">
-            {members.data?.items.map((member) => (
-              <div className="list-row" key={member.user_id}>
-                <div>
-                  <strong>{member.display_name}</strong>
-                  <p>{member.role}</p>
+      <details className="content-section task-disclosure">
+        <summary>Members</summary>
+        <section className="content-section" aria-labelledby="members-heading">
+          <h2 id="members-heading">Workspace members</h2>
+          {members.error && <Failure error={members.error} />}
+          {members.isPending ? (
+            <Notice>Loading members…</Notice>
+          ) : (
+            <div className="list">
+              {members.data?.items.map((member) => (
+                <div className="list-row" key={member.user_id}>
+                  <div>
+                    <strong>{member.display_name}</strong>
+                    <p>{member.role}</p>
+                  </div>
+                  {owner && member.role !== 'owner' && !workspace.archived ? (
+                    <div className="actions">
+                      <select
+                        aria-label={`Role for ${member.display_name}`}
+                        value={member.role}
+                        disabled={update.isPending}
+                        onChange={(event) =>
+                          update.mutate({
+                            path: `members/${member.user_id}/`,
+                            body: { role: event.target.value },
+                          })
+                        }
+                      >
+                        <option value="learner">Learner</option>
+                        <option value="instructor">Instructor</option>
+                      </select>
+                      <Dialog
+                        title={`Remove ${member.display_name}?`}
+                        description="They will lose workspace access. Projects they own must be transferred first."
+                        trigger={
+                          <Button variant="secondary">Remove member</Button>
+                        }
+                      >
+                        {update.error && <Failure error={update.error} />}
+                        <Button
+                          variant="danger"
+                          busy={update.isPending}
+                          onClick={() =>
+                            update.mutate({
+                              path: `members/${member.user_id}/`,
+                              method: 'DELETE',
+                            })
+                          }
+                        >
+                          Confirm removal
+                        </Button>
+                      </Dialog>
+                    </div>
+                  ) : (
+                    <span className="badge">{member.role}</span>
+                  )}
                 </div>
-                {owner && member.role !== 'owner' && !workspace.archived ? (
-                  <div className="actions">
-                    <select
-                      aria-label={`Role for ${member.display_name}`}
-                      value={member.role}
-                      disabled={update.isPending}
-                      onChange={(event) =>
-                        update.mutate({
-                          path: `members/${member.user_id}/`,
-                          body: { role: event.target.value },
-                        })
+              ))}
+            </div>
+          )}
+          {members.data && (
+            <Pagination
+              offset={memberOffset}
+              count={members.data.count}
+              limit={100}
+              onChange={setMemberOffset}
+            />
+          )}
+        </section>
+        {owner && <InvitationsPanel workspace={workspace} />}
+      </details>
+      {(owner || !workspace.archived) && (
+        <details className="content-section task-disclosure">
+          <summary>Workspace administration</summary>
+          {owner ? (
+            <section
+              className="content-section"
+              aria-labelledby="settings-heading"
+            >
+              <h2 id="settings-heading">Workspace settings</h2>
+              <form
+                className="form-stack"
+                style={{ maxWidth: '28rem' }}
+                onSubmit={rename}
+              >
+                <Field
+                  key={workspace.name}
+                  label="Workspace name"
+                  name="name"
+                  defaultValue={workspace.name}
+                  required
+                  maxLength={100}
+                />
+                <div>
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    busy={update.isPending}
+                  >
+                    Save workspace name
+                  </Button>
+                </div>
+              </form>
+              <div className="actions content-section">
+                {workspace.archived ? (
+                  <Button
+                    variant="secondary"
+                    busy={update.isPending}
+                    onClick={() => update.mutate({ body: { archived: false } })}
+                  >
+                    Restore workspace
+                  </Button>
+                ) : (
+                  <>
+                    <Dialog
+                      title="Transfer workspace ownership"
+                      description="The new owner will manage this workspace. You’ll remain an instructor; private project ownership is unchanged."
+                      trigger={
+                        <Button variant="secondary">Transfer ownership</Button>
                       }
                     >
-                      <option value="learner">Learner</option>
-                      <option value="instructor">Instructor</option>
-                    </select>
+                      <form className="form-stack" onSubmit={transfer}>
+                        <label htmlFor="new-owner">New owner</label>
+                        <select
+                          id="new-owner"
+                          name="new_owner_id"
+                          required
+                          defaultValue=""
+                        >
+                          <option value="" disabled>
+                            Choose an active member
+                          </option>
+                          {members.data?.items
+                            .filter(
+                              (member) => member.user_id !== identity.data?.id,
+                            )
+                            .map((member) => (
+                              <option
+                                key={member.user_id}
+                                value={member.user_id}
+                              >
+                                {member.display_name}
+                              </option>
+                            ))}
+                        </select>
+                        {update.error && <Failure error={update.error} />}
+                        <Button type="submit" busy={update.isPending}>
+                          Transfer workspace
+                        </Button>
+                      </form>
+                    </Dialog>
                     <Dialog
-                      title={`Remove ${member.display_name}?`}
-                      description="They will lose workspace access. Projects they own must be transferred first."
+                      title="Archive this workspace?"
+                      description="Your group’s records will be preserved. Changes stay paused until the owner restores the workspace."
                       trigger={
-                        <Button variant="secondary">Remove member</Button>
+                        <Button variant="secondary">Archive workspace</Button>
                       }
                     >
                       {update.error && <Failure error={update.error} />}
@@ -267,144 +389,42 @@ function WorkspaceDetail() {
                         variant="danger"
                         busy={update.isPending}
                         onClick={() =>
-                          update.mutate({
-                            path: `members/${member.user_id}/`,
-                            method: 'DELETE',
-                          })
+                          update.mutate({ body: { archived: true } })
                         }
                       >
-                        Confirm removal
+                        Confirm archive
                       </Button>
                     </Dialog>
-                  </div>
-                ) : (
-                  <span className="badge">{member.role}</span>
+                  </>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-        {members.data && (
-          <Pagination
-            offset={memberOffset}
-            count={members.data.count}
-            limit={100}
-            onChange={setMemberOffset}
-          />
-        )}
-      </section>
-      {owner && <InvitationsPanel workspace={workspace} />}
-      {owner ? (
-        <section className="content-section" aria-labelledby="settings-heading">
-          <h2 id="settings-heading">Workspace settings</h2>
-          <form
-            className="form-stack"
-            style={{ maxWidth: '28rem' }}
-            onSubmit={rename}
-          >
-            <Field
-              key={workspace.name}
-              label="Workspace name"
-              name="name"
-              defaultValue={workspace.name}
-              required
-              maxLength={100}
-            />
-            <div>
-              <Button type="submit" variant="secondary" busy={update.isPending}>
-                Save workspace name
-              </Button>
-            </div>
-          </form>
-          <div className="actions content-section">
-            {workspace.archived ? (
-              <Button
-                variant="secondary"
-                busy={update.isPending}
-                onClick={() => update.mutate({ body: { archived: false } })}
-              >
-                Restore workspace
-              </Button>
-            ) : (
-              <>
+            </section>
+          ) : (
+            !workspace.archived && (
+              <section className="content-section">
                 <Dialog
-                  title="Transfer workspace ownership"
-                  description="The new owner will manage this workspace. You’ll remain an instructor; private project ownership is unchanged."
-                  trigger={
-                    <Button variant="secondary">Transfer ownership</Button>
-                  }
-                >
-                  <form className="form-stack" onSubmit={transfer}>
-                    <label htmlFor="new-owner">New owner</label>
-                    <select
-                      id="new-owner"
-                      name="new_owner_id"
-                      required
-                      defaultValue=""
-                    >
-                      <option value="" disabled>
-                        Choose an active member
-                      </option>
-                      {members.data?.items
-                        .filter(
-                          (member) => member.user_id !== identity.data?.id,
-                        )
-                        .map((member) => (
-                          <option key={member.user_id} value={member.user_id}>
-                            {member.display_name}
-                          </option>
-                        ))}
-                    </select>
-                    {update.error && <Failure error={update.error} />}
-                    <Button type="submit" busy={update.isPending}>
-                      Transfer workspace
-                    </Button>
-                  </form>
-                </Dialog>
-                <Dialog
-                  title="Archive this workspace?"
-                  description="Your group’s records will be preserved. Changes stay paused until the owner restores the workspace."
-                  trigger={
-                    <Button variant="secondary">Archive workspace</Button>
-                  }
+                  title="Leave this workspace?"
+                  description="You will lose access. Transfer projects you own before leaving."
+                  trigger={<Button variant="secondary">Leave workspace</Button>}
                 >
                   {update.error && <Failure error={update.error} />}
                   <Button
                     variant="danger"
                     busy={update.isPending}
-                    onClick={() => update.mutate({ body: { archived: true } })}
+                    onClick={() =>
+                      update.mutate({
+                        path: `members/${identity.data?.id}/`,
+                        method: 'DELETE',
+                      })
+                    }
                   >
-                    Confirm archive
+                    Confirm leave
                   </Button>
                 </Dialog>
-              </>
-            )}
-          </div>
-        </section>
-      ) : (
-        !workspace.archived && (
-          <section className="content-section">
-            <Dialog
-              title="Leave this workspace?"
-              description="You will lose access. Transfer projects you own before leaving."
-              trigger={<Button variant="secondary">Leave workspace</Button>}
-            >
-              {update.error && <Failure error={update.error} />}
-              <Button
-                variant="danger"
-                busy={update.isPending}
-                onClick={() =>
-                  update.mutate({
-                    path: `members/${identity.data?.id}/`,
-                    method: 'DELETE',
-                  })
-                }
-              >
-                Confirm leave
-              </Button>
-            </Dialog>
-          </section>
-        )
+              </section>
+            )
+          )}
+        </details>
       )}
     </div>
   );

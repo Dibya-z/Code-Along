@@ -14,10 +14,12 @@ export function ProjectShares({
   project,
   accountId,
   paused,
+  active = true,
 }: {
   project: Project;
   accountId: string;
   paused: boolean;
+  active?: boolean;
 }) {
   const [kind, setKind] = useState<'live' | 'snapshot'>('live'),
     [offset, setOffset] = useState(0),
@@ -28,12 +30,15 @@ export function ProjectShares({
   const list = useQuery({
     queryKey: [...key, offset],
     queryFn: () => shareApi.list(project.id, offset),
+    enabled: active,
   });
   const revisions = useQuery({
     queryKey: ['revisions', accountId, project.id, 'share-picker'],
     queryFn: () => revisionApi.list(project.id, 0, 100),
+    enabled: active,
   });
   const members = useQuery({
+    enabled: active,
     queryKey: ['share-recipients', accountId, project.workspace_id],
     queryFn: () =>
       api<Page<Member>>(

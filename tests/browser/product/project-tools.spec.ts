@@ -6,6 +6,8 @@ import {
   login,
   createEditorProject,
   finishedRun,
+  openRecovery,
+  showFiles,
 } from './helpers.ts';
 const core = 'pyodide-314.0.7-core';
 async function hub(page: Page) {
@@ -16,9 +18,22 @@ async function hub(page: Page) {
   await expect(
     page.getByRole('heading', { name: 'Local drafts', exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Stored local copies', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel('Code Along source backup')).not.toBeVisible();
+}
+async function startDraft(page: Page) {
+  const summary = page
+    .locator('summary')
+    .filter({ hasText: /^Start a draft$/ });
+  await summary.focus();
+  await summary.press('Enter');
+  await expect(page.getByLabel('Code Along source backup')).toBeVisible();
 }
 async function template(page: Page, title = 'A function, two files') {
   await hub(page);
+  await startDraft(page);
   await page
     .getByRole('button', { name: `Preview ${title}`, exact: true })
     .click();
@@ -31,6 +46,7 @@ async function template(page: Page, title = 'A function, two files') {
   );
 }
 async function backup(page: Page): Promise<string> {
+  await openRecovery(page);
   const downloading = page.waitForEvent('download');
   await page
     .getByRole('button', { name: 'Export current code', exact: true })
@@ -61,6 +77,7 @@ test('templates, local metadata, Python imports and source export/import round t
   await page.getByRole('button', { name: 'Run code', exact: true }).click();
   await finishedRun(page);
   await expect(page.getByLabel('Python output')).toContainText('Hello, River!');
+  await showFiles(page);
   await page.getByRole('button', { name: 'Add file', exact: true }).click();
   let dialog = page.getByRole('dialog', { name: 'Add a Python file' });
   await dialog.getByLabel('File path').fill('scratch.py');
@@ -85,6 +102,7 @@ test('templates, local metadata, Python imports and source export/import round t
   await page.getByRole('button', { name: 'Run code', exact: true }).click();
   await finishedRun(page);
   await expect(page.getByLabel('Python output')).toContainText('local module');
+  await showFiles(page);
   await page.getByRole('button', { name: 'main.py', exact: true }).click();
   await page
     .getByRole('button', { name: 'Use as entrypoint', exact: true })
@@ -149,6 +167,7 @@ test('templates, local metadata, Python imports and source export/import round t
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
   await hub(page);
+  await startDraft(page);
   await page.getByLabel('Code Along source backup').setInputFiles({
     name: 'round-trip.codealong.json',
     mimeType: 'application/json',
@@ -157,6 +176,24 @@ test('templates, local metadata, Python imports and source export/import round t
   await expect(
     page.getByRole('region', { name: 'Source preview' }),
   ).toContainText('My copied experiment');
+  const preview = page.getByRole('region', {
+    name: 'Source preview',
+    exact: true,
+  });
+  await preview
+    .getByRole('combobox', { name: 'Preview file', exact: true })
+    .selectOption('greeting.py');
+  const start = page.locator('summary').filter({ hasText: /^Start a draft$/ });
+  await start.focus();
+  await start.press('Enter');
+  await expect(
+    page.getByRole('region', { name: 'Source preview' }),
+  ).not.toBeVisible();
+  await start.press('Enter');
+  await expect(
+    preview.getByRole('combobox', { name: 'Preview file', exact: true }),
+  ).toHaveValue('greeting.py');
+  await expect(start).toBeFocused();
   await page.screenshot({
     path: test.info().outputPath('local-drafts-desktop.png'),
     fullPage: true,
@@ -211,6 +248,7 @@ test('invalid backups leave storage unchanged and source previews cannot execute
 }) => {
   await register(page, `import-${browserName}-${Date.now()}@example.test`);
   await hub(page);
+  await startDraft(page);
   const archive = {
     version: 1,
     name: 'Imported text',
@@ -277,6 +315,7 @@ test('retained local drafts are account-scoped and confirmed deletion restores f
     'Welcome, Python learner!',
   );
   const url = page.url();
+  await openRecovery(page);
   await page
     .getByLabel('Keep my local drafts after sign out on this device.')
     .check();
@@ -324,7 +363,7 @@ test('retained local drafts are account-scoped and confirmed deletion restores f
   ).toBeFocused();
   const optionTab = browserName === 'webkit' && process.platform === 'darwin';
   await page.keyboard.press(optionTab ? 'Alt+Shift+Tab' : 'Shift+Tab');
-  // Native file-picker subcontrols have different focus ownership by engine.
+  // Focus can leave and return to the list after the deleted row's trigger disappears.
   await expect(
     page.getByRole('button', { name: 'Refresh local list', exact: true }),
   ).not.toBeFocused();
@@ -359,6 +398,7 @@ test('a project local copy captures current edits and cannot alter the original 
   });
   await page.getByLabel('Python source for main.py').fill(source);
   await expect(page.locator('.collaboration-status')).toHaveText('Saved');
+  await openRecovery(page);
   await page
     .getByRole('button', { name: 'Open local copy', exact: true })
     .click();
@@ -372,6 +412,7 @@ test('a project local copy captures current edits and cannot alter the original 
   );
   await page.goto(original);
   await expect(page.locator('.collaboration-status')).toHaveText('Saved');
+  await openRecovery(page);
   await expect(
     page.getByRole('button', { name: 'Restore local changes', exact: true }),
   ).toBeEnabled();

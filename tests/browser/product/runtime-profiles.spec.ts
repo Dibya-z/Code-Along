@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { register, createEditorProject } from './helpers.ts';
+import { register, createEditorProject, openRunOptions } from './helpers.ts';
 test('scientific packages are opt-in, pinned, self-hosted and fresh per run', async ({
   page,
   browserName,
@@ -20,6 +20,7 @@ test('scientific packages are opt-in, pinned, self-hosted and fresh per run', as
   await expect(status).toHaveText('Run failed', { timeout: 40_000 });
   await expect(output).toContainText('ModuleNotFoundError');
   expect(requests).toEqual([]);
+  await openRunOptions(page);
   await page
     .getByLabel('Python environment')
     .selectOption('pyodide-314.0.7-scientific');

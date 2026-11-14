@@ -1,6 +1,11 @@
 import { expect } from '@playwright/test';
 import { test } from './offline-fixture.ts';
-import { register, createEditorProject, finishedRun } from './helpers.ts';
+import {
+  register,
+  createEditorProject,
+  finishedRun,
+  openStartDraft,
+} from './helpers.ts';
 
 for (const [kind, scientific] of [
   ['project', false],
@@ -23,6 +28,7 @@ for (const [kind, scientific] of [
         .getByRole('navigation', { name: 'Main navigation' })
         .getByRole('link', { name: 'Local drafts', exact: true })
         .click();
+      await openStartDraft(page);
       await page
         .getByRole('button', {
           name: scientific

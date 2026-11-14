@@ -4,6 +4,7 @@ import {
   createEditorProject,
   runtimeDiagnostics,
   finishedRun,
+  openRunOptions,
 } from './helpers.ts';
 test('frozen multi-file Python runs, fresh globals/files, batch stdin and errors', async ({
   page,
@@ -55,6 +56,7 @@ test('frozen multi-file Python runs, fresh globals/files, batch stdin and errors
     'Earlier source',
   );
   await editor.fill('name = input("Name: ")\nprint("Hello", name)\n');
+  await openRunOptions(page);
   await page.getByLabel('Input before Run').fill('River');
   await page.getByRole('button', { name: 'Run code', exact: true }).click();
   await finishedRun(page);

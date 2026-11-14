@@ -30,6 +30,7 @@ import { CollaborationPanel } from '../collaboration/panel.tsx';
 import type { TicketLoader } from '../collaboration/api.ts';
 import type { FileSource } from './model/workspace.ts';
 import { SharedSourceActions } from './source-actions.tsx';
+import { createPortal } from 'react-dom';
 
 const noSubscription = () => () => {};
 const noCollaboration = () => null;
@@ -41,6 +42,12 @@ interface WorkbenchProps {
   selectedId: string;
   onSelect: (id: string) => void;
   paused: boolean;
+  targets?: {
+    readonly runToolbar: HTMLElement | null;
+    readonly collaboration: HTMLElement | null;
+    readonly recovery: HTMLElement | null;
+  };
+  onRun?: () => void;
 }
 type Props = WorkbenchProps &
   (
@@ -87,6 +94,8 @@ function ScopedWorkbench({
   local,
   localSources,
   capability,
+  targets,
+  onRun,
 }: Props) {
   const name = useRef(project.name);
   name.current = project.name;
@@ -135,6 +144,7 @@ function ScopedWorkbench({
   const [consoleWidth, setConsoleWidth] = useState('34');
   const [toolbar, setToolbar] = useState<HTMLDivElement | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [filesOpen, setFilesOpen] = useState(false);
   useEffect(() => {
     resource.leases++;
     resource.collaboration?.start();
@@ -254,7 +264,9 @@ function ScopedWorkbench({
     <div
       className="editor-workbench content-section"
       data-pane={pane}
-      data-collaboration={Boolean(resource.collaboration)}
+      data-collaboration={Boolean(
+        resource.collaboration && !targets?.collaboration,
+      )}
       style={
         {
           '--editor-font-size': fontSize,
@@ -263,7 +275,7 @@ function ScopedWorkbench({
       }
     >
       <div className="workbench-controls">
-        <div ref={setToolbar} />
+        <div ref={setToolbar} hidden={Boolean(targets?.runToolbar)} />
         <nav className="pane-switch" aria-label="Workbench panes">
           <Button
             variant="secondary"
@@ -279,6 +291,16 @@ function ScopedWorkbench({
           >
             Console
           </Button>
+          <Button
+            className="files-toggle"
+            variant="secondary"
+            aria-expanded={filesOpen}
+            aria-label={filesOpen ? 'Hide files' : 'Show files'}
+            aria-controls="project-file-list"
+            onClick={() => setFilesOpen(!filesOpen)}
+          >
+            Files <span aria-hidden="true">{filesOpen ? '▴' : '▾'}</span>
+          </Button>
         </nav>
         <label className="console-width">
           Console width{' '}
@@ -292,33 +314,46 @@ function ScopedWorkbench({
           {consoleWidth}%
         </label>
       </div>
-      {resource.collaboration && (
-        <CollaborationPanel
-          model={resource.collaboration}
-          selectedId={selectedId}
-          accountId={accountId}
-          following={following}
-          onFollow={setFollowing}
-        />
-      )}
-      <aside className="editor-explorer" aria-label="Project files">
-        <div className="section-head">
-          <h2>Files</h2>
-          {addControl}
+      {resource.collaboration &&
+        (() => {
+          const panel = (
+            <CollaborationPanel
+              model={resource.collaboration}
+              selectedId={selectedId}
+              accountId={accountId}
+              following={following}
+              onFollow={setFollowing}
+              compact={Boolean(targets?.collaboration)}
+            />
+          );
+          return targets?.collaboration
+            ? createPortal(panel, targets.collaboration)
+            : panel;
+        })()}
+      <aside
+        className="editor-explorer"
+        aria-label="Project files"
+        data-open={filesOpen}
+      >
+        <div id="project-file-list" className="editor-files-content">
+          <div className="section-head">
+            <h2>Files</h2>
+            {addControl}
+          </div>
+          <FileTree
+            files={summary.files}
+            selectedId={selectedId}
+            entrypoint={summary.entrypoint}
+            onSelect={onSelect}
+          />
+          <p className="editor-scope-note">
+            {local
+              ? 'This local draft stays in this browser.'
+              : capability
+                ? 'This link grants source access only. Saved confirms your current code is stored in Code Along.'
+                : 'Live edits are shared with project members. Saved confirms your current code is stored in Code Along.'}
+          </p>
         </div>
-        <FileTree
-          files={summary.files}
-          selectedId={selectedId}
-          entrypoint={summary.entrypoint}
-          onSelect={onSelect}
-        />
-        <p className="editor-scope-note">
-          {local
-            ? 'This local draft stays in this browser.'
-            : capability
-              ? 'This link grants source access only. Saved requires a server checkpoint receipt.'
-              : 'Live edits are shared with project members. Saved requires a server checkpoint receipt.'}
-        </p>
       </aside>
       <section className="editor-pane" aria-label="Python workbench">
         <FileTabs
@@ -328,34 +363,30 @@ function ScopedWorkbench({
           onClose={close}
         />
         <div className="editor-pane-head">
-          <h2>{active?.metadata.path ?? 'Your code'}</h2>
-          <label className="editor-size">
-            Code size
-            <select
-              aria-label="Editor text size"
-              value={fontSize}
-              onChange={(event) => setFontSize(event.target.value)}
-            >
-              <option value="1rem">16 px</option>
-              <option value="1.125rem">18 px</option>
-              <option value="1.25rem">20 px</option>
-            </select>
-          </label>
-          <span className="badge">
-            {!summary.writable || paused
-              ? 'Read only'
-              : collaboration
-                ? collaboration.phase === 'blocked' ||
-                  (collaboration.phase === 'offline' &&
-                    !collaboration.offlineEditable)
-                  ? 'Editing paused'
-                  : collaboration.save === 'saved'
-                    ? 'Saved'
-                    : 'Shared project'
+          <details className="editor-options">
+            <summary>Editor options</summary>
+            <label className="editor-size">
+              Code size
+              <select
+                aria-label="Editor text size"
+                value={fontSize}
+                onChange={(event) => setFontSize(event.target.value)}
+              >
+                <option value="1rem">16 px</option>
+                <option value="1.125rem">18 px</option>
+                <option value="1.25rem">20 px</option>
+              </select>
+            </label>
+          </details>
+          {!collaboration && (
+            <span className="badge">
+              {!summary.writable || paused
+                ? 'Read only'
                 : active?.dirty
                   ? 'Local draft'
                   : 'Ready to edit'}
-          </span>
+            </span>
+          )}
         </div>
         {notice && <Notice>{notice}</Notice>}
         <div
@@ -410,15 +441,28 @@ function ScopedWorkbench({
       <ExecutionPanel
         workspace={workspace}
         paused={paused}
-        toolbar={toolbar}
-        onRun={() => setPane('console')}
+        toolbar={targets?.runToolbar ?? toolbar}
+        onRun={() => {
+          setPane('console');
+          onRun?.();
+        }}
       />
       {resource.recovery ? (
-        <RecoveryPanel
-          model={resource.recovery}
-          name={project.name}
-          selectedId={selectedId}
-        />
+        (() => {
+          const panel = (
+            <RecoveryPanel
+              model={resource.recovery}
+              name={project.name}
+              selectedId={selectedId}
+              attention={
+                collaboration?.phase === 'blocked' || Boolean(sourceError)
+              }
+            />
+          );
+          return targets?.recovery
+            ? createPortal(panel, targets.recovery)
+            : panel;
+        })()
       ) : (
         <SharedSourceActions
           workspace={workspace}

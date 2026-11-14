@@ -240,7 +240,7 @@ export function ExecutionPanel({
         onClear={() => model.clearOutput()}
       />
       <PlotGallery key={`plots:${snapshot.runId}`} plots={snapshot.plots} />
-      <details className="run-settings" open>
+      <details className="run-settings">
         <summary>Run options</summary>
         <label className="execution-input">
           Python environment

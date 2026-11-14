@@ -5,6 +5,7 @@ import type { DiscussionSnapshot } from './controller.ts';
 export function useDiscussionReading(
   snapshot: DiscussionSnapshot,
   accountId: string,
+  active = true,
 ) {
   const log = useRef<HTMLOListElement>(null);
   const [unread, setUnread] = useState(0);
@@ -24,7 +25,7 @@ export function useDiscussionReading(
   };
   const scroll = () => {
     const element = log.current;
-    if (!element) return;
+    if (!element || !active) return;
     view.current.nearBottom =
       element.scrollHeight - element.scrollTop - element.clientHeight <= 48;
     if (view.current.nearBottom) clear();
@@ -39,15 +40,30 @@ export function useDiscussionReading(
       state.max = BigInt(newest);
       return;
     }
-    if (!state.initialized) {
+    const initial = !state.initialized;
+    if (initial) {
       state.initialized = true;
       state.nearBottom = true;
       state.pin = true;
     }
     const added = snapshot.messages.filter(
       (message) =>
-        !state.ids.has(message.id) && BigInt(message.sequence) > state.max,
+        !initial &&
+        !state.ids.has(message.id) &&
+        BigInt(message.sequence) > state.max,
     );
+    if (!active) {
+      for (const message of added)
+        if (!(
+          message.author.id === accountId &&
+          state.local.has(message.client_message_id)
+        ))
+          state.unread.add(message.id);
+      state.ids = new Set(snapshot.messages.map((message) => message.id));
+      state.max = BigInt(newest) > state.max ? BigInt(newest) : state.max;
+      if (unread !== state.unread.size) setUnread(state.unread.size);
+      return;
+    }
     if (state.anchor && !state.pin) {
       const target = [
         ...element.querySelectorAll<HTMLElement>('li[data-message-id]'),

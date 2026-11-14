@@ -5,6 +5,13 @@
 * {
   box-sizing: border-box;
 }
+[hidden] {
+  display: none !important;
+}
+summary:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
 body {
   margin: 0;
   background: var(--color-canvas);
@@ -40,12 +47,12 @@ select {
 }
 .app-shell {
   display: grid;
-  grid-template-columns: 15rem minmax(0, 1fr);
+  grid-template-columns: 12rem minmax(0, 1fr);
   min-height: 100svh;
 }
 .sidebar {
   border-right: 1px solid var(--color-separator);
-  padding: 2rem 1.5rem;
+  padding: 1.25rem 1rem;
   display: flex;
   flex-direction: column;
   background: var(--color-surface);
@@ -108,13 +115,13 @@ nav a:hover {
   flex-direction: column;
 }
 .topbar {
-  min-height: 5.5rem;
+  min-height: 4rem;
   border-bottom: 1px solid var(--color-separator);
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   align-items: center;
-  padding: 1.25rem 3rem;
+  padding: 0.75rem 1.5rem;
   color: var(--color-muted);
   font-size: 0.875rem;
 }
@@ -333,6 +340,138 @@ main {
 
 .compact-form {
   max-width: 28rem;
+}
+.project-page {
+  max-width: none;
+  padding: 1.5rem;
+}
+.project-heading {
+  margin-top: var(--space-4);
+  align-items: center;
+}
+.project-heading h1 {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  overflow-wrap: anywhere;
+}
+.project-heading .eyebrow,
+.project-heading h1,
+.project-heading p {
+  margin-bottom: var(--space-2);
+}
+.project-section-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+  border-bottom: 1px solid var(--color-separator);
+}
+.project-section-nav a[aria-current='page'] {
+  color: var(--color-ink);
+  background: var(--color-raised);
+  box-shadow: inset 0 -2px var(--color-primary);
+}
+.project-command-bar {
+  position: sticky;
+  top: 0;
+  z-index: var(--layer-sticky);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-separator);
+}
+.project-run-toolbar {
+  flex: 0 1 auto;
+}
+.project-collaboration {
+  flex: 1 1 28rem;
+  min-width: 0;
+}
+.project-section:focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.project-section,
+.project-page #discussion {
+  scroll-margin-top: var(--project-command-height, 8rem);
+}
+.project-section > .content-section,
+.project-page > [hidden] + .content-section {
+  margin-top: var(--space-4);
+}
+.project-page .editor-workbench {
+  margin-top: var(--space-4);
+}
+.task-disclosure > summary {
+  cursor: pointer;
+  min-height: var(--target-min);
+  padding-block: var(--space-3);
+  font-size: var(--text-heading-sm);
+  font-weight: 600;
+}
+.task-disclosure {
+  border-top: 1px solid var(--color-separator);
+}
+@media (max-width: 48rem) {
+  .sidebar {
+    padding: 0.5rem 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .sidebar .wordmark {
+    font-size: 1.05rem;
+    gap: 0.5rem;
+  }
+  .sidebar .brand-mark {
+    font-size: 1.25rem;
+  }
+  .sidebar nav {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .sidebar nav a {
+    padding-inline: 0.5rem;
+  }
+  .topbar {
+    min-height: 3.5rem;
+    padding: 0.5rem 1rem;
+  }
+  .project-page {
+    padding: 1rem;
+  }
+  .project-heading {
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+  .project-heading .actions {
+    gap: var(--space-2);
+  }
+  .project-section-nav {
+    gap: 0;
+    margin-top: var(--space-2);
+    font-size: var(--text-meta);
+  }
+  .project-section-nav a {
+    padding-inline: 3px;
+    min-width: var(--target-min);
+    justify-content: center;
+  }
+  .project-heading h1,
+  .project-heading p {
+    margin-bottom: var(--space-1);
+  }
+  .project-command-bar .execution-toolbar {
+    padding-block: var(--space-2);
+  }
+  .project-command-bar .execution-title {
+    display: none;
+  }
+  .project-recovery .local-recovery summary {
+    padding-block: var(--space-2);
+  }
+  .project-page .editor-workbench {
+    margin-top: var(--space-2);
+  }
 }
 textarea {
   font: 1rem/1.5 var(--font-code);

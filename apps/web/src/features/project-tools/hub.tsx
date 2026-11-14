@@ -120,66 +120,6 @@ function DraftHub() {
         offers an optional retention setting.
       </Notice>
       {error && <Notice tone="error">{error}</Notice>}
-      <section className="content-section" aria-label="Python templates">
-        <h2>Start with a small experiment.</h2>
-        <div className="template-list">
-          {TEMPLATES.map((template) => (
-            <article className="template-row" key={template.id}>
-              <div>
-                <h3>{template.title}</h3>
-                <p>{template.description}</p>
-                <span className="muted">
-                  {template.archive.files.length}{' '}
-                  {template.archive.files.length === 1 ? 'file' : 'files'} ·{' '}
-                  {runtimeProfile(template.archive.runtime_id)?.name}
-                </span>
-              </div>
-              <Button
-                variant="secondary"
-                disabled={busy || reading}
-                onClick={() => {
-                  readVersion.current++;
-                  setPreview(template.archive);
-                  setError('');
-                }}
-              >
-                Preview {template.title}
-              </Button>
-            </article>
-          ))}
-        </div>
-      </section>
-      <section
-        className="content-section import-section"
-        aria-label="Import a source backup"
-      >
-        <h2>Bring your code.</h2>
-        <label className="field">
-          <span>Code Along source backup</span>
-          <input
-            type="file"
-            accept=".codealong.json,.json,application/json"
-            disabled={busy || reading}
-            onChange={(event) => {
-              void read(event.target.files?.[0]);
-            }}
-          />
-        </label>
-        <p className="muted">
-          Choose a .codealong.json file, up to 16 MiB and 20 Python files.
-          Import opens a separate local copy and never runs it automatically.
-        </p>
-        {reading && <p role="status">Reading and validating source…</p>}
-        {preview && (
-          <ArchivePreview
-            archive={preview}
-            busy={busy}
-            onCreate={() => {
-              void create(preview);
-            }}
-          />
-        )}
-      </section>
       <section className="content-section" aria-label="Stored local copies">
         <div className="section-head">
           <h2>On this device</h2>
@@ -203,7 +143,8 @@ function DraftHub() {
         )}
         {query.data?.length === 0 && (
           <p className="muted">
-            No local copies yet. Preview a template or choose a backup above.
+            No local copies yet. Open Start a draft below to preview a template
+            or choose a backup.
           </p>
         )}
         <ul className="plain-list">
@@ -266,6 +207,69 @@ function DraftHub() {
           ))}
         </ul>
       </section>
+      <details className="content-section task-disclosure">
+        <summary>Start a draft</summary>
+        <section className="content-section" aria-label="Python templates">
+          <h2>Choose a Python template</h2>
+          <div className="template-list">
+            {TEMPLATES.map((template) => (
+              <article className="template-row" key={template.id}>
+                <div>
+                  <h3>{template.title}</h3>
+                  <p>{template.description}</p>
+                  <span className="muted">
+                    {template.archive.files.length}{' '}
+                    {template.archive.files.length === 1 ? 'file' : 'files'} ·{' '}
+                    {runtimeProfile(template.archive.runtime_id)?.name}
+                  </span>
+                </div>
+                <Button
+                  variant="secondary"
+                  disabled={busy || reading}
+                  onClick={() => {
+                    readVersion.current++;
+                    setPreview(template.archive);
+                    setError('');
+                  }}
+                >
+                  Preview {template.title}
+                </Button>
+              </article>
+            ))}
+          </div>
+        </section>
+        <section
+          className="content-section import-section"
+          aria-label="Import a source backup"
+        >
+          <h2>Import a source backup</h2>
+          <label className="field">
+            <span>Code Along source backup</span>
+            <input
+              type="file"
+              accept=".codealong.json,.json,application/json"
+              disabled={busy || reading}
+              onChange={(event) => {
+                void read(event.target.files?.[0]);
+              }}
+            />
+          </label>
+          <p className="muted">
+            Choose a .codealong.json file, up to 16 MiB and 20 Python files.
+            Import opens a separate local copy and never runs it automatically.
+          </p>
+          {reading && <p role="status">Reading and validating source…</p>}
+          {preview && (
+            <ArchivePreview
+              archive={preview}
+              busy={busy}
+              onCreate={() => {
+                void create(preview);
+              }}
+            />
+          )}
+        </section>
+      </details>
     </div>
   );
 }

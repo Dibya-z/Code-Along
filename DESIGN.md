@@ -46,7 +46,7 @@ Selection/cursor identities need text labels and optional patterns in addition t
 - Test 200% text zoom, 400% page zoom/reflow, long project names, empty/error/loading states, high-contrast settings, reduced motion and keyboard-only use. Controls need 44px targets or genuinely separated equivalent hit areas.
 - Dialogs restore focus; resize handles have keyboard controls and names; console updates do not force scrolling when a learner is reading earlier output.
 
-M1.3 will implement primitives/Storybook and first rendered screens. Browser screenshots and keyboard/screen-reader checks apply then; this document makes no claim of completed visual/accessibility QA.
+Primitives, Storybook and the core workbench are implemented. The UI clarity unit applies task-first project navigation, compact context and progressive disclosure before M4 learning screens. Keep editor/execution/discussion resources stable when switching views; hidden controls leave keyboard navigation, while Run/Stop, durable save/blocked state and recovery remain reachable. Workspace projects and existing local drafts lead their screens; occasional administration and creation details are disclosed explicitly. Rendered browser/keyboard checks accompany every meaningful UI unit; full screen-reader/retail/mobile certification remains a later gate.
 
 ## Reference discipline
 

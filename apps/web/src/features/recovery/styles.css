@@ -1,6 +1,19 @@
 .local-recovery {
   grid-column: 1 / -1;
   min-width: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-separator);
+}
+.local-recovery summary {
+  cursor: pointer;
+  min-height: var(--target-min);
+  padding: var(--space-3) var(--space-4);
+}
+.recovery-title {
+  font-weight: 600;
+  margin-right: var(--space-4);
+}
+.recovery-content {
   padding: var(--space-4);
   border-top: 1px solid var(--color-separator);
 }

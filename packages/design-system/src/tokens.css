@@ -40,6 +40,7 @@
   --focus-width: 2px;
   --focus-offset: 2px;
   --layer-base: 0;
+  --layer-sticky: 50;
   --layer-popover: 100;
   --layer-dialog: 200;
   --layer-notice: 300;

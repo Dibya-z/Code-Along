@@ -292,7 +292,7 @@ export class ProjectCollaboration {
     this.publish({
       members: {},
       error:
-        'Offline edits stay on this device until fresh server admission and a checkpoint receipt.',
+        'Your offline edits stay in this tab until you reconnect and see Saved. Export important work before closing it.',
     });
   };
   private online = (): void => {

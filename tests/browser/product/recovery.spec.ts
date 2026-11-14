@@ -1,7 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { register, login, createEditorProject } from './helpers.ts';
+import {
+  register,
+  login,
+  createEditorProject,
+  openRecovery,
+} from './helpers.ts';
 interface Row {
   revision: number;
   account: string;
@@ -125,6 +130,7 @@ async function replaceSharedSource(page: Page, source: string): Promise<void> {
   await page.keyboard.insertText(source);
 }
 async function archiveSource(page: Page, stored = false): Promise<string> {
+  await openRecovery(page);
   const downloading = page.waitForEvent('download');
   await page
     .getByRole('button', {
@@ -150,9 +156,11 @@ test('canonical recovery, immediate route flush, competing local stores and defa
   page.on('pageerror', (error) => errors.push(error.message));
   await register(page, `recovery-${browserName}-${Date.now()}@example.test`);
   await createEditorProject(page);
+  await openRecovery(page);
   const projectUrl = page.url(),
     source = '# 🐍\nprint("private draft")\n';
   await serverSaved(page);
+  await openRecovery(page);
   await expect(
     page.getByLabel('Keep my local drafts after sign out on this device.'),
   ).not.toBeChecked();
@@ -315,6 +323,7 @@ test('explicit retention survives sign out and a different account cannot open t
   const email = `retain-${browserName}-${Date.now()}@example.test`;
   await register(page, email);
   await createEditorProject(page);
+  await openRecovery(page);
   const projectUrl = page.url(),
     source = 'print("retained by choice")\n';
   await page.getByLabel('Python source for main.py').fill(source);
@@ -371,6 +380,7 @@ test('stale recovery generations cannot replace saved source and quota failure p
     `recovery-fault-${browserName}-${Date.now()}@example.test`,
   );
   await createEditorProject(page);
+  await openRecovery(page);
   const source = 'print("stored copy")\n';
   await page.getByLabel('Python source for main.py').fill(source);
   await stored(page, source);
@@ -483,6 +493,7 @@ test('unavailable IndexedDB keeps export and server sign out usable', async ({
   });
   await register(page, `no-storage-${browserName}-${Date.now()}@example.test`);
   await createEditorProject(page);
+  await openRecovery(page);
   await expect(page.locator('.recovery-status')).toHaveText(
     'Local recovery needs attention.',
   );
@@ -519,6 +530,7 @@ test('an unavailable verified starter baseline blocks complete actions but a loa
 }) => {
   await register(page, `partial-${browserName}-${Date.now()}@example.test`);
   await createEditorProject(page);
+  await openRecovery(page);
   await page.getByRole('button', { name: 'Add file', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Add a Python file' });
   await dialog.getByLabel('File path').fill('helper.py');
@@ -537,6 +549,7 @@ test('an unavailable verified starter baseline blocks complete actions but a loa
     }),
   );
   await page.reload();
+  await openRecovery(page);
   await page.getByRole('button', { name: 'main.py', exact: true }).click();
   const source = '# one complete loaded file\nprint("rescue")\n';
   await page.getByLabel('Python source for main.py').fill(source);

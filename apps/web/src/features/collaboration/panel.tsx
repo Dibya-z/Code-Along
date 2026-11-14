@@ -18,12 +18,14 @@ export function CollaborationPanel({
   accountId,
   following,
   onFollow,
+  compact = false,
 }: {
   model: ProjectCollaboration;
   selectedId: string;
   accountId: string;
   following: number | null;
   onFollow: (clientId: number | null) => void;
+  compact?: boolean;
 }) {
   const status = useSyncExternalStore(model.subscribe, model.getSnapshot);
   const members = status.members[selectedId] ?? [];
@@ -48,7 +50,10 @@ export function CollaborationPanel({
     users.set(member.userId, group);
   }
   return (
-    <section className="collaboration-panel" aria-label="Collaboration">
+    <section
+      className={`collaboration-panel${compact ? ' collaboration-compact' : ''}`}
+      aria-label="Collaboration"
+    >
       <div className="section-head">
         <h2>Working together</h2>
         <p className="collaboration-status" role="status">
@@ -59,53 +64,61 @@ export function CollaborationPanel({
               : saveLabels[status.save]}
         </p>
       </div>
-      <div className="collaboration-actions">
-        <ul className="collaboration-presence" aria-label="People in this file">
-          {[...users].map(([userId, member]) => (
-            <li key={userId}>
-              <span
-                className="participant-mark"
-                aria-hidden="true"
-                style={{ borderColor: member.color }}
-              />
-              {member.name}
-              {userId === accountId ? ' (you)' : ''}
-              {member.clients.length > 1
-                ? ` · ${member.clients.length} tabs`
-                : ''}
-              {userId !== accountId &&
-                (following !== null && member.clients.includes(following) ? (
-                  <Button variant="secondary" onClick={() => onFollow(null)}>
-                    Stop following
-                  </Button>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    onClick={() => onFollow(member.clients[0]!)}
-                    disabled={status.phase !== 'connected'}
-                  >
-                    Follow {member.name}
-                  </Button>
-                ))}
-            </li>
-          ))}
-        </ul>
-        <Button
-          variant="secondary"
-          onClick={model.save}
-          disabled={
-            status.phase !== 'connected' ||
-            ['connecting', 'read_only', 'error'].includes(status.save)
-          }
-        >
-          Save checkpoint
-        </Button>
-        {status.phase !== 'connected' && (
-          <Button variant="secondary" onClick={model.retry}>
-            {status.phase === 'blocked' ? 'Recheck access' : 'Reconnect'}
+      <details className="collaboration-details">
+        <summary>
+          People and save options <span aria-hidden="true">({users.size})</span>
+        </summary>
+        <div className="collaboration-actions">
+          <ul
+            className="collaboration-presence"
+            aria-label="People in this file"
+          >
+            {[...users].map(([userId, member]) => (
+              <li key={userId}>
+                <span
+                  className="participant-mark"
+                  aria-hidden="true"
+                  style={{ borderColor: member.color }}
+                />
+                {member.name}
+                {userId === accountId ? ' (you)' : ''}
+                {member.clients.length > 1
+                  ? ` · ${member.clients.length} tabs`
+                  : ''}
+                {userId !== accountId &&
+                  (following !== null && member.clients.includes(following) ? (
+                    <Button variant="secondary" onClick={() => onFollow(null)}>
+                      Stop following
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      onClick={() => onFollow(member.clients[0]!)}
+                      disabled={status.phase !== 'connected'}
+                    >
+                      Follow {member.name}
+                    </Button>
+                  ))}
+              </li>
+            ))}
+          </ul>
+          <Button
+            variant="secondary"
+            onClick={model.save}
+            disabled={
+              status.phase !== 'connected' ||
+              ['connecting', 'read_only', 'error'].includes(status.save)
+            }
+          >
+            Save code now
           </Button>
-        )}
-      </div>
+        </div>
+      </details>
+      {status.phase !== 'connected' && (
+        <Button variant="secondary" onClick={model.retry}>
+          {status.phase === 'blocked' ? 'Recheck access' : 'Reconnect'}
+        </Button>
+      )}
       {status.error && <Notice tone="error">{status.error}</Notice>}
       {following !== null && (
         <p role="status">
