@@ -196,6 +196,12 @@ test('named shared revisions survive a lost response, later edits, and create a 
   await exactSource(page, oldSource);
   const nonces: string[] = [];
   let drop = true;
+  let interceptedPost: import('@playwright/test').Request | null = null;
+  let resolveLoss!: () => void, rejectLoss!: (error: unknown) => void;
+  const didLoseReply = new Promise<void>((resolve, reject) => {
+    resolveLoss = resolve;
+    rejectLoss = reject;
+  });
   await page.route(
     `**/api/v1/projects/${original.projectId}/revisions/`,
     async (route) => {
@@ -206,17 +212,33 @@ test('named shared revisions survive a lost response, later edits, and create a 
       );
       if (!drop) return route.continue();
       drop = false;
-      await route.fetch();
-      await route.abort('failed');
+      interceptedPost = route.request();
+      try {
+        const response = await route.fetch();
+        expect(response.status()).toBe(201);
+        await response.json();
+        await route.abort('failed');
+        resolveLoss();
+      } catch (error) {
+        rejectLoss(error);
+        await route.abort('failed').catch(() => undefined);
+      }
     },
   );
   await openProjectSection(page, 'History');
   await page
     .getByLabel('Revision name', { exact: true })
     .fill('Before refactoring');
-  await page
-    .getByRole('button', { name: 'Capture shared revision', exact: true })
-    .click();
+  const failedPost = page.waitForEvent('requestfailed', {
+    predicate: (request) => request === interceptedPost,
+  });
+  await Promise.all([
+    page
+      .getByRole('button', { name: 'Capture shared revision', exact: true })
+      .click(),
+    didLoseReply,
+    failedPost,
+  ]);
   await expect(
     page.getByRole('button', { name: 'Retry same capture', exact: true }),
   ).toBeVisible();

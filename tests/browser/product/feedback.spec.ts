@@ -520,20 +520,42 @@ test('lost feedback reply retains the original publication after newer edits, co
     );
     const bodies: unknown[] = [];
     let lost = false;
+    let interceptedPost: import('@playwright/test').Request | null = null;
+    let resolveLoss!: () => void, rejectLoss!: (error: unknown) => void;
+    const didLoseReply = new Promise<void>((resolve, reject) => {
+      resolveLoss = resolve;
+      rejectLoss = reject;
+    });
     await page.route(`**${f.feedbackPath}publications/`, async (route) => {
       if (route.request().method() !== 'POST') return route.continue();
       bodies.push(route.request().postDataJSON() as unknown);
       if (!lost) {
         lost = true;
-        const response = await route.fetch();
-        expect(response.status()).toBe(201);
-        return route.abort('failed');
+        interceptedPost = route.request();
+        try {
+          const response = await route.fetch();
+          expect(response.status()).toBe(201);
+          await response.json();
+          await route.abort('failed');
+          resolveLoss();
+        } catch (error) {
+          rejectLoss(error);
+          await route.abort('failed').catch(() => undefined);
+        }
+        return;
       }
       return route.continue();
     });
-    await page
-      .getByRole('button', { name: 'Publish saved feedback', exact: true })
-      .click();
+    const failedPost = page.waitForEvent('requestfailed', {
+      predicate: (request) => request === interceptedPost,
+    });
+    await Promise.all([
+      page
+        .getByRole('button', { name: 'Publish saved feedback', exact: true })
+        .click(),
+      didLoseReply,
+      failedPost,
+    ]);
     await expect(
       page.getByRole('button', {
         name: 'Retry original feedback publication',
@@ -676,24 +698,46 @@ test('an invalid direct feedback receipt stays unconfirmed even when latest matc
     await saveDraft(page, f.feedbackPath, 'Exact saved review', 'reviewed');
     let corrupt = true;
     const bodies: unknown[] = [];
+    let interceptedPost: import('@playwright/test').Request | null = null;
+    let resolveCorruption!: () => void,
+      rejectCorruption!: (error: unknown) => void;
+    const didCorruptReply = new Promise<void>((resolve, reject) => {
+      resolveCorruption = resolve;
+      rejectCorruption = reject;
+    });
     await page.route(`**${f.feedbackPath}publications/`, async (route) => {
       if (route.request().method() !== 'POST') return route.continue();
       bodies.push(route.request().postDataJSON() as unknown);
       if (corrupt) {
         corrupt = false;
-        const response = await route.fetch();
-        expect(response.status()).toBe(201);
-        const value = (await response.json()) as Publication;
-        return route.fulfill({
-          response,
-          json: { ...value, content_sha256: '0'.repeat(64) },
-        });
+        interceptedPost = route.request();
+        try {
+          const response = await route.fetch();
+          expect(response.status()).toBe(201);
+          const value = (await response.json()) as Publication;
+          await route.fulfill({
+            response,
+            json: { ...value, content_sha256: '0'.repeat(64) },
+          });
+          resolveCorruption();
+        } catch (error) {
+          rejectCorruption(error);
+          await route.abort('failed').catch(() => undefined);
+        }
+        return;
       }
       return route.continue();
     });
-    await page
-      .getByRole('button', { name: 'Publish saved feedback', exact: true })
-      .click();
+    const finishedPost = page.waitForEvent('requestfinished', {
+      predicate: (request) => request === interceptedPost,
+    });
+    await Promise.all([
+      page
+        .getByRole('button', { name: 'Publish saved feedback', exact: true })
+        .click(),
+      didCorruptReply,
+      finishedPost,
+    ]);
     await expect(
       page.getByRole('button', {
         name: 'Retry original feedback publication',

@@ -780,6 +780,12 @@ test('draft CAS preserves local text and uncertain publication retries the same 
     const requests: { expected_revision: number; client_request_id: string }[] =
       [];
     let lost = true;
+    let interceptedPost: import('@playwright/test').Request | null = null;
+    let resolveLoss!: () => void, rejectLoss!: (error: unknown) => void;
+    const didLoseReply = new Promise<void>((resolve, reject) => {
+      resolveLoss = resolve;
+      rejectLoss = reject;
+    });
     await page.route(
       `**/api/v1/assignments/${seeded.assignment.id}/versions/`,
       async (route) => {
@@ -795,19 +801,34 @@ test('draft CAS preserves local text and uncertain publication retries the same 
         );
         if (lost) {
           lost = false;
-          const response = await route.fetch();
-          expect(response.status()).toBe(201);
-          await route.abort('failed');
+          interceptedPost = route.request();
+          try {
+            const response = await route.fetch();
+            expect(response.status()).toBe(201);
+            await response.json();
+            await route.abort('failed');
+            resolveLoss();
+          } catch (error) {
+            rejectLoss(error);
+            await route.abort('failed').catch(() => undefined);
+          }
         } else await route.continue();
       },
     );
     await page
       .getByRole('button', { name: 'Review publication', exact: true })
       .click();
-    await page
-      .getByRole('dialog', { name: 'Publish this saved draft?', exact: true })
-      .getByRole('button', { name: 'Publish saved draft', exact: true })
-      .click();
+    const failedPost = page.waitForEvent('requestfailed', {
+      predicate: (request) => request === interceptedPost,
+    });
+    await Promise.all([
+      page
+        .getByRole('dialog', { name: 'Publish this saved draft?', exact: true })
+        .getByRole('button', { name: 'Publish saved draft', exact: true })
+        .click(),
+      didLoseReply,
+      failedPost,
+    ]);
     await expect(
       page.getByRole('button', { name: 'Retry same publication', exact: true }),
     ).toBeVisible();

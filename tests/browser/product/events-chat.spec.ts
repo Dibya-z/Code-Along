@@ -196,11 +196,12 @@ async function pair(
   }
 }
 function deferred() {
-  let resolve!: () => void;
-  const promise = new Promise<void>((yes) => {
+  let resolve!: () => void, reject!: (error: unknown) => void;
+  const promise = new Promise<void>((yes, no) => {
     resolve = yes;
+    reject = no;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 async function openFileDownload(page: Page) {
   await openRecovery(page);
@@ -261,7 +262,11 @@ test('two accounts receive plaintext once despite duplicate notifications and re
   const p = await pair(page, browser, browserName, 'editor', (peer) =>
     notifications(peer, () => false, true),
   );
-  const release = deferred();
+  const release = deferred(),
+    didCommit = deferred(),
+    dropped = deferred();
+  void didCommit.promise.catch(() => {});
+  void dropped.promise.catch(() => {});
   let committed = false;
   try {
     await ready(page);
@@ -270,15 +275,27 @@ test('two accounts receive plaintext once despite duplicate notifications and re
       `**/api/v1/projects/${p.projectId}/chat/messages/`,
       async (route) => {
         if (route.request().method() !== 'POST') return route.continue();
-        const response = await route.fetch();
-        expect(response.status()).toBe(201);
-        committed = true;
-        await release.promise;
-        await route.abort('failed');
+        try {
+          const response = await route.fetch();
+          expect(response.status()).toBe(201);
+          committed = true;
+          didCommit.resolve();
+          await release.promise;
+          const failed = page.waitForEvent('requestfailed', {
+            predicate: (request) => request === route.request(),
+          });
+          await Promise.all([route.abort('failed'), failed]);
+          dropped.resolve();
+        } catch (error) {
+          didCommit.reject(error);
+          dropped.reject(error);
+          await route.abort('failed').catch(() => undefined);
+        }
       },
     );
     const text = '<b>Plain text, not markup</b> 🐍\nSecond line.';
     await send(page, text);
+    await didCommit.promise;
     await expect.poll(() => committed).toBe(true);
     // The HTTP response is still held: Sent must come from a committed authorized event.
     await expect(row(page, text)).toHaveCount(1, { timeout: 15000 });
@@ -288,6 +305,7 @@ test('two accounts receive plaintext once despite duplicate notifications and re
     await expect(row(p.peer, text).locator('b')).toHaveCount(0);
     await expect(row(p.peer, text).locator('time')).toContainText('UTC');
     release.resolve();
+    await dropped.promise;
     await expect(discussion(page).locator('.discussion-pending')).toHaveCount(
       0,
     );
@@ -593,6 +611,9 @@ test('unconfirmed messages retry one immutable nonce only manually, never replay
   });
   let composerEvidence: object[] = [];
   let loseReplies = true;
+  const dropped = Array.from({ length: 20 }, () => deferred());
+  const allDropped = Promise.all(dropped.map((fault) => fault.promise));
+  void allDropped.catch(() => {});
   const requests: { client_message_id: string; body: string }[] = [];
   const statuses: number[] = [];
   page.on('response', (response) => {
@@ -618,13 +639,25 @@ test('unconfirmed messages retry one immutable nonce only manually, never replay
           route.request().postDataJSON() as (typeof requests)[number],
         );
         if (!loseReplies) return route.continue();
-        const response = await route.fetch();
-        expect(response.status()).toBe(201);
-        await route.abort('failed');
+        try {
+          const fault = dropped[requests.length - 1];
+          if (!fault) throw new Error('Unexpected extra dropped chat request.');
+          const response = await route.fetch();
+          expect(response.status()).toBe(201);
+          const failed = page.waitForEvent('requestfailed', {
+            predicate: (request) => request === route.request(),
+          });
+          await Promise.all([route.abort('failed'), failed]);
+          fault.resolve();
+        } catch (error) {
+          for (const fault of dropped) fault.reject(error);
+          await route.abort('failed').catch(() => undefined);
+        }
       },
     );
     const text = 'Retry this same committed request';
     await send(page, text, composerDiagnostic);
+    await dropped[0]!.promise;
     await expect(discussion(page).locator('.discussion-pending')).toContainText(
       'Not confirmed',
     );
@@ -634,6 +667,7 @@ test('unconfirmed messages retry one immutable nonce only manually, never replay
         n + 1,
       );
     }
+    await allDropped;
     await expect(
       discussion(page)
         .locator('.discussion-pending')

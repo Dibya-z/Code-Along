@@ -2052,7 +2052,7 @@ test('lost work creation replies retain one manual request identity with no offl
   page,
   browser,
   browserName,
-}) => {
+}, info) => {
   test.setTimeout(150000);
   const f = await fixture(page, browser, browserName, 'individual', ['River']);
   const actor = f.actors[0]!;
@@ -2060,6 +2060,17 @@ test('lost work creation replies retain one manual request identity with no offl
     committed: Work | null = null,
     authChecks = 0;
   const requests: WorkRequest[] = [];
+  let phase = 'participation',
+    primary: unknown,
+    postStatus: number | null = null;
+  let abortCompleted = false,
+    failedEventSeen = false;
+  let interceptedPost: import('@playwright/test').Request | null = null;
+  let resolveLoss!: () => void, rejectLoss!: (error: unknown) => void;
+  const didLoseReply = new Promise<void>((resolve, reject) => {
+    resolveLoss = resolve;
+    rejectLoss = reject;
+  });
   try {
     await offer(page, f.assignmentId, actor);
     await accept(actor, f.assignmentId);
@@ -2076,20 +2087,49 @@ test('lost work creation replies retain one manual request identity with no offl
         if (route.request().method() !== 'POST') return route.continue();
         requests.push(route.request().postDataJSON() as WorkRequest);
         if (!lose) return route.continue();
-        const response = await route.fetch();
-        expect(response.status()).toBe(201);
-        committed = (await response.json()) as Work;
-        await route.abort('failed');
+        interceptedPost = route.request();
+        try {
+          phase = 'fetch-committed-reply';
+          const response = await route.fetch();
+          postStatus = response.status();
+          expect(postStatus).toBe(201);
+          committed = (await response.json()) as Work;
+          phase = 'abort-committed-reply';
+          await route.abort('failed');
+          abortCompleted = true;
+          resolveLoss();
+        } catch (error) {
+          rejectLoss(error);
+          await route.abort('failed').catch(() => undefined);
+        }
       },
     );
+    phase = 'review-work';
     const dialog = await reviewWork(
       actor.page,
       'One exact uncertain work',
       false,
     );
-    await dialog
-      .getByRole('button', { name: 'Start individual work', exact: true })
-      .click();
+    const failedPost = actor.page
+      .waitForEvent('requestfailed', {
+        predicate: (request) =>
+          request === interceptedPost &&
+          request.method() === 'POST' &&
+          new URL(request.url()).pathname ===
+            `/api/v1/assignments/${f.assignmentId}/works/`,
+      })
+      .then(() => {
+        failedEventSeen = true;
+      });
+    phase = 'await-committed-reply-loss';
+    await Promise.all([
+      dialog
+        .getByRole('button', { name: 'Start individual work', exact: true })
+        .click(),
+      didLoseReply,
+      failedPost,
+    ]);
+    phase = 'retry-visible-after-loss';
     const retry = actor.page.getByRole('button', {
       name: 'Retry same work request',
       exact: true,
@@ -2107,6 +2147,7 @@ test('lost work creation replies retain one manual request identity with no offl
     ]);
     expect(requests[0]!.sharing).toBe('private');
     expect(requests[0]!.expected_team_roster_revision).toBeNull();
+    phase = 'offline-manual-retry';
     await actor.context.setOffline(true);
     await retry.click();
     await expect(retry).toBeVisible();
@@ -2122,6 +2163,7 @@ test('lost work creation replies retain one manual request identity with no offl
     );
     expect(requests).toHaveLength(1);
     await expect(retry).toBeEnabled();
+    phase = 'online-manual-retry';
     const beforeAuth = authChecks;
     lose = false;
     const response = actor.page.waitForResponse(
@@ -2148,6 +2190,7 @@ test('lost work creation replies retain one manual request identity with no offl
     await confirmation
       .getByRole('link', { name: 'Continue work', exact: true })
       .click();
+    phase = 'verify-recovered-source';
     await sourceIs(actor.page, f.original);
     const works = await get<PageOf<Work>>(
       actor.page,
@@ -2162,7 +2205,30 @@ test('lost work creation replies retain one manual request identity with no offl
         )
       ).items,
     ).toEqual([]);
+  } catch (error) {
+    primary = error;
+    const state = {
+      phase,
+      postStatus,
+      postCount: requests.length,
+      committed: committed !== null,
+      abortCompleted,
+      failedEventSeen,
+      authChecks,
+    };
+    const body = JSON.stringify(state);
+    await writeFile(info.outputPath('lost-work-failure.json'), body).catch(
+      () => undefined,
+    );
+    await info
+      .attach('lost-work-failure', { body, contentType: 'application/json' })
+      .catch(() => undefined);
+    if (error instanceof Error)
+      error.message += `\nLost work fixture state: ${body}`;
+    throw error;
   } finally {
-    await f.close();
+    await f.close().catch((error: unknown) => {
+      if (primary === undefined) throw error;
+    });
   }
 });
