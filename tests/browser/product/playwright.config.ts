@@ -5,8 +5,8 @@ export default defineConfig({
   testDir: '.',
   testMatch: '**/*.spec.ts',
   workers: 1,
-  // Report the first regression promptly; a successful run still executes every case.
-  maxFailures: process.env['CI'] ? 1 : 0,
+  // Collect bounded failure evidence; a successful run still executes every case.
+  maxFailures: process.env['CI'] ? 3 : 0,
   timeout: 60_000,
   use: {
     baseURL: 'https://127.0.0.1:18443',
