@@ -1,0 +1,16 @@
+.feedback-panel {
+  min-width: 0;
+}
+.feedback-plaintext {
+  max-width: var(--measure-prose);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.feedback-editor textarea,
+.feedback-editor select {
+  display: block;
+  width: 100%;
+  max-width: var(--measure-prose);
+  min-height: 44px;
+  margin-block: var(--space-2);
+}

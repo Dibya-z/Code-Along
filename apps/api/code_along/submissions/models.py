@@ -49,6 +49,10 @@ class Submission(models.Model):
                 name="submission_assignment_number",
             ),
             models.UniqueConstraint(
+                fields=["id", "assignment", "workspace"],
+                name="submission_review_parent",
+            ),
+            models.UniqueConstraint(
                 fields=["id", "assignment", "assignment_version"],
                 name="submission_version_parent",
             ),
@@ -142,6 +146,7 @@ class SubmissionAssignmentUsage(models.Model):
     count = models.PositiveIntegerField(default=0)
     source_bytes = models.PositiveBigIntegerField(default=0)
     metadata_bytes = models.PositiveBigIntegerField(default=0)
+    feedback_metadata_bytes = models.PositiveBigIntegerField(default=0)
 
     class Meta:
         constraints = [
@@ -150,6 +155,7 @@ class SubmissionAssignmentUsage(models.Model):
                     count__lte=256,
                     source_bytes__lte=33554432,
                     metadata_bytes__lte=4194304,
+                    feedback_metadata_bytes__lte=8388608,
                 ),
                 name="submission_assignment_capacity",
             )
@@ -163,6 +169,7 @@ class SubmissionWorkspaceUsage(models.Model):
     count = models.PositiveIntegerField(default=0)
     source_bytes = models.PositiveBigIntegerField(default=0)
     metadata_bytes = models.PositiveBigIntegerField(default=0)
+    feedback_metadata_bytes = models.PositiveBigIntegerField(default=0)
 
     class Meta:
         constraints = [
@@ -171,7 +178,113 @@ class SubmissionWorkspaceUsage(models.Model):
                     count__lte=1024,
                     source_bytes__lte=134217728,
                     metadata_bytes__lte=16777216,
+                    feedback_metadata_bytes__lte=33554432,
                 ),
                 name="submission_workspace_capacity",
             )
+        ]
+
+
+class InstructorFeedback(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    submission = models.OneToOneField(Submission, on_delete=models.PROTECT)
+    assignment = models.ForeignKey("learning.Assignment", on_delete=models.PROTECT)
+    workspace = models.ForeignKey("workspaces.Workspace", on_delete=models.PROTECT)
+    revision = models.PositiveBigIntegerField(default=1)
+    draft_comments = models.TextField(default="", blank=True)
+    draft_assessment_status = models.CharField(max_length=13, null=True, blank=True)
+    last_edited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT
+    )
+    updated_at = models.DateTimeField(default=timezone.now)
+    current_publication = models.ForeignKey(
+        "FeedbackPublication",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    published_metadata_bytes = models.PositiveBigIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["id", "submission", "assignment", "workspace"],
+                name="feedback_scoped_parent",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    revision__range=(1, 9007199254740991),
+                    published_metadata_bytes__lte=131072,
+                ),
+                name="feedback_draft_bounds",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(draft_assessment_status__isnull=True)
+                | models.Q(
+                    draft_assessment_status__in=[
+                        "reviewed",
+                        "needs_changes",
+                        "complete",
+                    ]
+                ),
+                name="feedback_draft_status",
+            ),
+        ]
+
+
+class FeedbackPublication(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    feedback = models.ForeignKey(
+        InstructorFeedback, on_delete=models.PROTECT, related_name="publications"
+    )
+    submission = models.ForeignKey(Submission, on_delete=models.PROTECT)
+    assignment = models.ForeignKey("learning.Assignment", on_delete=models.PROTECT)
+    workspace = models.ForeignKey("workspaces.Workspace", on_delete=models.PROTECT)
+    number = models.PositiveSmallIntegerField()
+    source_revision = models.PositiveBigIntegerField()
+    published_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    publisher_display_name = models.CharField(max_length=80)
+    published_at = models.DateTimeField(default=timezone.now)
+    client_request_id = models.UUIDField()
+    request_sha256 = models.CharField(max_length=64)
+    comments = models.TextField(blank=True)
+    assessment_status = models.CharField(max_length=13)
+    content_sha256 = models.CharField(max_length=64)
+    metadata_bytes = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["-number", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["feedback", "number"], name="feedback_publication_number"
+            ),
+            models.UniqueConstraint(
+                fields=["feedback", "published_by", "client_request_id"],
+                name="feedback_publication_nonce",
+            ),
+            models.UniqueConstraint(
+                fields=["id", "feedback"], name="feedback_publication_parent"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    number__range=(1, 20),
+                    source_revision__range=(1, 9007199254740991),
+                    metadata_bytes__range=(1, 16384),
+                ),
+                name="feedback_publication_bounds",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    assessment_status__in=["reviewed", "needs_changes", "complete"]
+                ),
+                name="feedback_publication_status",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    content_sha256__regex=r"^[a-f0-9]{64}$",
+                    request_sha256__regex=r"^[a-f0-9]{64}$",
+                ),
+                name="feedback_publication_digests",
+            ),
         ]

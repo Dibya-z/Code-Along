@@ -112,6 +112,8 @@ def test_product_schema_and_real_restricted_role_preserve_binary_receipt_boundar
                 "SELECT * FROM submissions_submissionparticipant",
                 "SELECT * FROM submissions_submissionassignmentusage",
                 "SELECT * FROM submissions_submissionworkspaceusage",
+                "SELECT * FROM submissions_instructorfeedback",
+                "SELECT * FROM submissions_feedbackpublication",
                 "UPDATE projects_collaborationdocument SET schema_version=1",
                 "UPDATE collaboration_documentstate SET generation=1",
                 "DELETE FROM collaboration_documentstate",

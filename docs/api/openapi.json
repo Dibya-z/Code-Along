@@ -75,6 +75,11 @@
         "enum": ["submission"],
         "type": "string"
       },
+      "AssessmentKindEnum": {
+        "description": "* `manual` - manual",
+        "enum": ["manual"],
+        "type": "string"
+      },
       "AssignmentArchiveRequest": {
         "properties": {
           "archived": {
@@ -1004,6 +1009,189 @@
         ],
         "type": "string"
       },
+      "FeedbackDraft": {
+        "properties": {
+          "assessment_status": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ManualAssessmentStatus"
+              },
+              {
+                "$ref": "#/components/schemas/NullEnum"
+              }
+            ]
+          },
+          "comments": {
+            "type": "string"
+          },
+          "last_edited_by": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LearningUser"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "submission_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": ["string", "null"]
+          }
+        },
+        "required": [
+          "assessment_status",
+          "comments",
+          "last_edited_by",
+          "revision",
+          "submission_id",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "FeedbackDraftSaveRequest": {
+        "properties": {
+          "assessment_status": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ManualAssessmentStatus"
+              },
+              {
+                "$ref": "#/components/schemas/NullEnum"
+              }
+            ]
+          },
+          "comments": {
+            "type": "string"
+          },
+          "expected_revision": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": ["assessment_status", "comments", "expected_revision"],
+        "type": "object"
+      },
+      "FeedbackLatest": {
+        "properties": {
+          "latest": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackPublication"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["latest"],
+        "type": "object"
+      },
+      "FeedbackPage": {
+        "properties": {
+          "count": {
+            "maximum": 20,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FeedbackPublication"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["count", "items"],
+        "type": "object"
+      },
+      "FeedbackPublication": {
+        "properties": {
+          "assessment_kind": {
+            "$ref": "#/components/schemas/AssessmentKindEnum"
+          },
+          "assessment_status": {
+            "$ref": "#/components/schemas/ManualAssessmentStatus"
+          },
+          "assignment_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "assignment_version_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "comments": {
+            "type": "string"
+          },
+          "content_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "number": {
+            "maximum": 20,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "published_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "publisher": {
+            "$ref": "#/components/schemas/LearningUser"
+          },
+          "submission_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment_kind",
+          "assessment_status",
+          "assignment_id",
+          "assignment_version_id",
+          "comments",
+          "content_sha256",
+          "id",
+          "number",
+          "published_at",
+          "publisher",
+          "submission_id"
+        ],
+        "type": "object"
+      },
+      "FeedbackPublishRequest": {
+        "properties": {
+          "client_request_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expected_revision": {
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": ["client_request_id", "expected_revision"],
+        "type": "object"
+      },
       "FileBodyRequest": {
         "properties": {
           "expected_version": {
@@ -1377,6 +1565,11 @@
       "LiveShareResolvedKindEnum": {
         "description": "* `live` - live",
         "enum": ["live"],
+        "type": "string"
+      },
+      "ManualAssessmentStatus": {
+        "description": "* `reviewed` - reviewed\n* `needs_changes` - needs_changes\n* `complete` - complete",
+        "enum": ["reviewed", "needs_changes", "complete"],
         "type": "string"
       },
       "MemberBodyRequest": {
@@ -4869,6 +5062,489 @@
               }
             },
             "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/submissions/{submission_id}/feedback/": {
+      "get": {
+        "operationId": "get_submission_feedback",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackLatest"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/submissions/{submission_id}/feedback/draft/": {
+      "get": {
+        "operationId": "get_submission_feedback_draft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackDraft"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      },
+      "patch": {
+        "operationId": "save_submission_feedback_draft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackDraftSaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackDraft"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      }
+    },
+    "/api/v1/assignments/{assignment_id}/submissions/{submission_id}/feedback/publications/": {
+      "get": {
+        "operationId": "list_feedback_publications",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackPage"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOutput"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": ["assignments"]
+      },
+      "post": {
+        "operationId": "publish_submission_feedback",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackPublishRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackPublication"
+                }
+              }
+            },
+            "description": ""
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackPublication"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "No response body"
+          },
+          "403": {
+            "description": "No response body"
+          },
+          "404": {
+            "description": "No response body"
+          },
+          "409": {
+            "description": "No response body"
+          },
+          "413": {
+            "description": "No response body"
+          },
+          "429": {
+            "description": "No response body"
           }
         },
         "security": [

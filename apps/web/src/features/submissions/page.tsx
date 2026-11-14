@@ -9,6 +9,7 @@ import { RevisionViewer } from '../history/viewer.tsx';
 import { formatPublicationTime } from '../learning/presentation.ts';
 import { submissionsApi, readSubmissionEntry } from './api.ts';
 import { isRunnerId } from '@code-along/contracts/execution';
+import { FeedbackPanel } from '../feedback/panel.tsx';
 
 export function SubmissionPage() {
   return (
@@ -110,6 +111,15 @@ function FrozenSubmission({
             manifest={value.revision}
             name={value.detail.published_version.title}
             provenance="submission"
+          />
+          <FeedbackPanel
+            scope={{
+              accountId,
+              assignmentId,
+              submissionId,
+              versionId: value.detail.assignment_version_id,
+            }}
+            canReview={value.detail.can_review}
           />
           <details className="revision-provenance">
             <summary>Submission receipt</summary>

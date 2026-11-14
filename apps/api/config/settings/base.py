@@ -146,6 +146,7 @@ SPECTACULAR_SETTINGS = {
         ],
         "ProvenanceEnum": ["shared_room_capture"],
         "SubmissionProvenance": ["client_submitted_snapshot"],
+        "ManualAssessmentStatus": ["reviewed", "needs_changes", "complete"],
         "ReasonEnum": ["mode_mismatch", "team_size"],
         "SubmissionAvailabilityReasonEnum": [
             "submission_work_unavailable",

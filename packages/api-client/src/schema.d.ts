@@ -180,6 +180,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/assignments/{assignment_id}/submissions/{submission_id}/feedback/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_submission_feedback'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/submissions/{submission_id}/feedback/draft/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['get_submission_feedback_draft'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations['save_submission_feedback_draft'];
+    trace?: never;
+  };
+  '/api/v1/assignments/{assignment_id}/submissions/{submission_id}/feedback/publications/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['list_feedback_publications'];
+    put?: never;
+    post: operations['publish_submission_feedback'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/assignments/{assignment_id}/teams/': {
     parameters: {
       query?: never;
@@ -888,6 +936,11 @@ export interface components {
      * @enum {string}
      */
     ArtifactScopeEnum: 'submission';
+    /**
+     * @description * `manual` - manual
+     * @enum {string}
+     */
+    AssessmentKindEnum: 'manual';
     AssignmentArchiveRequest: {
       archived: boolean;
       /** Format: int64 */
@@ -1197,6 +1250,58 @@ export interface components {
      */
     ExecutionTerminalStatus:
       'succeeded' | 'failed' | 'cancelled' | 'timed_out' | 'output_limit';
+    FeedbackDraft: {
+      assessment_status:
+        | components['schemas']['ManualAssessmentStatus']
+        | components['schemas']['NullEnum'];
+      comments: string;
+      last_edited_by: components['schemas']['LearningUser'] | null;
+      /** Format: int64 */
+      revision: number;
+      /** Format: uuid */
+      submission_id: string;
+      /** Format: date-time */
+      updated_at: string | null;
+    };
+    FeedbackDraftSaveRequest: {
+      assessment_status:
+        | components['schemas']['ManualAssessmentStatus']
+        | components['schemas']['NullEnum'];
+      comments: string;
+      /** Format: int64 */
+      expected_revision: number;
+    };
+    FeedbackLatest: {
+      latest: components['schemas']['FeedbackPublication'] | null;
+    };
+    FeedbackPage: {
+      count: number;
+      items: components['schemas']['FeedbackPublication'][];
+    };
+    FeedbackPublication: {
+      assessment_kind: components['schemas']['AssessmentKindEnum'];
+      assessment_status: components['schemas']['ManualAssessmentStatus'];
+      /** Format: uuid */
+      assignment_id: string;
+      /** Format: uuid */
+      assignment_version_id: string;
+      comments: string;
+      content_sha256: string;
+      /** Format: uuid */
+      id: string;
+      number: number;
+      /** Format: date-time */
+      published_at: string;
+      publisher: components['schemas']['LearningUser'];
+      /** Format: uuid */
+      submission_id: string;
+    };
+    FeedbackPublishRequest: {
+      /** Format: uuid */
+      client_request_id: string;
+      /** Format: int64 */
+      expected_revision: number;
+    };
     FileBodyRequest: {
       /** Format: int64 */
       expected_version: number;
@@ -1344,6 +1449,13 @@ export interface components {
      * @enum {string}
      */
     LiveShareResolvedKindEnum: 'live';
+    /**
+     * @description * `reviewed` - reviewed
+     *     * `needs_changes` - needs_changes
+     *     * `complete` - complete
+     * @enum {string}
+     */
+    ManualAssessmentStatus: 'reviewed' | 'needs_changes' | 'complete';
     MemberBodyRequest: {
       role: components['schemas']['WorkspaceAssignableRole'];
     };
@@ -2985,6 +3097,345 @@ export interface operations {
         content: {
           'application/json': components['schemas']['ErrorOutput'];
         };
+      };
+    };
+  };
+  get_submission_feedback: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        submission_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FeedbackLatest'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  get_submission_feedback_draft: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        submission_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FeedbackDraft'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  save_submission_feedback_draft: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        submission_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FeedbackDraftSaveRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FeedbackDraft'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  list_feedback_publications: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        assignment_id: string;
+        submission_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FeedbackPage'];
+        };
+      };
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorOutput'];
+        };
+      };
+    };
+  };
+  publish_submission_feedback: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        assignment_id: string;
+        submission_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FeedbackPublishRequest'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FeedbackPublication'];
+        };
+      };
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FeedbackPublication'];
+        };
+      };
+      /** @description No response body */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No response body */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

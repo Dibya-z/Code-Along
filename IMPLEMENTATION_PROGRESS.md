@@ -2,7 +2,7 @@
 
 Updated: 14 November 2026 (Asia/Kolkata).
 
-Current position: **M0–M3 Completed; M4 In Progress (assignments, participation/work, learning practice and exact submissions locally verified/committed; CI job-budget repair and manual feedback in progress; progress/private updates not started); post-M2 maintenance Completed**. The owner authorized safe storage cleanup, CI efficiency, an autonomous local M2 review and then full M3 on 14 November 2026, including commits/pushes in coherent related feature bundles. Preserve the approved architecture, user data and deferred OS trust decision. See the current M4 authorization/record at the end and the [M4 validation report](docs/architecture/m4-validation.md).
+Current position: **M0–M3 Completed; M4 In Progress (assignments, participation/work, learning practice and exact submissions locally verified/committed; CI job-budget repair passed; manual feedback locally verified; progress/private updates not started); post-M2 maintenance Completed**. The owner authorized safe storage cleanup, CI efficiency, an autonomous local M2 review and then full M3 on 14 November 2026, including commits/pushes in coherent related feature bundles. Preserve the approved architecture, user data and deferred OS trust decision. See the current M4 authorization/record at the end and the [M4 validation report](docs/architecture/m4-validation.md).
 
 ## Approved baseline and tracking rules
 
@@ -110,7 +110,7 @@ Milestone status: **In Progress**. The owner authorized the current UI clarity w
 | M4.2 | Assignment participation/teams, invitations/consent and instructor-controlled eligibility               | M4.1       | Completed   | No arbitrary participant lists or automatic inclusion of project viewers/mentors              |
 | M4.3 | Learning session UI, staged hints and visible checks                                                    | M4.2       | Completed   | Accessible instructions/hints; practice results labeled untrusted and tied to manifest        |
 | M4.4 | Exact-version immutable submission transaction, frozen participants, deadlines, budgets and idempotency | M4.3       | Completed   | Submit tested H after live H2; server hashes bytes and rechecks eligibility/access at commit  |
-| M4.5 | Submission-owned artifact access, review/source viewer and instructor feedback                          | M4.4       | In Progress | Project owners/shares gain no implicit submission access; reviewer sees frozen source         |
+| M4.5 | Submission-owned artifact access, review/source viewer and instructor feedback                          | M4.4       | Completed   | Project owners/shares gain no implicit submission access; reviewer sees frozen source         |
 | M4.6 | Derived progress, assessment status and notifications                                                   | M4.5       | Not Started | Client cannot assign trusted scores; feedback/progress recover from missed events             |
 
 ## M5 — Pilot and operational readiness
@@ -809,15 +809,41 @@ M4.5 manual feedback now starts from the locally verified/committed submission f
 
 ### M4.5 implementation breakdown
 
-| Task                                                                                                          | Dependencies                                     | Status      |
-| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------- |
-| M4.5a — Private draft/publication schema, current teaching policies, CAS/idempotency, budgets and strict APIs | Verified M4.4; accepted manual-feedback contract | In Progress |
-| M4.5b — Generated contracts and learner/instructor feedback UI on the frozen submission page                  | Stable M4.5a DTOs; independent source authority  | Not Started |
-| M4.5c — Actual database/security/concurrency and browser/plaintext/keyboard acceptance                        | M4.5a–b; one reserved heavy local stack          | Not Started |
-| M4.5d — Independent review, documentation, explicit staging and coherent commit/push                          | Verified M4.5c                                   | Not Started |
+| Task                                                                                                          | Dependencies                                     | Status    |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | --------- |
+| M4.5a — Private draft/publication schema, current teaching policies, CAS/idempotency, budgets and strict APIs | Verified M4.4; accepted manual-feedback contract | Completed |
+| M4.5b — Generated contracts and learner/instructor feedback UI on the frozen submission page                  | Stable M4.5a DTOs; independent source authority  | Completed |
+| M4.5c — Actual database/security/concurrency and browser/plaintext/keyboard acceptance                        | M4.5a–b; one reserved heavy local stack          | Completed |
+| M4.5d — Independent review, documentation, explicit staging and coherent commit/push                          | Verified M4.5c                                   | Completed |
 
 The backend owns only submission feedback modules, its next migration and private accounting/denial tests. The frontend composes review controls with the static source viewer after generated DTOs are stable. Feedback publication is an explicit manual decision; draft saves expose no learner timestamp/event/draft metadata. Source owners, mentors and shares gain no authority, and a teacher cannot draft/review their own frozen-participant submission. No new dependency, process or service is planned.
 
 ### CI split verified locally
 
 The focused CI configuration unit passes **32 tests** (26 existing complete-diff/prose checks and six new aggregate tests), actionlint, scoped mypy/Ruff/Prettier and whitespace checks. Six actual Playwright list commands confirm **15 isolation + two foundation + 58 product cases per engine**, **150 total cases** across Chromium/WebKit, preserving workers1/retries0 and existing assertions/deadlines. Independent review accepts the fail-closed aggregate, exact docs-only skips, action/tool pins and per-engine logs/reports. No app/browser test execution, VM, service or dependency change is needed for this workflow-only unit. Proposed commit: `ci: split browser checks`, followed by one push of it and the already verified submission commit; remote execution is still required.
+
+The CI split is committed/pushed as `f226a1046523e05a0d4cc5c7dcd583a8c3b8281a` together with queued submission commit `a3d3b28`; tracking divergence is 0/0 after push. [Exact-source run 43612378437](https://github.com/Dibya-z/Code-Along/actions/runs/43612378437) passes classification, source and Compose at the latest observation; both engines are executing product cases. Aggregate/milestone acceptance remains pending.
+
+### M4.5 source and focused verification
+
+Feedback API/schema/model/transaction source is written and independently accepted. Official generation adds exactly three paths/five operations with all existing paths/schema definitions and both auth outputs unchanged; intended product/type outputs are reviewed/staged and official drift checking passes. The first **16 real database cases pass in 9.12s**. The comprehensive focused **75 cases pass in 43.48s**, including 52 new feedback cases and 23 existing artifact/role regressions. Review identifies one coverage gap: the workspace-budget race must use two assignments in the same workspace, rather than rely on one assignment's lock. That fixture-only correction and the complete backend gate precede frontend acceptance.
+
+The feedback UI/source passes **31 focused cases** (22 feedback and nine existing submission cases), web/browser typing and scoped lint/format. Independent review accepts nonce/CAS/account/source authority. A concrete mutable-response alias across asynchronous hashing is corrected by owning all publication fields/publisher before the hash await and returning owned draft/editor snapshots; a regression proves the boundary. Ten actual new browser cases, full workspace checks/build and the backend's final gate remain pending. The [manual feedback protocol](docs/protocols/manual-feedback.md) records the actual under-verification contract. M4.6 remains Not Started; only a private read-only source map is prepared.
+
+### Complete Linux baseline restored
+
+[Full exact-source run 43612378437](https://github.com/Dibya-z/Code-Along/actions/runs/43612378437) succeeds on `f226a1046523e05a0d4cc5c7dcd583a8c3b8281a`. All six jobs pass: changes, source, Compose, Chromium, WebKit and required foundation aggregate. It completes from **15:51:01 to 16:07:39 UTC (16m38s)**, with no increase to the old 35-minute per-job ceiling or test timeouts. The new split executes the configured 150-case two-engine matrix in independent jobs; per-case raw artifacts are not downloaded. This restores the remote source baseline through exact submissions and closes the known CI cancellation issue. M4.5–M4.6 and final M4 primary/preservation/handoff acceptance remain unfinished.
+
+### M4.5 backend verified; final frontend gate
+
+The genuine shared-workspace race first fails only because the second assignment fixture omitted required published instructions; the normal draft/version API correction then gives **2/2 passing cases in 4.43s**. Production source is unchanged. The full backend passes **930 tests plus 83 subtests in 203.18s**, mypy186/Ruff-format283 files, zero Django system-check issues, migration/drift/roundtrip/refusal and SQL/privacy/rollback/concurrency gates. All owned processes stop, seven ports close and about **5.85GiB** is free; primary VM/data are untouched.
+
+Frontend source/ten-case inventory is frozen and independently accepted, with **31 focused tests**, scoped types/lint/format and final full workspace checks passing. The regular JavaScript suite, web-only build and actual ten-case browser acceptance follow sequentially on the one heavy slot. No previous runner/execution suite or build is repeated without changed inputs or a concrete concern. M4.5 remains In Progress until those gates and final review pass.
+
+### M4.5 local completion and coherent review
+
+Final full checks and **630 JavaScript tests / 57 files** pass, followed by the web-only build. The initial regular-suite listener EPERM is resolved by the approved execution context without source changes. The first browser run's two setup failures come from an empty check-source argument rejected by the established fixture API; using its valid default preserves assertions and changes no application behavior. The corrected **10/10** feedback cases pass across both engines in **114.419s**, with zero skipped/flaky/retried cases. The validation record retains both initial execution/fixture failures.
+
+Final visual capture completion passes **2/2 in 36.136s** on the same build, proving actual settled dark button backgrounds and preserving product motion. Root independently inspects desktop form/focus and final narrow dark published/history views. Existing runner/proof/runtime bytes are unchanged and reused. Final owned processes/listeners are stopped, primary VM/data are untouched and **5.869GiB** is free. Backend/frontend independent reviews find no remaining blocker.
+
+Local M4.5 functionality is complete: private drafts/CAS, explicit immutable manual publications/corrections, own-participant review denial, private history, robust original publication confirmation and static review UI. README/protocol document actual use and in-tab limits. Proposed grouped commit: `feat: add instructor feedback`, after explicit complete diff/staging/secret/preservation review. M4.6 progress/private updates and final whole-M4 verification remain pending; no M5 work starts.
