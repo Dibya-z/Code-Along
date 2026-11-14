@@ -10,6 +10,12 @@ import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { privateMailLink } from './mail-link.ts';
+import {
+  networkFailureCode,
+  responseMime,
+  type NetworkFailureCode,
+  type ResponseMime,
+} from './readiness-diagnostics.ts';
 export const password = 'orbit-copper-river-83!';
 const mailDirectory = resolve(
   fileURLToPath(new URL('../../../.runtime/mail', import.meta.url)),
@@ -126,8 +132,19 @@ export function projectSetupDiagnostics(page: Page) {
     r: string;
     s: number | 'network-failed';
     ms: number;
+    code?: NetworkFailureCode;
   }[] = [];
-  const assets: { p: string; s: number | 'network-failed' }[] = [];
+  const assets: {
+    p: string;
+    s: number | 'network-failed';
+    mime?: ResponseMime;
+    http?: number;
+    code?: NetworkFailureCode;
+  }[] = [];
+  const assetResponses = new WeakMap<
+    Request,
+    { http: number; mime: ResponseMime }
+  >();
   const errors: { from: 'page' | 'console'; kind: string; at?: string }[] = [];
   const classifyError = (message: string) => {
     const known = message.match(
@@ -212,11 +229,20 @@ export function projectSetupDiagnostics(page: Page) {
     if (pending.size >= 32) pending.delete(pending.keys().next().value!);
     pending.set(value, { m: value.method(), r: route, at: Date.now() });
   };
-  const record = (value: Request, status: number | 'network-failed') => {
+  const record = (
+    value: Request,
+    status: number | 'network-failed',
+    code?: NetworkFailureCode,
+  ) => {
     const route = routeShape(value.url());
     if (!route) return;
     if (route.startsWith('/assets/')) {
-      assets.push({ p: route.slice('/assets/'.length), s: status });
+      assets.push({
+        p: route.slice('/assets/'.length),
+        s: status,
+        ...assetResponses.get(value),
+        ...(code ? { code } : {}),
+      });
       if (assets.length > 20) assets.splice(3, 1);
       return;
     }
@@ -225,15 +251,29 @@ export function projectSetupDiagnostics(page: Page) {
       r: route,
       s: status,
       ms: Date.now() - (pending.get(value)?.at ?? started),
+      ...(code ? { code } : {}),
     });
     if (recent.length > 16) recent.shift();
   };
-  const response = (value: Response) => record(value.request(), value.status());
+  const response = (value: Response) => {
+    const request = value.request();
+    if (routeShape(request.url())?.startsWith('/assets/')) {
+      assetResponses.set(request, {
+        http: value.status(),
+        mime: responseMime(value.headers()['content-type']),
+      });
+    }
+    record(request, value.status());
+  };
   const finished = (value: Request) => {
     pending.delete(value);
   };
   const failed = (value: Request) => {
-    record(value, 'network-failed');
+    record(
+      value,
+      'network-failed',
+      networkFailureCode(value.failure()?.errorText),
+    );
     pending.delete(value);
   };
   page.on('request', request);
