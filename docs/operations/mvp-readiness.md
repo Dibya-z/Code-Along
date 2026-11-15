@@ -20,7 +20,7 @@ light/dark appearance without changing the approved stack or source authority.
 
 ## Current verification
 
-- [Full exact-source Linux CI](https://github.com/Dibya-z/Code-Along/actions/runs/43686267508) on `92c09fa` passes all six jobs: **134 product, 30 isolation, six foundation UI and six development cases**, plus source/backend/protocol/build checks. Both browsers pass every declared product case with zero configured retries. The earlier functional-MVP acceptance on [`401940f`](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362) remains historical evidence; its foundation suite had four cases before the two-engine appearance check was added.
+- [Full exact-source Linux CI](https://github.com/Dibya-z/Code-Along/actions/runs/43702350691) on `1447bef` passes all six jobs: **136 product, 30 isolation, six foundation UI and six development cases**, plus source/backend/protocol/build checks. Both browsers pass every declared product case with zero configured retries. Earlier interface acceptance on [`92c09fa`](https://github.com/Dibya-z/Code-Along/actions/runs/43686267508) and functional-MVP acceptance on [`401940f`](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362) remain historical evidence.
 
 - Final interface verification includes **29 fresh screenshots and 49 viewport
   geometry records**, independent visual review, actual tab/keyboard/source
@@ -76,7 +76,7 @@ light/dark appearance without changing the approved stack or source authority.
 | Normal `npm run dev`, live mounts and existing-data preservation  | Passed, including all 19 live preservation checks                               |
 | Actual production Compose/Nginx configuration and runtime checks  | Passed isolated proxy/TLS checks; external prerequisites remain                 |
 | Real migrated project/submission/feedback backup/restore exercise | Passed, including final host/TLS validation recheck                             |
-| Combined source checks, reviewed commit and remote CI             | Passed: `92c09fa`, all six full Linux jobs successful                           |
+| Combined source checks, reviewed commit and remote CI             | Passed: `1447bef`, all six full Linux jobs successful                           |
 | Target DNS, real TLS/database/mail checks and deployment          | Operator inputs and separate deployment approval required                       |
 
 ## Earlier investigation and preservation
@@ -146,10 +146,37 @@ load targets, high availability and trusted automatic grading are not claimed.
 Broader metrics/alerts, administrative audit logging and retention policies
 remain M5 follow-up work; the delivery outbox is not a general audit log.
 
-## Current exact-source acceptance
+## Earlier interface acceptance
 
 Source `92c09facb52f94f76b7968b67d41ab3f75f2953f` passes [full Linux run 43686267508](https://github.com/Dibya-z/Code-Along/actions/runs/43686267508). Chromium passes 67 product cases in 16.7 minutes; WebKit passes 67 in 19.8 minutes. Each also passes 15 isolation and three foundation UI cases; Compose passes six development cases. Source and aggregate jobs succeed. M4, the essential MVP and UI1 are Completed.
 
 The earlier WebKit native API-fetch error did not recur in the final strict permissions journey. Its cause remains unresolved, with passive diagnostics retained for M5.1; no application fix or error filtering is claimed. The current complete pass does not certify classroom load, retail devices or absence of intermittent failures.
 
 M5 remains In Progress for broader pilot/load/accessibility/metrics/audit/retention work and target-provider recovery. Real domains/certificates, PostgreSQL TLS/provisioning privileges and SMTP must be supplied and validated before an explicitly approved deployment. No deployment, merge or system certificate-trust change has been performed.
+
+## Current exact-source acceptance
+
+Source `1447bef809ffea6707b528283b0fabbf51b2d098` passes [full Linux run 43702350691](https://github.com/Dibya-z/Code-Along/actions/runs/43702350691). Chromium and WebKit each pass **68 product, 15 isolation and three foundation UI cases**; Compose passes six development cases. All six jobs succeed. Product durations are 18.8 and 19.9 minutes. The direct sign-in/invitation journeys, Python assistance, stable options, collaboration, execution and existing learning workflows pass together.
+
+Local refinement acceptance includes 28 focused authentication/editor unit tests,
+eight feedback/lost-work browser cases across both engines, and two real-primary
+Chromium checks: actual account/project creation and greeting execution, plus
+exact BOM/body/LF preservation through keyboard editing and export. Ten fresh UI
+screenshots are reviewed at desktop, 390px and 320px. Options retain exact editor
+position/height at desktop and 390px. The application source is identical to the
+visually checked `1c978bd`; the later correction adapts an old typing fixture to
+the four-space indentation policy while retaining exact-source assertions.
+
+The actual production proxy passes fourteen isolated HTTP/configuration checks,
+including legacy/versioned JavaScript module and WASM types/hashes and Worker
+isolation. Its temporary containers are removed and the primary app remains
+healthy. This uses an existing image with the current production template;
+public domains/TLS, SMTP, managed PostgreSQL and deployment remain operator gates.
+All local fixture children exit, ports close and eleven static preservation
+checks pass. Existing source, reference, data, credentials and certificates are
+preserved; no OS trust change or deployment occurs.
+
+The earlier intermittent pre-POST work-creation timeout does not reproduce in
+the focused two-engine gate or this complete matrix. Its historical cause is
+not claimed fixed. Broader M5 pilot/load/accessibility/metrics/audit/retention
+work remains separate; authoritative grading, voice and drawing remain deferred.

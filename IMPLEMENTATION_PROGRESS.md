@@ -1138,15 +1138,15 @@ confirmation button and account/participation reads without changing its
 
 ## R2 — Product simplification and editor refinement
 
-Status: **In Progress**, 15 November 2026. The owner requests a smaller, more
+Status: **Completed** on accepted source `1447bef`, 15 November 2026. The owner requests a smaller, more
 predictable MVP. Local PyTogether source and its MIT licence are inspected;
 only interaction ideas are adopted, with no reference edits or copied code.
 
-| Batch      | Scope                                                                                                                                    | Status                                   |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Access     | Direct safe sign-in, authenticated account-form redirects, predictable workspace exit and explicit workspace/project permission guidance | Implemented; focused checks pass         |
-| Coding     | Real Python completion, bracket assistance, four-space indentation, visible collaborator names and stable options overlay                | Implemented; focused checks pass         |
-| Acceptance | Extended existing auth/invitation/editor/presence/plot journeys; complete browser and build verification                                 | Primary browser passed; Linux CI pending |
+| Batch      | Scope                                                                                                                                    | Status                                            |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Access     | Direct safe sign-in, authenticated account-form redirects, predictable workspace exit and explicit workspace/project permission guidance | Completed; focused and full checks pass           |
+| Coding     | Real Python completion, bracket assistance, four-space indentation, visible collaborator names and stable options overlay                | Completed; focused and full checks pass           |
+| Acceptance | Extended existing auth/invitation/editor/presence/plot journeys; complete browser and build verification                                 | Completed; primary browser and full Linux CI pass |
 
 Core authentication, workspace/project access, editing, Run/Stop/output,
 collaboration, chat and durable saving are retained. Learning, history/shares,
@@ -1195,3 +1195,31 @@ Actual CodeMirror indentation/newline-command proof, scoped lint/format and
 browser typing also pass. Proposed correction commit: **`test: match Python indentation`**.
 Full matrix acceptance remains open; the earlier lost-work case was not reached
 in this stopped run and is not claimed fixed.
+
+**R2 is Completed.** Correction `1447bef809ffea6707b528283b0fabbf51b2d098`
+passes [full Linux run 43702350691](https://github.com/Dibya-z/Code-Along/actions/runs/43702350691):
+all six actual jobs succeed. Chromium and WebKit each pass **68 product, 15
+isolation and three foundation UI cases**; Compose passes six development cases.
+That is **136 product + 30 isolation + six foundation UI + six development**,
+with zero configured retries and the original assertions/budgets/quotas retained.
+Source/backend/protocol/type/build checks also pass. Both formerly failing
+feedback fixtures and the earlier uncertain-work-creation case pass in this
+matrix. The prior intermittent pre-POST timeout is not claimed causally fixed.
+
+Additional focused local acceptance passes **6/6 feedback + 2/2 lost-work cases**
+across both engines, with zero errors, retries, skips or flaky cases. A fresh
+web build passes; all 662 source inputs, 25 web outputs and the reused 33
+runner/proof inputs and 23 outputs remain unchanged during the gates. Test
+children stop, fixture ports close, prior QA mail and all eleven static
+preservation checks pass. Actual production-proxy verification also passes
+**14/14** after correcting a private proof cleanup-variable collision; both
+uniquely owned proof containers are absent, its port is closed and the primary
+app remains healthy. Historical proof artifacts are retained. No image build,
+OS trust change or deployment is part of that proxy check.
+
+The accepted batch simplifies existing journeys and adds real local Python
+assistance through the existing editor. Existing authorization, data and
+reference source are preserved. Full language-server typing and the previously
+deferred optional features remain future work. This final handoff updates only
+README, this tracker and MVP readiness; application/test/build source remains
+accepted at `1447bef`. Proposed documentation commit: **`docs: record workflow refinement`**.
