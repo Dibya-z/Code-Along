@@ -1,7 +1,8 @@
 # MVP readiness
 
-Updated 15 November 2026 (Asia/Kolkata). This records tested behavior and open
-release gates; it is not a deployment approval or a completed release claim.
+Updated 15 November 2026 (Asia/Kolkata). The essential MVP and M4 are accepted
+on the declared Chromium/WebKit baseline. Production/recovery preparation is
+complete; actual deployment and broader M5 pilot gates remain separate.
 
 ## Essential scope
 
@@ -9,11 +10,13 @@ The existing platform includes verified account sessions, workspace/invitation
 and private-project management, a multi-file Python editor, isolated browser
 execution/output/Stop, collaborative code/cursors, server checkpoints, history,
 chat, assignments, participation/team work, immutable submissions, manual
-feedback and derived progress/private learning updates. Reuse those modules.
+feedback and derived progress/private learning updates.
 Authoritative server grading, voice, drawing, broad restyling and advanced
 analytics are deferred.
 
 ## Current verification
+
+- [Full exact-source Linux CI](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362) on `401940f` passes all six jobs: **134 product, 30 isolation, four foundation and six development cases**, plus source/backend/protocol/build checks. Both browsers pass every declared product case with zero configured retries.
 
 - The combined backend pass completed **1,122 tests plus 83 subtests**. A later
   security review changed only backup host/TLS validation and its tests; all
@@ -26,7 +29,7 @@ analytics are deferred.
   and stop requests between groups are included in that verification.
 - Frontend source-query cancellation and removal of redundant learning refreshes
   pass 33 focused tests, web typing and scoped lint/format. These regressions
-  establish those fixes; exact-source Linux acceptance remains separate.
+  establish those fixes; full Linux acceptance is now recorded above.
 - Production configuration passes 142 no-database configuration tests; two
   PostgreSQL tests and one real-server test were explicitly excluded from that
   selection. Django's deployment check has no errors and two intentional HSTS
@@ -43,7 +46,7 @@ analytics are deferred.
   ticket, socket, manual and online recovery, retaining unsaved bytes/session
   identities and permanent-denial behavior. Its focused regressions pass; the
   current browser build includes this fix.
-- The affected learning browser gate passes **8/8 in one uninterrupted run**
+- Earlier local verification: the affected learning browser gate passes **8/8 in one uninterrupted run**
   across Chromium/WebKit, with no retries, skips or flaky cases. It verifies
   published-starter privacy, final dropped-update recovery/exact submissions,
   consent/withdrawal with retained live source/Worker, and version-pinned A work
@@ -54,16 +57,18 @@ analytics are deferred.
   viewer/revocation/export behavior. These are 16 unique passing cases across
   two frozen-source runs, not the complete remote browser matrix.
 
-## Open gates
+## Release gates
 
-| Gate                                                              | Status                                                                                        |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Focused browser acceptance of the latest reliability changes      | Passed: final fourteen fault cases; read-pressure eight and prior sixteen retained as history |
-| Normal `npm run dev`, live mounts and existing-data preservation  | Passed, including all 19 live preservation checks                                             |
-| Actual production Compose/Nginx configuration and runtime checks  | Passed isolated proxy/TLS checks; external prerequisites remain                               |
-| Real migrated project/submission/feedback backup/restore exercise | Passed, including final host/TLS validation recheck                                           |
-| Combined source checks, reviewed commit and remote CI             | `fb422d3`: 132/134 product cases; progress readback and WebKit error investigation open       |
-| Target DNS, real TLS/database/mail checks and deployment          | Operator inputs and separate deployment approval required                                     |
+| Gate                                                              | Status                                                                          |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Focused browser acceptance of the latest reliability changes      | Passed: latest four cases, prior fourteen fault cases and complete Linux matrix |
+| Normal `npm run dev`, live mounts and existing-data preservation  | Passed, including all 19 live preservation checks                               |
+| Actual production Compose/Nginx configuration and runtime checks  | Passed isolated proxy/TLS checks; external prerequisites remain                 |
+| Real migrated project/submission/feedback backup/restore exercise | Passed, including final host/TLS validation recheck                             |
+| Combined source checks, reviewed commit and remote CI             | Passed: `401940f`, all six full Linux jobs successful                           |
+| Target DNS, real TLS/database/mail checks and deployment          | Operator inputs and separate deployment approval required                       |
+
+## Earlier investigation and preservation
 
 The owner approved this release bundle and subsequent verified project
 commits/pushes without repeated confirmation. The application bundle is
@@ -129,3 +134,11 @@ Screen-reader/retail-device certification, cold offline installation, classroom
 load targets, high availability and trusted automatic grading are not claimed.
 Broader metrics/alerts, administrative audit logging and retention policies
 remain M5 follow-up work; the delivery outbox is not a general audit log.
+
+## Current exact-source acceptance
+
+Source `401940fa1d7a75efd789386d5abb7d8df1d54bb4` passes [full Linux run 43656864362](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362). Chromium passes 67 product cases in 16.8 minutes; WebKit passes 67 in 19.8 minutes. Each also passes 15 isolation and two foundation cases; Compose passes six development cases. Source and aggregate jobs succeed. M4 and the essential MVP are Completed.
+
+The earlier WebKit native API-fetch error did not recur in the final strict permissions journey. Its cause remains unresolved, with passive diagnostics retained for M5.1; no application fix or error filtering is claimed. The current complete pass does not certify classroom load, retail devices or absence of intermittent failures.
+
+M5 remains In Progress for broader pilot/load/accessibility/metrics/audit/retention work and target-provider recovery. Real domains/certificates, PostgreSQL TLS/provisioning privileges and SMTP must be supplied and validated before an explicitly approved deployment. No deployment, merge or system certificate-trust change has been performed.

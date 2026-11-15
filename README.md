@@ -4,7 +4,7 @@ Code Along is an independently implemented collaborative Python learning and dev
 
 ## Current state
 
-M0 integration proofs and the M1–M3 product milestones are implemented. You can register, verify an email locally, sign in, create a workspace, invite another account and create private projects with explicit editor/viewer access.
+M0 integration proofs and the M1–M4 product milestones are complete on the verified Chromium/WebKit baseline. You can register, verify an email locally, sign in, create a workspace, invite another account and create private projects with explicit editor/viewer access.
 
 Projects open a multi-file Python editor with stable tabs, syntax highlighting, undo and adjustable text size. Run code executes a complete frozen source snapshot in a fresh, separate-site Python Worker. It offers batch/interactive input, a bounded plain-text console, captured-source inspection, PNG plots and Stop. Core and opt-in NumPy use reviewed, hash-pinned assets; Matplotlib awaits compatible dependencies that pass the advisory gate. See [runtime profiles](packages/runtime-profiles/README.md). Desktop editor/console panes resize with a keyboard-friendly control; small screens retain both panes behind Editor/Console buttons.
 
@@ -26,11 +26,11 @@ Manual instructor feedback is implemented on **View submitted code → Review th
 
 Derived progress and [private learning updates](docs/protocols/learning-updates.md) are implemented and locally verified. Learners see progress in **My work**, a pinned Work's **Task → Your progress**, and the submitted-code progress disclosure. Teachers use **Progress** to choose a published version and review each learner's latest submission and manual assessment. Historical assessment stays separate from current participation/submission availability. Updates refresh visible learning records while retaining open source, running Python, chosen code and private drafts. See [learning progress](docs/protocols/learning-progress.md).
 
-M4 remains In Progress pending exact-source Linux CI. Final local verification passes 16 targeted Chromium/WebKit journeys, normal primary startup, the rebuilt frontend and all 19 live preservation checks. Nothing is deployed. Current results are in [MVP readiness](docs/operations/mvp-readiness.md); earlier results and failure history remain in the [M4 validation record](docs/architecture/m4-validation.md).
+The essential MVP is accepted on source `401940f`. [Full Linux CI](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362) passes all six jobs: **134 product, 30 isolation, four foundation and six development cases**, plus source/backend/protocol/build checks. Normal local startup and all 19 live preservation checks pass. Nothing is deployed. See [MVP readiness](docs/operations/mvp-readiness.md) for evidence, the demo checklist and remaining limits, and [M4 validation](docs/architecture/m4-validation.md) for retained failure history.
 
-The current MVP work closes these acceptance failures and prepares the existing
-stack for deployment. A standalone production profile, environment template and
-private backup tooling pass their local preparation checks; they have not been deployed.
+A standalone production profile, environment template and private backup tooling
+pass their preparation checks, including an actual migrated-application restore.
+Broader pilot/load/observability work and real target deployment remain separate.
 See [MVP readiness](docs/operations/mvp-readiness.md) for tested changes/blockers
 and [production preparation](docs/operations/production.md) for required operator
 inputs, build, mail/TLS and recovery instructions.
@@ -40,7 +40,7 @@ Open **https://127.0.0.1:8443** after starting the [local development stack](doc
 - [Implementation tracker](IMPLEMENTATION_PROGRESS.md): milestones, dependencies, verification, commits and remaining work.
 - [M2 validation report](docs/architecture/m2-validation.md): editor/runner/recovery functionality, browser evidence and remaining boundaries.
 - [M3 validation record](docs/architecture/m3-validation.md): completed collaboration tests, crash recovery, CI and preservation evidence.
-- [M4 validation record](docs/architecture/m4-validation.md): locally verified learning features, failure history and remaining primary/Linux acceptance gates.
+- [M4 validation record](docs/architecture/m4-validation.md): completed learning workflows, full Linux acceptance, failure history and limits.
 - [M1 validation report](docs/architecture/m1-validation.md): completed functionality, test evidence, CI and limitations.
 - [Approved architecture](docs/architecture/approved-architecture.html): decisions, schema, protocols and roadmap. Open the HTML in a browser; some archived investigation links are machine-local.
 - [Design direction](DESIGN.md) and [repository instructions](AGENTS.md).

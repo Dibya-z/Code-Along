@@ -2,7 +2,7 @@
 
 Updated: 15 November 2026 (Asia/Kolkata).
 
-Current position: **M0–M3 Completed; M4 In Progress pending exact-source Linux acceptance; essential M5/MVP preparation, read-pressure and browser-fixture corrections committed/pushed through `fb422d3`**. Final local verification passes 16 targeted Chromium/WebKit cases, frontend/backend checks, production proxy preparation, real backup/restore, normal startup/build and all 19 live preservation checks. The owner now grants standing approval for this bundle and subsequent verified project commits/pushes without repeated confirmation; merges, deployment, architecture/OS trust changes and destructive actions remain separate. Preserve the approved architecture, user data and deferred OS trust decision. See [MVP readiness](docs/operations/mvp-readiness.md), the current record at the end and the [M4 validation history](docs/architecture/m4-validation.md).
+Current position: **M0–M4 Completed; essential MVP functionality and production/recovery preparation accepted on `401940f`**. [Full Linux CI](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362) passes all six jobs, including 134 product, 30 isolation, four foundation and six Compose development cases. Normal primary startup, all 19 live preservation checks and actual migrated-application backup/restore pass. Broader M5 pilot/load/observability work remains In Progress; M6/M7 are deferred. Nothing is deployed. Standing owner approval covers verified commits/pushes; merges, deployment, architectural/OS trust changes and destructive actions remain separate. See [MVP readiness](docs/operations/mvp-readiness.md) and the final handoff record below; earlier unit notes preserve historical failures.
 
 ## Approved baseline and tracking rules
 
@@ -28,8 +28,8 @@ The owner explicitly authorized completing the remaining M0 tasks as one review 
 | M1 — Product foundation and identity    | Completed   | M0                               | Two authenticated users can create/join scoped workspaces/projects; negative permission tests pass       |
 | M2 — Multi-file Python IDE              | Completed   | M1; M0 runner proof              | Exact-source local runs, input/output and cancellation work with isolation and resource budgets          |
 | M3 — Collaboration, durability and chat | Completed   | M2; M0 collaboration proof       | Concurrent/reconnect/crash save behavior and durable chat pass integration tests                         |
-| M4 — Learning and instructor workflows  | In Progress | M3                               | Versioned assignments, exact-source submissions and scoped review/progress work                          |
-| M5 — Pilot and operational readiness    | In Progress | M4; essential MVP scope approved | Essential production/recovery preparation underway; broader pilot gates and deployment remain separate   |
+| M4 — Learning and instructor workflows  | Completed   | M3                               | Versioned assignments, exact-source submissions and scoped review/progress work                          |
+| M5 — Pilot and operational readiness    | In Progress | M4; essential MVP scope approved | Essential production/recovery preparation complete; broader pilot gates and deployment remain separate   |
 | M6 — Optional authoritative grading     | Not Started | M5; execution threat model       | Hostile remote-code isolation/scoring gate passes before enablement                                      |
 | M7 — Extended collaborative learning    | Not Started | M5; feature-specific designs     | Each extension passes its own access/privacy/resource/reliability gate                                   |
 
@@ -101,21 +101,21 @@ Approved on 14 November 2026 to begin after storage/CI maintenance and local M2 
 
 ## M4 — Learning and instructor workflows
 
-Milestone status: **In Progress**. The owner authorized the current UI clarity work and complete approved M4 on 14 November 2026, including grouped verified commits/pushes. M4.0 resolves current task hierarchy before adding learning screens; M4.1–M4.6 retain the approved dependencies and acceptance gates.
+Milestone status: **Completed** on the declared Chromium/WebKit baseline. M4.0–M4.6, normal primary startup/preservation and [full exact-source Linux acceptance](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362) pass. Learning practice remains untrusted; manual feedback does not enable authoritative server grading. Broader pilot/browser certification remains M5 work.
 
-| ID   | Task and sub-tasks                                                                                      | Depends on | Status      | Verification / exit criteria                                                                  |
-| ---- | ------------------------------------------------------------------------------------------------------- | ---------- | ----------- | --------------------------------------------------------------------------------------------- |
-| M4.0 | Current UI clarity: task navigation, coding-first layout, progressive disclosure and retained state     | M3         | Completed   | Corrected mobile/chat/navigation cases pass locally and in Linux; full M4 CI remains separate |
-| M4.1 | Assignment/version schema, authoring, instructions and immutable starter policy                         | M3         | Completed   | Local API/browser/contract gates pass; exact-source Linux CI tracked separately               |
-| M4.2 | Assignment participation/teams, invitations/consent and instructor-controlled eligibility               | M4.1       | Completed   | No arbitrary participant lists or automatic inclusion of project viewers/mentors              |
-| M4.3 | Learning session UI, staged hints and visible checks                                                    | M4.2       | Completed   | Accessible instructions/hints; practice results labeled untrusted and tied to manifest        |
-| M4.4 | Exact-version immutable submission transaction, frozen participants, deadlines, budgets and idempotency | M4.3       | Completed   | Submit tested H after live H2; server hashes bytes and rechecks eligibility/access at commit  |
-| M4.5 | Submission-owned artifact access, review/source viewer and instructor feedback                          | M4.4       | Completed   | Project owners/shares gain no implicit submission access; reviewer sees frozen source         |
-| M4.6 | Derived progress, assessment status and notifications                                                   | M4.5       | In Progress | Client cannot assign trusted scores; feedback/progress recover from missed events             |
+| ID   | Task and sub-tasks                                                                                      | Depends on | Status    | Verification / exit criteria                                                                 |
+| ---- | ------------------------------------------------------------------------------------------------------- | ---------- | --------- | -------------------------------------------------------------------------------------------- |
+| M4.0 | Current UI clarity: task navigation, coding-first layout, progressive disclosure and retained state     | M3         | Completed | Corrected mobile/chat/navigation cases and full supported Linux matrix pass                  |
+| M4.1 | Assignment/version schema, authoring, instructions and immutable starter policy                         | M3         | Completed | Local API/browser/contracts and full exact-source Linux gates pass                           |
+| M4.2 | Assignment participation/teams, invitations/consent and instructor-controlled eligibility               | M4.1       | Completed | No arbitrary participant lists or automatic inclusion of project viewers/mentors             |
+| M4.3 | Learning session UI, staged hints and visible checks                                                    | M4.2       | Completed | Accessible instructions/hints; practice results labeled untrusted and tied to manifest       |
+| M4.4 | Exact-version immutable submission transaction, frozen participants, deadlines, budgets and idempotency | M4.3       | Completed | Submit tested H after live H2; server hashes bytes and rechecks eligibility/access at commit |
+| M4.5 | Submission-owned artifact access, review/source viewer and instructor feedback                          | M4.4       | Completed | Project owners/shares gain no implicit submission access; reviewer sees frozen source        |
+| M4.6 | Derived progress, assessment status and notifications                                                   | M4.5       | Completed | Client cannot assign trusted scores; feedback/progress recover from missed events            |
 
 ## M5 — Pilot and operational readiness
 
-Milestone status: **In Progress (essential MVP preparation)**. The 15 November instruction permits independent production/recovery preparation while M4 acceptance is repaired. Parallel preparation does not mark prerequisite gates complete; broad operational enhancements remain deferred.
+Milestone status: **In Progress**. Essential MVP production/recovery preparation is complete. Automated core/browser/security checks, a real migrated-application restore and the production profile/runbook are verified. Broader load targets, screen-reader/retail-device certification, metrics/audit/retention, target-provider recovery and an approved deployment/pilot remain separate; these tasks are not all completed by MVP acceptance.
 
 | ID   | Task and sub-tasks                                                            | Depends on | Status      | Verification / exit criteria                                                                           |
 | ---- | ----------------------------------------------------------------------------- | ---------- | ----------- | ------------------------------------------------------------------------------------------------------ |
@@ -123,7 +123,7 @@ Milestone status: **In Progress (essential MVP preparation)**. The 15 November i
 | M5.2 | Load/resource profiling, quotas and bottleneck fixes                          | M5.1       | Not Started | Measure proposed 2–6 editors/room and 30 learners/workspace; publish results, not assumed guarantees   |
 | M5.3 | Metrics/traces/alerts, audit/retention policy and incident procedures         | M5.2       | Not Started | Checkpoint lag/outbox age/errors visible; no credentials/source in routine logs                        |
 | M5.4 | Backup/restore, drain/restart and migration/rollback exercises                | M5.3       | In Progress | Restore project/submission data; no overlapping collaboration writers; documented recovery limitations |
-| M5.5 | Threat-model regression, dependency review and first-release readiness report | M5.4       | Not Started | Authorization/output/runner/abuse checks pass; unresolved risks stated explicitly                      |
+| M5.5 | Threat-model regression, dependency review and first-release readiness report | M5.4       | In Progress | Authorization/output/runner/abuse checks pass; unresolved risks stated explicitly                      |
 | M5.6 | Prepare reviewed deployment configuration/runbook and controlled pilot        | M5.5       | In Progress | Separate explicit deployment approval before any deployment; observed pilot results recorded           |
 
 ## M6 — Optional authoritative server assessment
@@ -245,14 +245,16 @@ The owner requested one completion bundle after the approved M0.4b commit. Depen
 | MVP prep        | `8c1299a`                                  | Essential startup, production configuration, private backup/restore and verified core workflows; pushed                                                    |
 | MVP reads       | `35a6f98`                                  | Learning refresh coalescing and discussion Retry-After corrections; focused regressions and runtime passed; pushed                                         |
 | MVP fault tests | `fb422d3`                                  | Seven actual fault-delivery boundaries; fourteen browser cases passed with original assertions/budgets; pushed                                             |
+| MVP progress    | `401940f`                                  | Exact fresh progress readback and passive reload diagnostics; full source/browser/Compose Linux CI passed                                                  |
 
 After an approved commit, replace the pending entry with its actual hash. A commit cannot contain its own final hash: record that hash in the next tracker change and include it in the next approved unit. Do not amend commits or create automatic bookkeeping commits. Record completed units, tests and remaining issues before presenting each subsequent commit.
 
 ## Pending work, known issues and technical debt
 
-- M0–M3 are complete. The 15 November instruction authorizes essential M4/MVP reliability and M5 production/recovery preparation with standing approval for verified commits/pushes. Merges, actual deployment, architectural/OS trust changes and destructive operations remain separate. Optional M6/M7 are deferred.
+- M0–M4 are complete. The 15 November instruction authorizes essential M4/MVP reliability and M5 production/recovery preparation with standing approval for verified commits/pushes. Merges, actual deployment, architectural/OS trust changes and destructive operations remain separate. Optional M6/M7 are deferred.
+- Earlier Linux runs recorded an intermittent WebKit native API-fetch page error during revoked-access reload. Local controls did not reproduce it; the final strict Linux matrix passes with passive diagnostics and no error filtering. No root cause or application fix is claimed. Retain this observation for M5.1 investigation.
 - Firefox's installed owned engine cannot find fresh profile folders here. Its suite is unverified, not skipped/passed; fix the launcher and execute all cases before claiming support. Chromium/WebKit results do not certify retail browsers, mobile or deployed headers.
-- IDE, collaboration, admission/leases, durable server saves, revisions/shares, chat and M4 learning workflows are implemented and pushed. Final exact-source Linux acceptance remains the current release gate. Local recovery is never a server Saved receipt.
+- IDE, collaboration, admission/leases, durable server saves, revisions/shares, chat and M4 learning workflows are implemented and pushed. Essential exact-source Linux acceptance passes; broader pilot and target-deployment gates remain. Local recovery is never a server Saved receipt.
 - Legacy `origin: "m2-local"` recovery now forks into a local copy; independently seeded M2 binary history must never merge into a canonical server room. M4 submission bundles bind their reviewed `code_along` helper/app release identity as well as source/runtime-profile digests; preserve that boundary for future replay.
 - Local records are unencrypted and storage can be unavailable/full. Wait for the completed recovery transaction and export important work. Sign-out purges by default; explicit retention is a device preference. Cold offline login is unavailable; warmed runs depend on the open frame and browser script cache.
 - OS certificate trust remains owner-deferred. Online use can require site-specific exceptions for both loopback sites; reliable offline caching needs browser-accepted HTTPS. No automatic trust installation or HTTP development profile was introduced.
@@ -858,13 +860,13 @@ That run subsequently finishes red: source/backend/build, Compose and Chromium j
 
 ### M4.6 implementation breakdown
 
-| Task                                                                                                 | Dependencies                                                                                   | Status      |
-| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------- |
-| M4.6a — Fixed private streams, atomic domain producers, historical progress and scoped HTTP APIs     | Verified M4.5 and accepted learning contract                                                   | Completed   |
-| M4.6b — Captured-generation delivery, exact learning socket and current authorization                | Stable stream model/access interface; existing dispatcher/Channels                             | Completed   |
-| M4.6c — Strict wire, bounded visible-view observer and progress UI                                   | Stable protocol, generated REST contracts, existing learning/review pages                      | Completed   |
-| M4.6d — Actual database/Redis/HTTPS/browser integration, independent review and coherent commit/push | M4.6a–c; one reserved heavy local stack                                                        | Completed   |
-| M4.6e — Final Linux acceptance, normal local startup/preservation and milestone handoff              | Verified integrated M4.6; normal primary passed; final source/browser/Linux acceptance pending | In Progress |
+| Task                                                                                                 | Dependencies                                                                                 | Status    |
+| ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------- |
+| M4.6a — Fixed private streams, atomic domain producers, historical progress and scoped HTTP APIs     | Verified M4.5 and accepted learning contract                                                 | Completed |
+| M4.6b — Captured-generation delivery, exact learning socket and current authorization                | Stable stream model/access interface; existing dispatcher/Channels                           | Completed |
+| M4.6c — Strict wire, bounded visible-view observer and progress UI                                   | Stable protocol, generated REST contracts, existing learning/review pages                    | Completed |
+| M4.6d — Actual database/Redis/HTTPS/browser integration, independent review and coherent commit/push | M4.6a–c; one reserved heavy local stack                                                      | Completed |
+| M4.6e — Final Linux acceptance, normal local startup/preservation and milestone handoff              | Verified integration, normal primary preservation and complete exact-source Linux acceptance | Completed |
 
 The first **seven actual PostgreSQL stream/domain cases pass in 7.03s**: fixed lifetime stream allocation, current teaching/recipient authorization without Source authority, no draft/original-nonce head increments, deduplicated old/new team recipients, pending captured generation across later mutations/broker failure, ended membership and SQL identity/monotonic/capture guards. The domain fixture is stopped before the transport fixture receives the sole heavy reservation. Pure transport/route tests and frontend protocol tests are progressing separately; these results do not yet establish M4.6 integration acceptance. No new VM, service, queue or dependency is planned. Stop before M5.
 
@@ -894,11 +896,11 @@ The locally verified 89-file feature bundle is committed and pushed as `9dc504aa
 
 The owner authorizes essential M5 reliability and deployment preparation alongside closing M4 acceptance, within approximately 15–16 hours from the latest instruction (received around 01:20 Asia/Kolkata). Priority: functional completion, reliability, deployment readiness, then optional work. Existing features are reused. New commits require explicit review/approval; no push, merge, actual deployment or destructive cleanup is authorized.
 
-| Batch | Essential work                                                                                    | Status      |
-| ----- | ------------------------------------------------------------------------------------------------- | ----------- |
-| MVP.1 | Close failing collaborative/learning workflows and normal local startup; preserve existing data   | In Progress |
-| MVP.2 | Prepare production settings/profile, separate runner, SMTP/TLS/environment and isolated checks    | Completed   |
-| MVP.3 | Core demonstration, recovery/backup instructions and final release evidence with remaining limits | In Progress |
+| Batch | Essential work                                                                                    | Status    |
+| ----- | ------------------------------------------------------------------------------------------------- | --------- |
+| MVP.1 | Close failing collaborative/learning workflows and normal local startup; preserve existing data   | Completed |
+| MVP.2 | Prepare production settings/profile, separate runner, SMTP/TLS/environment and isolated checks    | Completed |
+| MVP.3 | Core demonstration, recovery/backup instructions and final release evidence with remaining limits | Completed |
 
 Exact-source Linux run `43629301195` on `9dc504a` finished red: product 82 passed / 6 failed / 46 not run; source checks, Compose six, isolation 30 and foundation UI four passed. Both engines reject an obsolete no-socket assertion after private learning sockets were added and fail a pinned-version editor check. Chromium also observes a progress-read 429; WebKit's team workflow times out. The editor/timeout causes remain unproven; focused investigation precedes changes. See retained sanitized annotations under ignored `.runtime/m4-final-ci/html/`.
 
@@ -981,3 +983,17 @@ The local macOS WebKit probe completes five controls with no app imports or chan
 The final focused gate passes **4/4 in 165.655s**: the corrected learning-H2/older-H1 scenario and the strict project-permissions journey in Chromium/WebKit. There are zero failures, skips, retries, flaky cases or global errors. All 227 monitored inputs, both specs, 24 web outputs and 23 reused runner/proof outputs remain frozen. The runtime exits 0 in 166.643s, with minimum 5.198GiB; cleanup finds zero owned browser/native/PostgreSQL/Redis processes, all eight checked ports closed and 5.240GiB free. This verifies the concrete progress correction and diagnostic integration; it **does not establish or fix the prior WebKit cause**.
 
 The coherent six-file batch contains two browser specs, README authorization/production-status reconciliation and the three current evidence/tracker documents. Browser typing, scoped lint/format, staged scope/secrets and all documentation links are reviewed before the proposed **`test: refine progress and reload diagnostics`** commit under standing owner approval. Full Linux acceptance remains open; no app source, API/schema/dependency, navigation workaround, error filter, deployment or OS trust change is included.
+
+### Progress readback and reload diagnostics committed and pushed
+
+The reviewed six-file batch is committed and pushed as **`401940fa1d7a75efd789386d5abb7d8df1d54bb4`** (`test: refine progress and reload diagnostics`). All intended source/output fingerprints, both child spec freezes, four actual passing browser cases and five controlled probe outcomes match the evidence; staging reports zero actual environment-secret/private-key matches, index/worktree equality and correct explicit paths. All 38 Markdown formatting/local-link checks and all eleven static preservation checks pass. [Full exact-source Linux run 43656864362](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362) passes all six jobs. The unresolved earlier WebKit observation is retained without claiming a cause or fix. The final handoff below records the successful terminal result.
+
+## Essential MVP acceptance and handoff — 15 November 2026
+
+**M4 and MVP.1–MVP.3 are Completed.** Source `401940fa1d7a75efd789386d5abb7d8df1d54bb4` passes [full Linux run 43656864362](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362): all six actual jobs are successful. Chromium and WebKit each pass **67 product + 15 isolation + two foundation cases**; Compose passes **six development cases**. Product durations are 16.8 and 19.8 minutes respectively. Original zero-error assertions, ordinary quotas and zero configured retries remain intact. This is the complete 134-case product matrix, superseding earlier targeted-only acceptance. Earlier red runs remain recorded above.
+
+The existing platform now covers real verified accounts, workspace/project invitations and grants, collaborative multi-file Python with cursors and durable Saved receipts, isolated Python execution/input/output/Stop, history/shares/chat, assignments/consent/teams, version-pinned practice, exact immutable submissions, manual feedback and private progress updates. Normal `npm run dev`, the 19-case live preservation gate, production proxy/settings checks and actual migrated-project/submission/feedback backup/restore are verified. Detailed commands and a teacher/learner demonstration are in [MVP readiness](docs/operations/mvp-readiness.md).
+
+Essential M5 production/recovery preparation is complete; the full M5 pilot is not. Real target domains/certificates, managed PostgreSQL TLS/role privileges, SMTP, provider restore and explicit deployment approval remain required before deployment. Classroom load, broader accessibility/retail browsers, metrics/audit/retention and the earlier unexplained WebKit observation remain tracked. Trusted server grading, voice, drawing and advanced analytics are deferred. No merge, deployment, OS trust change or additional destructive cleanup is performed.
+
+The final handoff changes only README, this tracker, M4 validation and MVP readiness. Application/test/build fingerprints remain unchanged from accepted source `401940f`; the existing conservative prose CI path applies. Proposed commit: **`docs: record MVP handoff`**, under standing owner approval after format/link, diff/staging and secret review. Its own final hash belongs in the next meaningful unit rather than a bookkeeping commit.
