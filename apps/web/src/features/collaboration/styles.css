@@ -41,6 +41,16 @@
 .collaboration-details[open] .collaboration-actions {
   padding-bottom: var(--space-3);
 }
+.collaboration-preview {
+  display: inline-block;
+  max-inline-size: min(16rem, 35vw);
+  margin-inline-start: var(--space-2);
+  overflow: hidden;
+  color: var(--color-muted);
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
 .collaboration-compact .collaboration-presence {
   flex: 1 1 auto;
 }

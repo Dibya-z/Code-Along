@@ -2064,7 +2064,83 @@ test('lost work creation replies retain one manual request identity with no offl
     primary: unknown,
     postStatus: number | null = null;
   let abortCompleted = false,
-    failedEventSeen = false;
+    failedEventSeen = false,
+    clickCompleted = false;
+  let confirmBefore: { enabled: boolean; disabled: boolean } | null = null;
+  type ReadRoute =
+    'account' | 'assignment' | 'participation' | 'version' | 'work';
+  type ReadEvent = {
+    ms: number;
+    route: ReadRoute;
+    event: 'request' | 'response' | 'finished' | 'failed';
+    status?: number;
+    retryAfter?: number | null;
+  };
+  const began = Date.now();
+  const origin = new URL(actor.page.url()).origin;
+  const pendingReads = new Map<import('@playwright/test').Request, ReadRoute>();
+  const recentReads: ReadEvent[] = [],
+    readFailures: ReadEvent[] = [];
+  let pendingOverflow = false;
+  const readRoute = (
+    request: import('@playwright/test').Request,
+  ): ReadRoute | null => {
+    if (request.method() !== 'GET') return null;
+    const url = new URL(request.url());
+    if (url.origin !== origin) return null;
+    if (url.pathname === '/api/v1/me/') return 'account';
+    const base = `/api/v1/assignments/${f.assignmentId}/`;
+    if (url.pathname === base) return 'assignment';
+    if (url.pathname === `${base}participation/`) return 'participation';
+    if (url.pathname === `${base}versions/${f.version.id}/`) return 'version';
+    if (url.pathname === `${base}works/`) return 'work';
+    return null;
+  };
+  const recordRead = (value: Omit<ReadEvent, 'ms'>) => {
+    const event = { ms: Date.now() - began, ...value };
+    recentReads.push(event);
+    if (recentReads.length > 8) recentReads.shift();
+    if (value.status !== undefined && value.status >= 400) {
+      readFailures.push(event);
+      if (readFailures.length > 4) readFailures.shift();
+    }
+  };
+  const onRequest = (request: import('@playwright/test').Request) => {
+    const route = readRoute(request);
+    if (!route) return;
+    if (route === 'account') authChecks++;
+    if (pendingReads.size < 32) pendingReads.set(request, route);
+    else pendingOverflow = true;
+    recordRead({ route, event: 'request' });
+  };
+  const onResponse = (response: import('@playwright/test').Response) => {
+    const route = readRoute(response.request());
+    if (!route) return;
+    const raw = response.headers()['retry-after'] ?? '';
+    const seconds = /^[0-9]{1,2}$/.test(raw) ? Number(raw) : NaN;
+    recordRead({
+      route,
+      event: 'response',
+      status: response.status(),
+      retryAfter:
+        response.status() === 429 && seconds >= 1 && seconds <= 60
+          ? seconds
+          : null,
+    });
+  };
+  const completeRead = (
+    request: import('@playwright/test').Request,
+    event: 'finished' | 'failed',
+  ) => {
+    const route = readRoute(request);
+    if (!route) return;
+    pendingReads.delete(request);
+    recordRead({ route, event });
+  };
+  const onFinished = (request: import('@playwright/test').Request) =>
+    completeRead(request, 'finished');
+  const onFailed = (request: import('@playwright/test').Request) =>
+    completeRead(request, 'failed');
   let interceptedPost: import('@playwright/test').Request | null = null;
   let resolveLoss!: () => void, rejectLoss!: (error: unknown) => void;
   const didLoseReply = new Promise<void>((resolve, reject) => {
@@ -2074,13 +2150,10 @@ test('lost work creation replies retain one manual request identity with no offl
   try {
     await offer(page, f.assignmentId, actor);
     await accept(actor, f.assignmentId);
-    actor.page.on('request', (request) => {
-      if (
-        request.method() === 'GET' &&
-        new URL(request.url()).pathname === '/api/v1/me/'
-      )
-        authChecks++;
-    });
+    actor.page.on('request', onRequest);
+    actor.page.on('response', onResponse);
+    actor.page.on('requestfinished', onFinished);
+    actor.page.on('requestfailed', onFailed);
     await actor.page.route(
       `**/api/v1/assignments/${f.assignmentId}/works/`,
       async (route) => {
@@ -2110,6 +2183,14 @@ test('lost work creation replies retain one manual request identity with no offl
       'One exact uncertain work',
       false,
     );
+    const confirm = dialog.getByRole('button', {
+      name: 'Start individual work',
+      exact: true,
+    });
+    confirmBefore = await confirm.evaluate((button) => ({
+      enabled: !(button as HTMLButtonElement).disabled,
+      disabled: (button as HTMLButtonElement).disabled,
+    }));
     const failedPost = actor.page
       .waitForEvent('requestfailed', {
         predicate: (request) =>
@@ -2123,9 +2204,9 @@ test('lost work creation replies retain one manual request identity with no offl
       });
     phase = 'await-committed-reply-loss';
     await Promise.all([
-      dialog
-        .getByRole('button', { name: 'Start individual work', exact: true })
-        .click(),
+      confirm.click().then(() => {
+        clickCompleted = true;
+      }),
       didLoseReply,
       failedPost,
     ]);
@@ -2207,6 +2288,38 @@ test('lost work creation replies retain one manual request identity with no offl
     ).toEqual([]);
   } catch (error) {
     primary = error;
+    const currentUi = await actor.page
+      .evaluate(() => {
+        const button = [
+          ...document.querySelectorAll<HTMLButtonElement>('button'),
+        ].find(
+          (element) => element.textContent?.trim() === 'Start individual work',
+        );
+        return {
+          confirmPresent: Boolean(button),
+          confirmDisabled: button?.disabled ?? null,
+          checkingAccount: [
+            ...document.querySelectorAll('[role="status"]'),
+          ].some(
+            (element) =>
+              element.textContent?.trim() ===
+              'Checking the current account and requesting work…',
+          ),
+          retryPresent: [...document.querySelectorAll('button')].some(
+            (element) =>
+              element.textContent?.trim() === 'Retry same work request',
+          ),
+        };
+      })
+      .catch(() => null);
+    const pending = {
+      account: 0,
+      assignment: 0,
+      participation: 0,
+      version: 0,
+      work: 0,
+    };
+    for (const route of pendingReads.values()) pending[route]++;
     const state = {
       phase,
       postStatus,
@@ -2215,6 +2328,15 @@ test('lost work creation replies retain one manual request identity with no offl
       abortCompleted,
       failedEventSeen,
       authChecks,
+      clickCompleted,
+      confirmBefore,
+      currentUi,
+      reads: {
+        pending,
+        pendingOverflow,
+        failures: readFailures,
+        recent: recentReads,
+      },
     };
     const body = JSON.stringify(state);
     await writeFile(info.outputPath('lost-work-failure.json'), body).catch(
@@ -2227,6 +2349,10 @@ test('lost work creation replies retain one manual request identity with no offl
       error.message += `\nLost work fixture state: ${body}`;
     throw error;
   } finally {
+    actor.page.off('request', onRequest);
+    actor.page.off('response', onResponse);
+    actor.page.off('requestfinished', onFinished);
+    actor.page.off('requestfailed', onFailed);
     await f.close().catch((error: unknown) => {
       if (primary === undefined) throw error;
     });

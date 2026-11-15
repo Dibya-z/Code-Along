@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, Navigate, useSearchParams } from 'react-router';
 import { Button, Field, Notice } from '@code-along/design-system';
 import {
   authenticate,
@@ -44,6 +44,7 @@ const content = {
 };
 export function AccountPage({ kind }: { kind: Kind }) {
   const [params] = useSearchParams();
+  const identity = useIdentity();
   const key = params.get('key') ?? '';
   const next = safeDestination(params.get('next'));
   const nextQuery = `?next=${encodeURIComponent(next)}`;
@@ -102,6 +103,15 @@ export function AccountPage({ kind }: { kind: Kind }) {
   }
   const invalidKey =
     (kind === 'verify' || kind === 'reset') && !key && !message;
+  if (kind === 'login' || kind === 'signup') {
+    if (identity.isPending)
+      return (
+        <div className="page narrow">
+          <Notice>Checking your account…</Notice>
+        </div>
+      );
+    if (identity.data) return <Navigate replace to={next} />;
+  }
   return (
     <div className="account-entry">
       <section className="account-form" aria-labelledby="account-heading">
@@ -116,6 +126,12 @@ export function AccountPage({ kind }: { kind: Kind }) {
         {message ? (
           <>
             <Notice tone="success">{message}</Notice>
+            {kind === 'signup' && next.startsWith('/invitations/') && (
+              <p>
+                After verifying your email, return to this tab and sign in to
+                accept your invitation. You can also reopen the invitation link.
+              </p>
+            )}
             <Link className="button" to={`/login${nextQuery}`}>
               Go to sign in
             </Link>
@@ -182,7 +198,7 @@ export function AccountPage({ kind }: { kind: Kind }) {
         )}
         {kind === 'login' && (
           <div className="form-stack">
-            <Link to="/auth/forgot">Forgot your password?</Link>
+            <Link to={`/auth/forgot${nextQuery}`}>Forgot your password?</Link>
             <p className="muted">
               New here?{' '}
               <Link to={`/auth/signup${nextQuery}`}>Create an account</Link>

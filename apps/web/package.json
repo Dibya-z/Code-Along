@@ -12,6 +12,7 @@
     "@code-along/api-client": "workspace:*",
     "@code-along/contracts": "workspace:*",
     "@code-along/design-system": "workspace:*",
+    "@codemirror/autocomplete": "6.20.4",
     "@codemirror/commands": "6.11.1",
     "@codemirror/lang-python": "6.2.1",
     "@codemirror/language": "6.13.1",

@@ -46,6 +46,31 @@ for (const keyboardPlatform of ['native', 'linux']) {
     await expect(source).toHaveText(original, { useInnerText: true });
     await source.press(`${modifier}+Shift+Z`);
     await expect(source).toHaveText(draft, { useInnerText: true });
+    await source.fill('pri');
+    await source.press('Control+Space');
+    await expect(page.getByRole('option', { name: /^print\b/ })).toBeVisible();
+    // CodeMirror intentionally ignores acceptance for 75ms after opening.
+    await page.waitForTimeout(100);
+    await source.press('Enter');
+    await expect(source).toHaveText('print');
+    await source.press('(');
+    await expect(source).toHaveText('print()');
+    await source.press(')');
+    await expect(source).toHaveText('print()');
+    await source.fill('student_name = "Ada"\nstu');
+    await source.press('Control+Space');
+    await expect(
+      page.getByRole('option', { name: /^student_name\b/ }),
+    ).toBeVisible();
+    await source.press('Escape');
+    await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
+    await source.fill('def greet():');
+    await source.press('Enter');
+    await source.press('x');
+    await expect(source).toHaveText('def greet():\n    x', {
+      useInnerText: true,
+    });
+    await source.fill(draft);
     await page.getByRole('tab', { name: 'helper.py' }).click();
     await page.getByLabel('Python source for helper.py').fill('answer = 84\n');
     await page
@@ -75,9 +100,20 @@ for (const keyboardPlatform of ['native', 'linux']) {
     await expect(source).toHaveText(draft, { useInnerText: true });
     await source.press('Tab');
     await expect(source).not.toBeFocused();
+    const beforeOptions = await source.boundingBox();
     await openEditorOptions(page);
+    const afterOptions = await source.boundingBox();
+    expect(Math.abs(beforeOptions!.y - afterOptions!.y)).toBeLessThan(1);
+    expect(Math.abs(beforeOptions!.height - afterOptions!.height)).toBeLessThan(
+      1,
+    );
     await page.getByLabel('Editor text size').selectOption('1.125rem');
     await expect(page.locator('.cm-editor')).toHaveCSS('font-size', '18px');
+    await page.getByLabel('Editor text size').press('Escape');
+    await expect(page.locator('.editor-options')).not.toHaveAttribute(
+      'open',
+      '',
+    );
     for (const width of [1440, 1024, 768, 390, 320]) {
       await page.setViewportSize({ width, height: 1000 });
       expect(

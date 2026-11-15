@@ -252,6 +252,9 @@ importers:
       '@code-along/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
+      '@codemirror/autocomplete':
+        specifier: 6.20.4
+        version: 6.20.4
       '@codemirror/commands':
         specifier: 6.11.1
         version: 6.11.1

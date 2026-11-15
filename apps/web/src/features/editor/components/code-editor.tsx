@@ -12,34 +12,13 @@ import {
 } from '@codemirror/view';
 import { defaultKeymap } from '@codemirror/commands';
 import {
-  HighlightStyle,
-  indentOnInput,
-  syntaxHighlighting,
-} from '@codemirror/language';
-import { python } from '@codemirror/lang-python';
-import { tags } from '@lezer/highlight';
-import {
   yCollab,
   ySyncAnnotation,
   yUndoManagerKeymap,
 } from 'y-codemirror.next';
 import { RUN_LIMITS, sourceBytes } from '@code-along/contracts/execution';
 import type { EditorDocument } from '../model/document.ts';
-
-const highlighting = HighlightStyle.define([
-  { tag: tags.keyword, color: 'var(--color-info)', fontWeight: '600' },
-  {
-    tag: [tags.string, tags.special(tags.string)],
-    color: 'var(--color-primary)',
-  },
-  { tag: [tags.number, tags.bool, tags.null], color: 'var(--color-warning)' },
-  { tag: tags.comment, color: 'var(--color-muted)', fontStyle: 'italic' },
-  {
-    tag: tags.invalid,
-    color: 'var(--color-error)',
-    textDecoration: 'underline',
-  },
-]);
+import { pythonEditingSupport } from './python-support.ts';
 
 export function CodeEditor({
   file,
@@ -107,9 +86,7 @@ export function CodeEditor({
           drawSelection(),
           highlightActiveLine(),
           highlightActiveLineGutter(),
-          indentOnInput(),
-          python(),
-          syntaxHighlighting(highlighting),
+          pythonEditingSupport,
           keymap.of([
             {
               key: 'Escape',

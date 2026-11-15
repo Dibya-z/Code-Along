@@ -69,7 +69,7 @@ export function InvitationsPanel({ workspace }: { workspace: Workspace }) {
             open={open}
             onOpenChange={setOpen}
             title="Invite a workspace member"
-            description="Only the person with this email address can use the link. They’ll need a verified account."
+            description="Invite someone to your group. Only this email address can accept the link, using a verified account. Private projects are shared separately."
             trigger={<Button variant="secondary">Invite member</Button>}
           >
             <form className="form-stack" onSubmit={submit}>
@@ -85,6 +85,10 @@ export function InvitationsPanel({ workspace }: { workspace: Workspace }) {
                 <option value="learner">Learner</option>
                 <option value="instructor">Instructor</option>
               </select>
+              <p className="muted">
+                Learners join tasks. Instructors can also publish tasks and give
+                feedback. Neither role grants access to private projects.
+              </p>
               <label htmlFor="invite-expiry">Link expires after</label>
               <select id="invite-expiry" name="expires_hours" defaultValue="72">
                 <option value="24">One day</option>
@@ -212,8 +216,8 @@ function InvitationDetails() {
         <>
           <p>
             {preview.data?.project_name
-              ? `Accept to open this private project as a ${preview.data.role}.`
-              : `You’re invited as a ${preview.data?.role}. Private project access is shared separately.`}
+              ? `This project belongs to ${preview.data.workspace_name}. ${preview.data.role === 'editor' ? 'You can edit and run its code with the group.' : 'You can read and run its code. Editing stays with project editors.'}`
+              : `Join ${preview.data?.workspace_name} as a ${preview.data?.role}. The workspace owner manages membership; project owners share access to their private projects separately.`}
           </p>
           {accept.error && <Failure error={accept.error} />}
           <Button busy={accept.isPending} onClick={() => accept.mutate()}>

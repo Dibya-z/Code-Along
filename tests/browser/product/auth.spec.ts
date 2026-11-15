@@ -5,7 +5,16 @@ test('register, verify, login, logout and reset through real browser sessions', 
   browserName,
 }) => {
   const email = `auth-${browserName}-${Date.now()}@example.test`;
+  await page.goto('/workspaces');
+  await expect(page).toHaveURL(/\/login\?next=%2Fworkspaces$/);
+  await expect(
+    page.getByRole('heading', { name: 'Sign in', exact: true }),
+  ).toBeVisible();
   await register(page, email);
+  await page.goto('/login?next=%2Fdrafts');
+  await expect(page).toHaveURL('https://127.0.0.1:18443/drafts');
+  await page.goto('/auth/signup');
+  await expect(page).toHaveURL('https://127.0.0.1:18443/workspaces');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(
     page.getByRole('link', { name: 'Sign in', exact: true }),

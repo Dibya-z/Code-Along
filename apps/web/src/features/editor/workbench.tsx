@@ -444,17 +444,6 @@ function ScopedWorkbench({
             </>
           )}
         </nav>
-        <label className="console-width">
-          Console width{' '}
-          <input
-            type="range"
-            min="28"
-            max="44"
-            value={consoleWidth}
-            onChange={(event) => setConsoleWidth(event.target.value)}
-          />
-          {consoleWidth}%
-        </label>
       </div>
       {resource.collaboration &&
         (() => {
@@ -588,27 +577,50 @@ function ScopedWorkbench({
                 Files <span aria-hidden="true">{filesOpen ? '▴' : '▾'}</span>
               </Button>
             )}
-            <details className="editor-options">
+            <details
+              className="editor-options"
+              onKeyDown={(event) => {
+                if (event.key !== 'Escape') return;
+                event.currentTarget.open = false;
+                event.currentTarget.querySelector('summary')?.focus();
+                event.stopPropagation();
+              }}
+            >
               <summary>
                 <Icon name="settings" size={16} />
                 Editor options
               </summary>
-              <label className="editor-size">
-                Code size
-                <select
-                  aria-label="Editor text size"
-                  value={fontSize}
-                  onChange={(event) => setFontSize(event.target.value)}
-                >
-                  <option value="1rem">16 px</option>
-                  <option value="1.125rem">18 px</option>
-                  <option value="1.25rem">20 px</option>
-                </select>
-              </label>
-              <p className="editor-keyboard-help" id="editor-keyboard-help">
-                Tab moves focus. Ctrl/Cmd + ] indents. Arrow keys switch file
-                tabs; Delete closes a tab.
-              </p>
+              <div className="editor-options-content">
+                <label className="editor-size">
+                  Code size
+                  <select
+                    aria-label="Editor text size"
+                    value={fontSize}
+                    onChange={(event) => setFontSize(event.target.value)}
+                  >
+                    <option value="1rem">16 px</option>
+                    <option value="1.125rem">18 px</option>
+                    <option value="1.25rem">20 px</option>
+                  </select>
+                </label>
+                <label className="console-width">
+                  Console width
+                  <input
+                    type="range"
+                    min="28"
+                    max="44"
+                    value={consoleWidth}
+                    onChange={(event) => setConsoleWidth(event.target.value)}
+                  />
+                  {consoleWidth}%
+                </label>
+                <p className="editor-keyboard-help" id="editor-keyboard-help">
+                  Ctrl + Space opens Python suggestions. Use arrows to choose,
+                  Enter to insert and Escape to dismiss. Tab moves focus;
+                  Ctrl/Cmd + ] indents. Arrow keys switch file tabs; Delete
+                  closes a tab.
+                </p>
+              </div>
             </details>
             {!collaboration && (
               <span className="badge">

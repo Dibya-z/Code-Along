@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { register, createEditorProject } from './helpers.ts';
+import { register, createEditorProject, openEditorOptions } from './helpers.ts';
 test('bounded original PNG helpers, fresh plots and responsive retained panes', async ({
   page,
   browserName,
@@ -39,8 +39,10 @@ test('bounded original PNG helpers, fresh plots and responsive retained panes', 
   expect(
     sourceBox && outputBox && sourceBox.x + sourceBox.width <= outputBox.x,
   ).toBe(true);
+  await openEditorOptions(page);
   await page.getByLabel('Console width', { exact: false }).focus();
   await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Escape');
   await page.screenshot({
     path: testInfo.outputPath('workbench-desktop.png'),
     fullPage: true,

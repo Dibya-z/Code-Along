@@ -67,6 +67,15 @@ export function CollaborationPanel({
       <details className="collaboration-details">
         <summary>
           People &amp; saving <span aria-hidden="true">({users.size})</span>
+          {users.size > 0 && (
+            <span className="collaboration-preview">
+              {[...users]
+                .slice(0, 2)
+                .map(([id, member]) => (id === accountId ? 'You' : member.name))
+                .join(' · ')}
+              {users.size > 2 && ` · +${users.size - 2} more`}
+            </span>
+          )}
         </summary>
         <div className="collaboration-actions">
           <ul

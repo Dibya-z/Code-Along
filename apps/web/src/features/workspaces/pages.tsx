@@ -44,10 +44,11 @@ function WorkspaceList() {
     <div className="page workspace-index">
       <div className="workspace-page-header">
         <div>
-          <p className="workspace-kicker">A LITTLE PROGRESS, TOGETHER</p>
+          <p className="workspace-kicker">WORKSPACES</p>
           <h1>Your workspaces</h1>
           <p className="workspace-intro">
-            Your groups, projects and Python practice, in one place.
+            Open a group to find its projects, or create a workspace of your
+            own.
           </p>
         </div>
         <Dialog
@@ -142,23 +143,11 @@ function WorkspaceList() {
             <span className="workspace-empty-icon" aria-hidden="true">
               <Icon name="workspace" />
             </span>
-            <p className="workspace-kicker">GOOD THINGS START SMALL</p>
-            <h2>A fresh workspace starts here.</h2>
+            <h2>No workspaces yet.</h2>
             <p>
-              Create a workspace for your group, or open an invitation someone
-              has shared with you.
+              Create a workspace to start a project. To join an existing group,
+              open the invitation link its owner shared with you.
             </p>
-            <ol className="workspace-first-steps">
-              <li>
-                <span>01</span> Make a space
-              </li>
-              <li>
-                <span>02</span> Invite your people
-              </li>
-              <li>
-                <span>03</span> Write some Python
-              </li>
-            </ol>
           </div>
         )
       )}
@@ -184,6 +173,7 @@ export function WorkspacePage() {
 }
 function WorkspaceDetail() {
   const location = useLocation();
+  const navigate = useNavigate();
   const active = location.hash === '#assignments' ? 'assignments' : 'projects';
   const { workspaceId } = useParams();
   const [memberOffset, setMemberOffset] = useState(0);
@@ -212,7 +202,11 @@ function WorkspaceDetail() {
         method,
         ...(body === undefined ? {} : { body }),
       }),
-    onSuccess: async () => {
+    onSuccess: async (_result, variables) => {
+      const leftWorkspace =
+        variables.method === 'DELETE' &&
+        variables.path === `members/${identity.data?.id}/`;
+      if (leftWorkspace) await navigate('/workspaces', { replace: true });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] }),
         queryClient.invalidateQueries({ queryKey: ['members', workspaceId] }),
@@ -279,7 +273,9 @@ function WorkspaceDetail() {
           <p className="workspace-kicker">LEARNING WORKSPACE</p>
           <h1>{workspace.name}</h1>
           <p className="workspace-intro">
-            Your group's projects, lessons and shared progress.
+            {owner
+              ? 'You own this workspace. Manage your group under Members.'
+              : 'Open a project shared with you, or find your learning tasks.'}
           </p>
           <div className="workspace-context">
             <span className="workspace-role">{workspace.role}</span>
@@ -339,6 +335,11 @@ function WorkspaceDetail() {
         </summary>
         <section className="content-section" aria-labelledby="members-heading">
           <h2 id="members-heading">Workspace members</h2>
+          <p className="muted">
+            Owners manage members and invitations. Instructors manage learning
+            tasks. Private project owners share editing or viewing access
+            separately.
+          </p>
           {members.error && <Failure error={members.error} />}
           {members.isPending ? (
             <Notice>Loading members…</Notice>
@@ -355,6 +356,9 @@ function WorkspaceDetail() {
                     </span>
                     <div>
                       <strong>{member.display_name}</strong>
+                      {member.user_id === identity.data?.id && (
+                        <span className="muted"> (you)</span>
+                      )}
                       <p>{member.role}</p>
                     </div>
                   </div>

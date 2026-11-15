@@ -1041,7 +1041,7 @@ This final handoff changes only README, this tracker, MVP readiness and interfac
 
 ## R1 — Local Python runtime connection recovery
 
-Status: **In Progress**, 15 November 2026. The owner reports that valid greeting
+Status: **Completed for the reported runtime fault**, 15 November 2026. The owner reports that valid greeting
 code cannot connect to the Python runtime. Read-only checks against the actual
 running development stack confirm healthy services, correct app/runner origins,
 bootstrap availability, isolation headers, explicit-CA HTTPS and the expected
@@ -1125,3 +1125,45 @@ documentation links, diff whitespace and all eleven static preservation checks.
 The live proxy passes the expanded HTTP smoke with explicit project-CA and
 hostname verification. Full web typing/build and the two-engine browser matrix
 are assigned to Linux CI, preserving the approximately 2.9GiB local headroom.
+
+Runtime fix `e97f96a8d9346029c3065d996bc15f5a4dd3a426` is committed and pushed.
+[Linux run 43692383290](https://github.com/Dibya-z/Code-Along/actions/runs/43692383290)
+passes source/type/build checks, Compose six, isolation thirty and foundation
+six. Both engines pass the new real runner-recovery journey. Full product
+acceptance is **135/136**, not green: Chromium's existing lost-work-reply case
+times out before any work-creation POST; WebKit passes all 68 cases. Its cause
+is unresolved. The next batch adds bounded, value-free evidence around the
+confirmation button and account/participation reads without changing its
+150-second budget, fault fence or functional assertions.
+
+## R2 — Product simplification and editor refinement
+
+Status: **In Progress**, 15 November 2026. The owner requests a smaller, more
+predictable MVP. Local PyTogether source and its MIT licence are inspected;
+only interaction ideas are adopted, with no reference edits or copied code.
+
+| Batch      | Scope                                                                                                                                    | Status                                   |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Access     | Direct safe sign-in, authenticated account-form redirects, predictable workspace exit and explicit workspace/project permission guidance | Implemented; focused checks pass         |
+| Coding     | Real Python completion, bracket assistance, four-space indentation, visible collaborator names and stable options overlay                | Implemented; focused checks pass         |
+| Acceptance | Extended existing auth/invitation/editor/presence/plot journeys; complete browser and build verification                                 | Pending Linux CI and fresh visual checks |
+
+Core authentication, workspace/project access, editing, Run/Stop/output,
+collaboration, chat and durable saving are retained. Learning, history/shares,
+local drafts and recovery retain their existing secondary views; no database
+feature or user data is removed. Voice, drawing, trusted server grading and
+advanced analytics remain deferred. No new architecture or package version is
+introduced: autocomplete 6.20.4 already exists in the lockfile and is now an
+explicit web dependency. Suggestions are local syntax/name assistance, not a
+language server. Existing document/Yjs/Worker lifetimes and authority remain.
+
+Focused authentication tests pass **8/8** and editor/workspace tests **20/20**.
+Changed TypeScript lint/format and browser-test typing pass. Existing watcher
+modules return JavaScript over explicit-CA HTTPS after linking its already
+installed completion package; no image build/download is needed for this
+session. Future normal image builds use the committed dependency manifest.
+Host free space falls to roughly 1.7GiB; a no-file-deletion guest discard does
+not recover meaningful host space. No new browser/stack/build is started below
+the heavy-work floor, and additional owner disk headroom is requested while
+remote verification proceeds. Final review/commit and browser acceptance remain
+open; no unrun check is described as passed.

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
 import { Button, Notice } from '@code-along/design-system';
 import { Failure } from '../../api/feedback.tsx';
 import { useIdentity, safeDestination } from './session.ts';
@@ -30,20 +30,10 @@ export function SignedIn({ children }: { children: ReactNode }) {
     );
   if (!identity.data)
     return (
-      <div className="page narrow">
-        <h1>Sign in to continue.</h1>
-        <p>Your workspaces are only visible to your account.</p>
-        <Link
-          className="button"
-          to={`/login?next=${encodeURIComponent(safeDestination(location.pathname))}`}
-        >
-          Sign in
-        </Link>
-        <p className="muted">
-          If you create an account, verify your email and reopen the invitation
-          link to join.
-        </p>
-      </div>
+      <Navigate
+        replace
+        to={`/login?next=${encodeURIComponent(safeDestination(location.pathname))}`}
+      />
     );
   return children;
 }

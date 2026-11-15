@@ -59,3 +59,12 @@ The owner chose a focused developer-product direction. The redesign applies cons
 The study uses [Linear’s interface hierarchy refresh](https://linear.app/now/behind-the-latest-design-refresh), [Replit’s collaborative programming product](https://replit.com/collaboration), and [Brilliant’s Python learning flow](https://brilliant.org/topics/python/). These are qualitative references, not an objective ranking. The local Awesome DESIGN.md analyses of Linear, Cursor and Resend guide the reference discipline. External research images remain ignored local references and are never shipped as Code Along assets.
 
 Taste’s truthful copy, deliberate composition, aligned edges and component consistency apply to these product surfaces. Web-design supplies the structure, responsive, contrast and interaction checks. Marketing-site full-screen sections, shader scenes and timed promotional motion do not belong in the authenticated workbench. Actual screenshots, keyboard checks and retained-state regressions remain required; source review alone is not visual acceptance.
+
+Product refinement keeps core coding and collaboration prominent. Editor options
+open as an anchored overlay without moving source or resizing the workbench;
+Escape closes them and restores focus. Python suggestions use existing local
+language support, with Tab reserved for leaving the editor. Collaborator names
+remain visible beside saving controls. Workspace membership and private project
+access use separate, explicit explanations; occasional administration stays
+behind disclosures. No existing data or learning capability is deleted to
+simplify the default presentation.

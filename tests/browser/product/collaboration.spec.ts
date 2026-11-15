@@ -127,6 +127,8 @@ test('two accounts converge on empty/short text, show real multi-tab presence, a
   const pair = await projectPair(page, browser, browserName),
     peer = pair.peer;
   try {
+    await expect(page.locator('.collaboration-preview')).toContainText('River');
+    await expect(peer.locator('.collaboration-preview')).toContainText('Mira');
     await openPeople(page);
     await openPeople(peer);
     const ownerPeople = page.getByRole('list', { name: 'People in this file' });
