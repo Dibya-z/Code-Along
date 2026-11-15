@@ -1146,7 +1146,7 @@ only interaction ideas are adopted, with no reference edits or copied code.
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
 | Access     | Direct safe sign-in, authenticated account-form redirects, predictable workspace exit and explicit workspace/project permission guidance | Implemented; focused checks pass         |
 | Coding     | Real Python completion, bracket assistance, four-space indentation, visible collaborator names and stable options overlay                | Implemented; focused checks pass         |
-| Acceptance | Extended existing auth/invitation/editor/presence/plot journeys; complete browser and build verification                                 | Pending Linux CI and fresh visual checks |
+| Acceptance | Extended existing auth/invitation/editor/presence/plot journeys; complete browser and build verification                                 | Primary browser passed; Linux CI pending |
 
 Core authentication, workspace/project access, editing, Run/Stop/output,
 collaboration, chat and durable saving are retained. Learning, history/shares,
@@ -1167,3 +1167,31 @@ not recover meaningful host space. No new browser/stack/build is started below
 the heavy-work floor, and additional owner disk headroom is requested while
 remote verification proceeds. Final review/commit and browser acceptance remain
 open; no unrun check is described as passed.
+
+The reviewed 22-file refinement is committed/pushed as
+**`1c978bde63f5e7c0ab2015cf7f35d005dd727798`**. After the owner frees disk space,
+fresh Chromium verification against the already-running primary app passes
+**1/1 in 11.7 seconds**, with zero page errors, overflow, retries, skips or flaky
+cases. Real registration/verification, workspace/project creation, built-in and
+same-file completion, brackets, retained code, Run/output and 390/320px views
+pass. All **ten fresh PNGs** are visually reviewed. Opening options leaves source
+position/height exactly unchanged at desktop and 390px; Escape restores focus.
+All eleven observed browser processes exit; no new VM/service starts. Minimum
+free space is 9.613GiB. Only the separate QA account/project is added and retained.
+
+[Refinement CI 43701196760](https://github.com/Dibya-z/Code-Along/actions/runs/43701196760)
+passes source/type/build, changes, Compose six, isolation thirty and foundation
+six. Each engine then passes 23 product cases and stops after three feedback
+setups fail; 42 cases per engine remain unrun. The exact-source helper recognizes
+the old three-space BOM autoindent suffix, while the four-space configuration
+produces five. A narrow test-only correction recognizes/removes exactly those
+five generated spaces and retains the final exact export assertion. The editor
+implementation, expected BOM/body/LF bytes and all budgets/quotas remain intact.
+An additional real-primary Chromium proof passes **1/1 in 8.8 seconds**: export
+before cleanup equals expected source plus exactly five spaces; after the five
+keyboard deletions it equals the expected BOM-prefixed source with final LF.
+Its browser closes cleanly, zero page errors and 9.977GiB minimum free space.
+Actual CodeMirror indentation/newline-command proof, scoped lint/format and
+browser typing also pass. Proposed correction commit: **`test: match Python indentation`**.
+Full matrix acceptance remains open; the earlier lost-work case was not reached
+in this stopped run and is not claimed fixed.

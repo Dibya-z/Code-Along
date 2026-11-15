@@ -318,15 +318,16 @@ export async function replaceSource(page: Page, path: string, value: string) {
     (file) => file.path === path,
   )?.source;
   let removedIndent = false;
-  // This BOM-prefixed fixture produces exactly three autoindent spaces on Enter.
+  // With four-space Python indentation, this BOM-prefixed fixture produces
+  // exactly five autoindent spaces on Enter.
   // Remove only this observed helper-created suffix, preserving the LF and BOM.
-  if (trailing > 0 && inserted === `${value}   `) {
+  if (trailing > 0 && inserted === `${value}     `) {
     removedIndent = true;
-    expect(inserted.slice(0, -3)).toBe(value);
-    expect(inserted.slice(0, -3).endsWith('\n')).toBe(true);
+    expect(inserted.slice(0, -5)).toBe(value);
+    expect(inserted.slice(0, -5).endsWith('\n')).toBe(true);
     await editor.focus();
     await editor.press(`${modifier}+End`);
-    for (let index = 0; index < 3; index++)
+    for (let index = 0; index < 5; index++)
       await editor.press('Shift+ArrowLeft');
     await editor.press('Backspace');
     await saved(page);
