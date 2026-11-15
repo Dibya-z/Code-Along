@@ -104,6 +104,17 @@ is introduced. Earlier core-MVP acceptance remains documented in
 device certification, classroom load and the earlier intermittent WebKit
 native-fetch observation remain broader M5 work.
 
+## Commit and acceptance tracking
+
+The interface bundle is committed/pushed as
+[`104d4ec`](https://github.com/Dibya-z/Code-Along/commit/104d4ecfbb1d345b752c619b2052eda81a1e0a7f).
+The [first Linux run](https://github.com/Dibya-z/Code-Along/actions/runs/43682960339)
+starts before a final source/query audit catches a changed workspace return-link
+name: its decorative arrow became hidden from accessibility. The correction
+explicitly restores the previous `← Your workspaces` label. The original
+workspace test stays intact. Scoped lint and web types pass; the complete
+replacement Linux run remains required before acceptance.
+
 ## Local preview
 
 From the repository root, run `npm run dev`, then open

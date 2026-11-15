@@ -261,7 +261,11 @@ function WorkspaceDetail() {
   }
   return (
     <div className="page workspace-detail">
-      <Link className="workspace-back" to="/workspaces">
+      <Link
+        className="workspace-back"
+        to="/workspaces"
+        aria-label="← Your workspaces"
+      >
         <span aria-hidden="true">←</span> Your workspaces
       </Link>
       <div className="workspace-page-header workspace-detail-header">
