@@ -1038,3 +1038,90 @@ The reviewed responsive repair is committed/pushed as **`92c09facb52f94f76b7968b
 The original product shell/account/catalogue/editor/console/learning design, appearance preference, restored file tabs/focus and responsive repairs are implemented, reviewed, committed and pushed. Final local evidence includes 711 regular JavaScript tests, workspace lint/format/types, web/Storybook builds, the four-case responsive regression and the two-case fresh design capture. All 613 source inputs and verified build/reuse outputs remain frozen through handoff. Local test processes and the owned VM remain stopped. No deployment, merge, OS trust change, extra dependency or additional cleanup is performed. Broader M5 pilot/load/accessibility/metrics/audit/retention and operator deployment prerequisites remain separate.
 
 This final handoff changes only README, this tracker, MVP readiness and interface validation. Proposed commit: **`docs: record interface acceptance`**, under standing authorization after formatting/link, exact-source, diff/staging and secret review. The conservative prose-only CI path applies; no product gate is weakened or reclassified for a source change.
+
+## R1 — Local Python runtime connection recovery
+
+Status: **In Progress**, 15 November 2026. The owner reports that valid greeting
+code cannot connect to the Python runtime. Read-only checks against the actual
+running development stack confirm healthy services, correct app/runner origins,
+bootstrap availability, isolation headers, explicit-CA HTTPS and the expected
+served certificate. macOS verification reports `CSSMERR_TP_NOT_TRUSTED`.
+Browser-specific certificate acceptance remains an owner/browser action, separate
+from these checks; system-wide trust installation remains deferred.
+
+The exact reported message is the fixed ten-second iframe READY timeout, before
+Python/Worker/WASM startup. Its earlier certificate-specific wording overstates
+the diagnosis. Connection help also appeared for unrelated execution errors.
+The bounded fix uses neutral timeout wording and an internal connection-issue
+flag, reset on each run and set only for current bridge faults. Help now gives
+local-only certificate guidance and the correct Run code/practice retry action.
+No protocol, origin, nonce, timeout, runner security or execution behavior changes.
+
+Two targeted unit files pass **32 tests** using a single worker and bounded heap.
+Coverage includes the exact ten-second timeout/cleanup, current versus stale
+faults, retry reset, invalid input/capture, Python/protocol errors and deadline
+classification. An additional two-engine browser journey simulates an inert
+runner document, retains the user's greeting source, then restores the actual
+runtime and requires `Hello, Code Along!` and `hello`; it remains pending CI.
+The existing real Python-exception journey also asserts no connection help.
+The new full product matrix contains 136 cases rather than 134.
+
+Host free space is approximately 2.9GiB while the owner's development VM runs.
+No second stack, browser or large build is started below the 3.5GiB heavy-work
+floor. The running application, source, database/mail volumes, certificates and
+OS trust settings remain intact. Browser-only recovery instructions are added
+to README and local HTTPS operations. Final scoped checks, review and CI remain
+pending; browser trust and successful execution in the owner's session are not
+claimed verified.
+
+The owner confirms Chrome shows an untrusted-certificate interstitial for
+`localhost`; proceeding opens the runtime page. A second live-proxy probe finds
+an independent concrete problem: `pyodide.mjs` and `pyodide.asm.mjs` are served
+as `application/octet-stream`, which native module imports reject. Native
+browser fixtures use Python MIME detection; the earlier Nginx smoke verified
+WASM but missed module MIME, explaining that coverage gap.
+
+Both development and production templates now extend the existing HTTP-level
+MIME table with `text/javascript mjs`. Same-context merge behavior is reviewed
+against the pinned Nginx source. A tiny candidate passes `nginx -t` inside the
+already-running proxy; activation and a second syntax check precede graceful
+reload. The existing local container receives the equivalent small mapping;
+future image builds receive it from committed templates. No container, database,
+mail, credentials, certificate or OS trust is replaced. The actual live HTTP
+smoke passes with explicit project-CA/hostname verification: both modules on
+legacy/versioned paths have correct MIME, bytes/hash, COEP/CORP/nosniff; existing
+Worker/WASM, cookie, route and API-denial checks also pass. No large build or
+new browser/test stack is started locally.
+
+The targeted 32 unit tests pass again after the final wording, and scoped ESLint
+and browser typing pass. A deliberately capped 384MiB web typecheck exhausts
+its own heap; it is not reported as a source failure or passing check and is
+deferred to CI rather than increasing local memory. The additional production
+HTTP proof is updated and passes syntax/Ruff review but is not executed at this
+storage headroom. Current owner-browser execution after the proxy fix is still
+pending confirmation. Proposed coherent commit: **`fix: restore Python runtime module loading`**.
+
+The owner subsequently reports the same READY timeout after proceeding in
+Chrome. The standalone page opening therefore does not establish the embedded
+handshake. Chrome Console evidence is requested before attributing the remaining
+failure to certificate trust, policy or bootstrap; the MIME fix addresses the
+independent later module-import issue. The earlier OS-trust deferral remains
+in force while a renewed explicit choice is requested. No system trust or
+browser security setting is changed by the agent. Code/server corrections and
+their automated gate are independent of the pending owner-browser result.
+
+The owner now confirms that, after opening the separate runner connection page,
+the Python run succeeds and its output appears in their actual Chrome session.
+This establishes the reported end-to-end local workflow beyond standalone
+reachability. Browser-specific acceptance is sufficient for this session; the
+optional system-wide CA trust step is not needed to resolve this report and
+remains deferred. No Chrome Console evidence is required for a failure that no
+longer reproduces. The source fix and automated regression acceptance remain
+separate from that successful owner verification.
+
+Final scoped verification passes: 32 execution unit tests, changed TypeScript
+ESLint, browser-test typing, changed-file formatting, Python smoke Ruff checks,
+documentation links, diff whitespace and all eleven static preservation checks.
+The live proxy passes the expanded HTTP smoke with explicit project-CA and
+hostname verification. Full web typing/build and the two-engine browser matrix
+are assigned to Linux CI, preserving the approximately 2.9GiB local headroom.

@@ -286,24 +286,51 @@ describe('product execution state', () => {
     'drops a faulted connection and ignores its late callback (active: %s)',
     async (active) => {
       const f = await fixture();
+      expect(f.controller.getSnapshot().connectionIssue).toBe(false);
       await f.controller.run();
       f.finish();
       if (active) await f.controller.run();
       f.sessions[0]!.fault('connection lost');
+      expect(f.controller.getSnapshot().connectionIssue).toBe(true);
       expect(f.controller.getSnapshot().phase).toBe(
         active ? 'failed' : 'succeeded',
       );
       expect(f.sessions[0]!.bridge.destroy).toHaveBeenCalledOnce();
-      await f.controller.run();
+      const retry = f.controller.run();
+      expect(f.controller.getSnapshot().connectionIssue).toBe(false);
+      await retry;
       expect(f.sessions).toHaveLength(2);
       f.sessions[0]!.fault('late connection fault');
       expect(f.controller.getSnapshot().phase).toBe('initializing');
+      expect(f.controller.getSnapshot().connectionIssue).toBe(false);
       f.controller.stop();
       expect(f.sessions[1]!.bridge.destroy).toHaveBeenCalledOnce();
       f.controller.destroy();
       f.workspace.destroy();
     },
   );
+  it('does not classify invalid input or capture validation as a connection issue', async () => {
+    const f = await fixture();
+    try {
+      await f.controller.run(['a'.repeat(4097)]);
+      expect(f.controller.getSnapshot().phase).toBe('failed');
+      expect(f.controller.getSnapshot().error).toContain('input lines');
+      expect(f.controller.getSnapshot().connectionIssue).toBe(false);
+      await f.controller.runChecks({
+        ...(await checksInput()),
+        project_id: id(700),
+      });
+      expect(f.controller.getSnapshot().phase).toBe('failed');
+      expect(f.controller.getSnapshot().error).toContain(
+        'different work project',
+      );
+      expect(f.controller.getSnapshot().connectionIssue).toBe(false);
+      expect(f.sessions).toHaveLength(0);
+    } finally {
+      f.controller.destroy();
+      f.workspace.destroy();
+    }
+  });
   it('keeps a shell-confirmed failed run reusable but reports a worker that produced no output', async () => {
     const f = await fixture();
     await f.controller.run();
@@ -314,8 +341,9 @@ describe('product execution state', () => {
       runtime_id: CORE_RUNTIME.runtime_id,
     });
     expect(f.controller.getSnapshot().phase).toBe('failed');
-    expect(f.controller.getSnapshot().error).toContain(
-      'Python could not start',
+    expect(f.controller.getSnapshot().connectionIssue).toBe(false);
+    expect(f.controller.getSnapshot().error).toBe(
+      'The Python run failed without output. Try a fresh run.',
     );
     expect(f.sessions[0]!.bridge.destroy).not.toHaveBeenCalled();
     await f.controller.run();
@@ -362,6 +390,7 @@ describe('product execution state', () => {
       sequence: 1,
     });
     expect(f.controller.getSnapshot().phase).toBe('failed');
+    expect(f.controller.getSnapshot().connectionIssue).toBe(false);
     f.controller.destroy();
     f.workspace.destroy();
   });
@@ -392,6 +421,7 @@ describe('product execution state', () => {
     await f.controller.run();
     vi.advanceTimersByTime(75_000);
     expect(f.controller.getSnapshot().phase).toBe('timed_out');
+    expect(f.controller.getSnapshot().connectionIssue).toBe(false);
     expect(f.sessions[1]!.bridge.destroy).toHaveBeenCalledOnce();
     f.controller.destroy();
     f.workspace.destroy();
@@ -559,6 +589,7 @@ describe('visible check execution through the retained controller', () => {
       else terminal[field] = 'f'.repeat(64);
       f.event(0, terminal);
       expect(f.controller.getSnapshot().phase).toBe('failed');
+      expect(f.controller.getSnapshot().connectionIssue).toBe(false);
       expect(session.bridge.destroy).toHaveBeenCalledOnce();
       f.controller.destroy();
       f.workspace.destroy();

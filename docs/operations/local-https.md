@@ -4,6 +4,54 @@
 
 The current development profile uses **https://127.0.0.1:8443** and its separate-site Python runner uses **https://localhost:8443**. It retains the approved HTTPS/separate-site setup. A self-signed certificate encrypts traffic but does not establish browser trust, which causes the privacy warning.
 
+System-wide trust installation is optional, but the browser must accept the
+runtime's HTTPS connection before Python can run. Opening the app successfully
+does not establish that the separate runtime is accepted. Automated fixtures
+accept their test certificates explicitly; their passing results do not verify
+trust in your everyday browser.
+
+## Python connection recovery
+
+1. Keep `npm run dev` running and open the app at `https://127.0.0.1:8443`.
+2. Open `https://localhost:8443/` directly in the same browser/profile. If a
+   privacy warning appears, review the local Code Along certificate and use a
+   site-specific exception only if you recognize it and the browser permits
+   one. This does not require the optional system-wide trust installation.
+3. Once the runtime site opens normally, return to the app, reload and click
+   **Run code**, or **Run visible checks** for practice. The standalone page
+   loading establishes reachability; a completed run establishes Python
+   execution.
+
+If the runtime site cannot open, run `npm run status` and the read-only
+`npm run tls:check`. The latter separately checks explicit-CA connectivity,
+the served certificate and macOS trust. An OS trust failure can coexist with
+successful network/readiness checks and a browser-specific exception.
+If the site opens normally but Run still fails, inspect the browser's failed
+iframe/module requests and console; a connection timeout alone cannot identify
+the certificate as its cause. A stopped proxy, blocked bootstrap, wrong origin
+or handshake failure can produce the same timeout. Worker/WASM/package failures
+occur later and should be investigated from their own error output.
+
+The proxy must also serve `.mjs` files as JavaScript. A successful HTTP status
+alone is insufficient: native module imports reject `application/octet-stream`.
+Development and production proxy templates extend the existing HTTP-level MIME
+table with `text/javascript mjs`. The Compose smoke check verifies both runtime
+modules on legacy and versioned paths, their bytes/hashes and isolation headers.
+If a module MIME error persists after an update, temporarily enable Chrome
+DevTools → Network → Disable cache while retrying; do not clear cookies, browser
+storage or local drafts to fix cached response headers.
+
+For the 15 November investigation, both sites and the bootstrap module respond
+successfully with matching origin/isolation headers and the expected certificate
+when using the project CA explicitly. macOS reports
+`CSSMERR_TP_NOT_TRUSTED`. No trust settings are changed by these diagnostics.
+The subsequent module-header probe also identifies `.mjs` responses incorrectly
+served as `application/octet-stream`; the live local proxy's validated graceful
+reload corrects this without restarting the database or changing TLS policies.
+After opening the separate runner connection page, the owner confirms that
+Python execution and output work in their actual Chrome session. System-wide
+CA trust remains unchanged; the browser-only recovery resolves this session.
+
 Use [mkcert](https://github.com/FiloSottile/mkcert) for a local development CA and a server certificate with exactly those two names. The root npm commands separate certificate preparation from an explicit OS trust operation. `npm run dev` never installs trust, disables browser TLS checks or renews certificates silently. This is local development setup, not production TLS.
 
 ## Optional setup, when explicitly selected

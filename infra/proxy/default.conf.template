@@ -1,5 +1,8 @@
 server_tokens off;
 access_log off;
+types {
+  text/javascript mjs;
+}
 server {
   listen 8443 ssl default_server;
   server_name _;

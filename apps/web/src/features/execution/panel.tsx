@@ -38,21 +38,45 @@ const labels: Record<RunPhase, string> = {
   timed_out: 'Time limit reached',
   output_limit: 'Output limit reached',
 };
-function RuntimeHelp() {
+function RuntimeHelp({ practice }: { practice: boolean }) {
   let origin: string;
   try {
     origin = configuredRunnerOrigin();
   } catch {
     return null;
   }
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(
+    new URL(origin).hostname,
+  );
   return (
-    <p>
-      <a href={origin} target="_blank" rel="noreferrer">
-        Open Python runtime
-      </a>{' '}
-      to check its connection. On local development HTTPS, each site may need a
-      browser certificate exception.
-    </p>
+    <div>
+      <p>
+        <a
+          className="button secondary"
+          href={origin}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open Python runtime
+        </a>{' '}
+        in a new tab to check whether the runtime site loads.
+      </p>
+      {local && (
+        <p>
+          If your browser shows a privacy warning, review the local Code Along
+          certificate and allow this site only if you recognize it. The app and
+          Python runtime use separate addresses; accepting the app address does
+          not necessarily accept the runtime address.
+        </p>
+      )}
+      <p>
+        Once the runtime site opens normally, return here and choose{' '}
+        {practice ? 'Run visible checks' : 'Run code'} again.{' '}
+        {local
+          ? 'If the site cannot be reached, check that the Code Along development terminal is still running.'
+          : 'If the site cannot be reached, contact your Code Along administrator.'}
+      </p>
+    </div>
   );
 }
 export function ExecutionPanel({
@@ -286,7 +310,9 @@ export function ExecutionPanel({
       {snapshot.error && (
         <Notice tone="error">
           {snapshot.error}
-          <RuntimeHelp />
+          {snapshot.connectionIssue && (
+            <RuntimeHelp practice={snapshot.kind === 'practice'} />
+          )}
         </Notice>
       )}
       {mode === 'interactive' && (

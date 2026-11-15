@@ -84,8 +84,47 @@ function environment() {
   vi.stubGlobal('location', { origin: 'https://app.test' });
   return { frame, channels };
 }
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 describe('fixed protocol iframe execution connection', () => {
+  it('reports a missing connection at ten seconds and closes the frame and both ports once', async () => {
+    const m = await manifest(),
+      dom = environment(),
+      fault = vi.fn();
+    vi.useFakeTimers();
+    const bridge = new IframeRunnerBridge(vi.fn(), fault);
+    const pending = bridge.start(id(20), m.source, []);
+    const message =
+      'The Python runtime did not connect. Open its connection check below, then retry the run.';
+    const outcome = pending.catch((error: unknown) => error);
+    try {
+      dom.frame.onload?.();
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(fault).not.toHaveBeenCalled();
+      expect(dom.frame.remove).not.toHaveBeenCalled();
+      expect(dom.channels[0]!.port1.close).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(await outcome).toBeInstanceOf(Error);
+      expect(await outcome).toHaveProperty('message', message);
+      expect(fault).toHaveBeenCalledExactlyOnceWith(message);
+      expect(dom.frame.remove).toHaveBeenCalledOnce();
+      expect(dom.channels[0]!.port1.close).toHaveBeenCalledOnce();
+      expect(dom.channels[0]!.port2.close).toHaveBeenCalledOnce();
+      expect(dom.channels[0]!.port1.postMessage).not.toHaveBeenCalled();
+      expect(dom.frame.onload).toBeNull();
+      expect(dom.frame.onerror).toBeNull();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(fault).toHaveBeenCalledOnce();
+    } finally {
+      bridge.destroy();
+      await pending.catch(() => undefined);
+    }
+    expect(dom.frame.remove).toHaveBeenCalledOnce();
+    expect(dom.channels[0]!.port1.close).toHaveBeenCalledOnce();
+    expect(dom.channels[0]!.port2.close).toHaveBeenCalledOnce();
+  });
   it('selects practice at connect and rejects ordinary/malformed packets on that port', async () => {
     const m = await manifest(),
       dom = environment(),

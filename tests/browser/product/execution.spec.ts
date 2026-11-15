@@ -65,6 +65,9 @@ test('frozen multi-file Python runs, fresh globals/files, batch stdin and errors
   await page.getByRole('button', { name: 'Run code', exact: true }).click();
   await expect(status).toHaveText('Run failed', { timeout: 40_000 });
   await expect(output).toContainText('ValueError: learning error');
+  await expect(
+    page.getByRole('link', { name: 'Open Python runtime', exact: true }),
+  ).toHaveCount(0);
   await expect(output.getByLabel('Standard error').first()).toBeVisible();
   await editor.fill(source);
   await page.getByRole('button', { name: 'Run code', exact: true }).click();
@@ -86,5 +89,66 @@ test('frozen multi-file Python runs, fresh globals/files, batch stdin and errors
     path: test.info().outputPath('execution.png'),
     fullPage: true,
   });
+  expect(errors).toEqual([]);
+});
+
+test('an unresponsive runtime offers connection recovery and retries the retained Python source', async ({
+  page,
+  browserName,
+}) => {
+  test.setTimeout(90_000);
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await register(
+    page,
+    `runtime-recovery-${browserName}-${Date.now()}@example.test`,
+  );
+  await createEditorProject(page);
+  const editor = page.getByLabel('Python source for main.py');
+  await editor.fill(
+    'def greet(name):\n    return f"Hello, {name}!"\n\nprint(greet("Code Along"))\nprint("hello")\n',
+  );
+  const runtime = 'https://localhost:18443/';
+  // Serve an inert, correctly isolated document to exercise a missing READY
+  // handshake without a browser-generated network/certificate error.
+  await page.context().route(runtime, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+        'Cross-Origin-Resource-Policy': 'cross-origin',
+        'Content-Security-Policy':
+          "default-src 'none'; frame-ancestors https://127.0.0.1:18443",
+      },
+      body: '<!doctype html><title>Unresponsive runtime fixture</title>',
+    }),
+  );
+  await page.getByRole('button', { name: 'Run code', exact: true }).click();
+  await expect(page.locator('.execution-status')).toHaveText('Run failed', {
+    timeout: 20_000,
+  });
+  await expect(
+    page.locator('.execution-panel').getByRole('alert'),
+  ).toContainText(
+    'The Python runtime did not connect. Open its connection check below, then retry the run.',
+  );
+  await expect(
+    page.getByRole('link', { name: 'Open Python runtime', exact: true }),
+  ).toHaveAttribute('href', 'https://localhost:18443');
+  await expect(editor).toContainText('def greet(name):');
+  await expect(editor).toContainText('print("hello")');
+  await page.context().unroute(runtime);
+  await page.getByRole('button', { name: 'Run code', exact: true }).click();
+  await finishedRun(page);
+  await expect(page.locator('.execution-status')).toHaveText('Run finished');
+  await expect(page.getByLabel('Python output')).toContainText(
+    'Hello, Code Along!',
+  );
+  await expect(page.getByLabel('Python output')).toContainText('hello');
+  await expect(
+    page.getByRole('link', { name: 'Open Python runtime', exact: true }),
+  ).toHaveCount(0);
   expect(errors).toEqual([]);
 });

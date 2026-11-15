@@ -129,7 +129,7 @@ export class IframeRunnerBridge implements RunnerBridge {
         this.timer = setTimeout(
           () =>
             this.fail(
-              'The Python runtime did not connect. Check its separate-site HTTPS certificate and try again.',
+              'The Python runtime did not connect. Open its connection check below, then retry the run.',
             ),
           10_000,
         );

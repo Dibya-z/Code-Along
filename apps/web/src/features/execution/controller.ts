@@ -50,6 +50,7 @@ export interface ExecutionSnapshot {
   readonly output: readonly ConsoleLine[];
   readonly plots: readonly RasterPlot[];
   readonly error: string;
+  readonly connectionIssue: boolean;
 }
 export function running(phase: RunPhase): boolean {
   return ['capturing', 'initializing', 'running', 'waiting_for_input'].includes(
@@ -75,6 +76,7 @@ export class ExecutionController {
     output: [],
     plots: [],
     error: '',
+    connectionIssue: false,
   });
   private readonly listeners = new Set<() => void>();
   private bridge: RunnerBridge | null = null;
@@ -169,6 +171,7 @@ export class ExecutionController {
       output: [],
       plots: [],
       error: '',
+      connectionIssue: false,
     });
     try {
       if (!validBatchInput(stdin))
@@ -194,6 +197,7 @@ export class ExecutionController {
           },
           (message) => {
             if (connection !== this.connection || this.closed) return;
+            this.publish({ connectionIssue: true });
             if (running(this.snapshot.phase)) this.finish('failed', message);
             else {
               this.release();
@@ -281,7 +285,7 @@ export class ExecutionController {
       this.finish(
         event.status,
         event.status === 'failed' && this.bytes === 0
-          ? 'Python could not start. Check the runtime connection and try again.'
+          ? 'The Python run failed without output. Try a fresh run.'
           : '',
         reusable,
       );

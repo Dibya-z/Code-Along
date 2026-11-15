@@ -62,17 +62,43 @@ def main() -> None:
     _, _, shell = fetch(RUNNER + "/")
     script = re.search(rb'src="(/assets/[^" ]+\.js)"', shell)
     assert script
-    _, _, bootstrap = fetch(RUNNER + script[1].decode())
+    status, headers, bootstrap = fetch(RUNNER + script[1].decode())
+    assert status == 200
+    assert headers["content-type"].split(";", 1)[0] in {
+        "application/javascript",
+        "text/javascript",
+    }
     worker = re.search(rb"/assets/worker-[A-Za-z0-9_-]+\.js", bootstrap)
     assert worker
     status, headers, _ = fetch(RUNNER + worker[0].decode())
     assert status == 200 and "'wasm-unsafe-eval'" in headers["content-security-policy"]
     assert "worker-src 'none'" in headers["content-security-policy"]
+    assert headers["content-type"].split(";", 1)[0] in {
+        "application/javascript",
+        "text/javascript",
+    }
     inventory = json.loads(
         (
             ROOT / "apps/runner-web/public/runtime-manifests/pyodide-core.json"
         ).read_text()
     )
+    digest = hashlib.sha256(
+        json.dumps(inventory, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    for prefix in ("/runtime/", f"/runtime/v2/{digest}/"):
+        for name in ("pyodide.mjs", "pyodide.asm.mjs"):
+            asset = next(item for item in inventory["assets"] if item["name"] == name)
+            status, headers, body = fetch(RUNNER + prefix + name)
+            assert status == 200
+            assert headers["content-type"].split(";", 1)[0] in {
+                "application/javascript",
+                "text/javascript",
+            }
+            assert headers["cross-origin-embedder-policy"] == "require-corp"
+            assert headers["cross-origin-resource-policy"] == "cross-origin"
+            assert headers["x-content-type-options"] == "nosniff"
+            assert len(body) == asset["bytes"]
+            assert hashlib.sha256(body).hexdigest() == asset["sha256"]
     wasm = next(
         asset for asset in inventory["assets"] if asset["name"] == "pyodide.asm.wasm"
     )
@@ -80,7 +106,7 @@ def main() -> None:
     assert status == 200 and headers["content-type"] == "application/wasm"
     assert hashlib.sha256(body).hexdigest() == wasm["sha256"]
     print(
-        "Compose readiness, React assets, cookie scope, runner routing/CSP and runtime hash passed."
+        "Compose readiness, React assets, cookie scope, runner routing/CSP, module MIME and runtime hashes passed."
     )
 
 

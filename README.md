@@ -121,6 +121,15 @@ The app uses `127.0.0.1`; `localhost` serves the separate Python runner. **Syste
 
 ## Verification
 
+If Python reports a runtime connection failure while the rest of the app opens,
+visit **https://localhost:8443/** directly. If your browser presents a privacy
+warning, review the local Code Along certificate and allow that site only if
+you recognize it and your browser supports a site-specific exception. Accepting
+the app at `127.0.0.1` does not necessarily accept its separate runtime at
+`localhost`. Once that site opens normally, return to the app, reload and retry
+Run code. This browser-only path does not install system-wide CA trust. See
+[local HTTPS recovery](docs/operations/local-https.md#python-connection-recovery).
+
 ```sh
 corepack pnpm check
 corepack pnpm api:check
