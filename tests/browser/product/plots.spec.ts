@@ -76,11 +76,26 @@ test('bounded original PNG helpers, fresh plots and responsive retained panes', 
   await page.getByRole('button', { name: 'Console', exact: true }).click();
   await expect(image).toBeVisible();
   await page.evaluate(() => (document.documentElement.style.fontSize = '200%'));
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  const zoom = await page.evaluate(() => ({
+    fits: document.documentElement.scrollWidth <= innerWidth,
+    viewport: innerWidth,
+    width: document.documentElement.scrollWidth,
+    overflowing: [...document.querySelectorAll('body *')]
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          tag: element.tagName,
+          class: element.getAttribute('class'),
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          wrap: getComputedStyle(element).flexWrap,
+        };
+      })
+      .filter((rect) => rect.width > 0 && rect.right > innerWidth)
+      .slice(0, 20),
+  }));
+  expect(zoom.fits, `200% text zoom: ${JSON.stringify(zoom)}`).toBe(true);
   await page.evaluate(() => (document.documentElement.style.fontSize = ''));
   await page.screenshot({
     path: testInfo.outputPath('workbench-mobile.png'),

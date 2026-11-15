@@ -87,7 +87,9 @@
 .execution-toolbar .actions {
   padding: 0;
   border: 0;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
   gap: var(--space-2);
 }
 .execution-status,
@@ -237,10 +239,10 @@
 }
 @media (max-width: 48rem) {
   .editor-workbench[data-guide='true'] .execution-provenance {
-    margin-block: var(--space-2);
+    margin-block: var(--space-1);
   }
   .editor-workbench[data-guide='true'] .console-controls {
-    padding-block: var(--space-2);
+    padding-block: var(--space-1);
   }
   .execution-output:has(> .muted) {
     min-height: 12rem;

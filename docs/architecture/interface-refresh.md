@@ -128,6 +128,34 @@ exact CSS assertions and other changed-markup selectors are reviewed. Browser
 typing, scoped lint and formatting pass; application source and behavior remain
 unchanged. The final grouped test correction still requires full Linux acceptance.
 
+The grouped test correction is committed/pushed as
+[`bc1f77e`](https://github.com/Dibya-z/Code-Along/commit/bc1f77eaef51ae44be5c57a91b04fde777dadba1).
+Its [full Linux run](https://github.com/Dibya-z/Code-Along/actions/runs/43683580271)
+passes all source/backend/build, six development, thirty isolation and six
+foundation cases, but finishes with **130/134 product cases**. Both engines fail
+the same two real layout checks: phone practice output at 855.28125px exceeds
+the 844px viewport, and the workbench overflows at 320px with 200% text zoom.
+All semantic selector corrections and the other product cases pass.
+
+The repair lets enlarged account and Run/Stop groups reflow within their hosts.
+Mobile learning-console provenance margins and secondary-control padding return
+to the existing 4px token. It preserves the untrusted-practice warning, body
+text, 44px targets and all viewport/zoom assertions. Bounded read-only geometry
+diagnostics help identify any remaining problem without logging source or
+account text. A fresh web build passes in 2.012s; a four-case local rerun and
+fresh full Linux acceptance are pending at this checkpoint.
+
+The local repair gate passes **4/4 in 53.378s**: both complete failing journeys
+in Chromium and WebKit, with zero retries, failures, skips or flaky results.
+At 390×844, the first practice result ends at 761.59375px in both light and dark
+themes, with no page scroll. Inspectors follow output and retain at least 44px
+targets. These are actual macOS results, not a claimed Linux geometry match.
+Fresh phone output screenshots are visually reviewed. Browser typing/lint,
+frozen source/build checks and clean shutdown pass; all eight ports close and
+4.966GiB remains. The earlier zero-case sandbox setup failure is retained
+separately from the passing native run. Full Linux acceptance still remains
+required for the coherent responsive-control repair.
+
 ## Local preview
 
 From the repository root, run `npm run dev`, then open

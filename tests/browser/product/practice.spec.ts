@@ -113,6 +113,26 @@ async function visuals(page: Page, browserName: string) {
             '.captured-source > summary,.captured-checks > summary,.practice-provenance > summary',
           ),
         ].map((element) => element.getBoundingClientRect().height),
+        chrome: [
+          '.topbar',
+          '.project-heading',
+          '.project-command-bar',
+          '.project-recovery',
+          '.workbench-controls',
+          '.console-head',
+          '.execution-provenance',
+          '.console-controls',
+        ].map((selector) => {
+          const rect = document
+            .querySelector(selector)
+            ?.getBoundingClientRect();
+          return {
+            selector,
+            top: rect?.top,
+            height: rect?.height,
+            bottom: rect?.bottom,
+          };
+        }),
       };
     });
     await writeFile(
@@ -126,7 +146,10 @@ async function visuals(page: Page, browserName: string) {
     expect(geometry.targets).toHaveLength(3);
     expect(geometry.targets.every((height) => height >= 44)).toBe(true);
     if (capture.width === 390) {
-      expect(geometry.firstLine.bottom).toBeLessThan(capture.height);
+      expect(
+        geometry.firstLine.bottom,
+        `Phone practice output: ${JSON.stringify(geometry)}`,
+      ).toBeLessThan(capture.height);
       await expect(resultLine).toBeInViewport();
     }
     await page.screenshot({
