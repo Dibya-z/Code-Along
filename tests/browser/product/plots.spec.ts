@@ -49,9 +49,10 @@ test('bounded original PNG helpers, fresh plots and responsive retained panes', 
   await page.evaluate(
     () => (document.documentElement.dataset['theme'] = 'dark'),
   );
-  await expect(
-    page.getByRole('button', { name: 'Refresh project', exact: true }),
-  ).toHaveCSS('background-color', 'rgb(24, 35, 29)');
+  await expect(page.locator('.editor-workbench')).toHaveCSS(
+    'background-color',
+    'rgb(25, 35, 28)',
+  );
   await page.screenshot({
     path: testInfo.outputPath('workbench-dark.png'),
     fullPage: true,

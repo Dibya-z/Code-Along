@@ -1,14 +1,15 @@
 .execution-panel {
   border-top: 1px solid var(--color-separator);
   min-width: 0;
+  background: var(--color-canvas);
 }
 .execution-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
 }
 .execution-toolbar h2 {
   font-size: var(--text-heading-sm);
@@ -16,20 +17,48 @@
 }
 .execution-title,
 .console-heading {
-  font-size: var(--text-heading-sm);
+  font-size: var(--text-meta);
   font-weight: 600;
+}
+.execution-title {
+  color: var(--color-muted);
+}
+.execution-toolbar .button {
+  gap: var(--space-2);
+}
+.console-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--target-min);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-raised);
+  border-bottom: 1px solid var(--color-separator);
+}
+.execution-panel .console-head .execution-status {
+  padding: 0;
+  margin: 0;
+  font-size: var(--text-meta);
+  font-weight: 500;
 }
 .run-settings {
   border-top: 1px solid var(--color-separator);
-  padding-top: var(--space-3);
+  padding-top: 0;
 }
 .run-settings > summary {
   cursor: pointer;
   padding: var(--space-3) var(--space-4);
   min-height: var(--target-min);
+  color: var(--color-muted);
+  font-size: var(--text-meta);
 }
 .console-heading {
-  padding: var(--space-4) var(--space-4) 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
   margin: 0;
 }
 .raster-plot {
@@ -58,6 +87,8 @@
 .execution-toolbar .actions {
   padding: 0;
   border: 0;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
 }
 .execution-status,
 .execution-provenance,
@@ -91,20 +122,44 @@
   max-height: 24rem;
   overflow: auto;
   padding: var(--space-4);
-  border-block: 1px solid var(--color-separator);
+  border: 0;
   font: 1rem/1.5 var(--font-code);
   background: var(--color-canvas);
   color: var(--color-ink);
   white-space: pre;
+}
+.execution-output:has(> .muted) {
+  display: grid;
+  place-items: center;
+  min-height: 16rem;
+  padding: var(--space-6);
+  text-align: center;
+}
+.execution-output > .muted {
+  max-width: 27ch;
+  white-space: normal;
+  font: 1rem/1.6 var(--font-ui);
 }
 .console-controls {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-1) var(--space-3);
   color: var(--color-muted);
   font-size: var(--text-meta);
+}
+.console-controls .button {
+  min-height: var(--target-min);
+  padding-inline: var(--space-2);
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-muted);
+  font-size: var(--text-meta);
+}
+.console-controls .button:hover:not(:disabled) {
+  background: var(--color-raised);
+  color: var(--color-ink);
 }
 .console-line {
   display: flex;
@@ -130,7 +185,9 @@
   gap: var(--space-2);
 }
 .captured-source {
-  margin: var(--space-4);
+  margin: 0;
+  padding-inline: var(--space-4);
+  border-top: 1px solid var(--color-separator);
   font-size: var(--text-meta);
   overflow-wrap: anywhere;
 }
@@ -153,7 +210,7 @@
 }
 .captured-checks,
 .practice-provenance {
-  padding: var(--space-4);
+  padding: 0 var(--space-4);
   border-block-start: 1px solid var(--color-separator);
   overflow-wrap: anywhere;
 }
@@ -179,14 +236,13 @@
   overflow-wrap: anywhere;
 }
 @media (max-width: 48rem) {
-  .editor-workbench[data-guide='true'] .console-heading {
-    padding-block-start: var(--space-3);
-  }
-  .editor-workbench[data-guide='true'] .execution-status,
   .editor-workbench[data-guide='true'] .execution-provenance {
     margin-block: var(--space-2);
   }
   .editor-workbench[data-guide='true'] .console-controls {
     padding-block: var(--space-2);
+  }
+  .execution-output:has(> .muted) {
+    min-height: 12rem;
   }
 }

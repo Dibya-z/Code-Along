@@ -11,8 +11,11 @@ and private-project management, a multi-file Python editor, isolated browser
 execution/output/Stop, collaborative code/cursors, server checkpoints, history,
 chat, assignments, participation/team work, immutable submissions, manual
 feedback and derived progress/private learning updates.
-Authoritative server grading, voice, drawing, broad restyling and advanced
-analytics are deferred.
+Authoritative server grading, voice, drawing and advanced analytics are deferred.
+The focused product-interface refresh is tracked separately in the
+[interface refresh record](../architecture/interface-refresh.md); the accepted
+MVP source and its earlier test counts below remain historical evidence until
+that refresh completes its own acceptance gate.
 
 ## Current verification
 

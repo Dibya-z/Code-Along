@@ -13,6 +13,7 @@ import {
   runtimeProfile,
 } from '@code-along/contracts/execution/profiles';
 import { projectRuntimeChoices } from './runtime-choices.ts';
+import { Icon } from '../../ui/icon.tsx';
 export function ProjectsPanel({
   workspace,
   active = true,
@@ -76,9 +77,15 @@ export function ProjectsPanel({
     });
   }
   return (
-    <section className="content-section" aria-labelledby="projects-heading">
-      <div className="section-head">
-        <h2 id="projects-heading">Projects</h2>
+    <section
+      className="content-section project-catalog"
+      aria-labelledby="projects-heading"
+    >
+      <div className="section-head project-catalog-header">
+        <div>
+          <h2 id="projects-heading">Projects</h2>
+          <p>Create a project, or open one shared with you.</p>
+        </div>
         {!workspace.archived && (
           <Dialog
             open={open}
@@ -92,7 +99,12 @@ export function ProjectsPanel({
             }}
             title="Create a Python project"
             description="Start with a private main.py. Choose who can join when you’re ready."
-            trigger={<Button>Create project</Button>}
+            trigger={
+              <Button>
+                <Icon name="plus" />
+                Create project
+              </Button>
+            }
           >
             <form className="form-stack" onSubmit={submit}>
               <Field
@@ -179,27 +191,73 @@ export function ProjectsPanel({
       ) : (
         query.data && (
           <>
-            <div className="list">
-              {query.data.items.map((project) => (
-                <div className="list-row" key={project.id}>
-                  <div>
-                    <h3>
-                      <Link to={`/projects/${project.id}`}>{project.name}</Link>
-                    </h3>
-                    <p>
-                      {project.archived ? 'Archived' : 'Python'} ·{' '}
-                      {project.entrypoint_path}
-                    </p>
-                  </div>
-                  <span className="badge">{project.role}</span>
+            {query.data.items.length > 0 && (
+              <div className="project-catalog-list">
+                <div className="project-catalog-columns" aria-hidden="true">
+                  <span>Project</span>
+                  <span>Environment</span>
+                  <span>Your access</span>
+                  <span />
                 </div>
-              ))}
-            </div>
+                {query.data.items.map((project) => (
+                  <Link
+                    className="project-catalog-row"
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    aria-label={project.name}
+                    aria-describedby={`project-${project.id}-context project-${project.id}-runtime project-${project.id}-access`}
+                  >
+                    <div className="project-catalog-identity">
+                      <span className="project-catalog-icon" aria-hidden="true">
+                        <Icon name="code" />
+                      </span>
+                      <div>
+                        <h3>{project.name}</h3>
+                        <p id={`project-${project.id}-context`}>
+                          <Icon name="folder" />
+                          <span>{project.entrypoint_path}</span>
+                          {project.archived && (
+                            <span className="project-catalog-archived">
+                              Archived
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      id={`project-${project.id}-runtime`}
+                      className="project-catalog-environment"
+                    >
+                      {runtimeProfile(project.runtime_id)?.name ?? 'Python'}
+                    </span>
+                    <span
+                      id={`project-${project.id}-access`}
+                      className="project-catalog-access"
+                    >
+                      {project.role}
+                    </span>
+                    <span className="project-catalog-arrow" aria-hidden="true">
+                      <Icon name="chevron-right" />
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
             {query.data.count === 0 && (
-              <p className="muted">
-                No projects shared with you yet. Create your own, or ask a
-                project owner for access.
-              </p>
+              <div className="project-catalog-empty">
+                <span className="workspace-empty-icon" aria-hidden="true">
+                  <Icon name="code" />
+                </span>
+                <h3>No projects here yet.</h3>
+                <p>
+                  No projects shared with you yet. Create your own, or ask a
+                  project owner for access.
+                </p>
+                <span className="project-catalog-empty-detail">
+                  <Icon name="shield" />
+                  Every new project starts private.
+                </span>
+              </div>
             )}
             <Pagination
               offset={offset}

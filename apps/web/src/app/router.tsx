@@ -12,6 +12,10 @@ import { AccountPage, AccountActions } from '../features/auth/pages.tsx';
 import { useIdentity, replaceSession } from '../features/auth/session.ts';
 import { listenForLocalLogout } from '../features/recovery/session-events.ts';
 import { Notice } from '@code-along/design-system';
+import { Icon } from '../ui/icon.tsx';
+import { ProductBrand } from '../ui/brand.tsx';
+import { AppearanceToggle } from '../ui/appearance.tsx';
+import { Welcome } from '../ui/welcome.tsx';
 import {
   WorkspacesPage,
   WorkspacePage,
@@ -55,9 +59,27 @@ function Shell() {
   const location = useLocation();
   const identity = useIdentity();
   const actor = identity.data?.id;
+  const accountRoute =
+    location.pathname === '/login' || location.pathname.startsWith('/auth/');
+  const entryRoute = accountRoute || (location.pathname === '/' && !actor);
   const workspaceActive =
     /^\/(workspaces|projects|assignments)(\/|$)/.test(location.pathname) ||
     (location.pathname === '/' && Boolean(actor));
+  const workbenchRoute =
+    /^\/projects\//.test(location.pathname) ||
+    /^\/drafts\//.test(location.pathname) ||
+    /\/works\//.test(location.pathname);
+  const context = location.pathname.startsWith('/drafts')
+    ? 'Local drafts'
+    : location.pathname.includes('/submissions/')
+      ? 'Submitted code'
+      : location.pathname.includes('/works/')
+        ? 'Learning workspace'
+        : location.pathname.startsWith('/assignments')
+          ? 'Assignments'
+          : location.pathname.startsWith('/projects')
+            ? 'Project workspace'
+            : 'Workspaces';
   useEffect(
     () =>
       actor
@@ -68,97 +90,146 @@ function Shell() {
     [actor],
   );
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell${entryRoute ? ' entry-shell' : ''}${workbenchRoute ? ' workbench-shell' : ''}`}
+    >
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <aside className="sidebar">
-        <Link className="wordmark" to="/">
-          code along
-          <span className="brand-mark" aria-hidden="true">
-            ↗
-          </span>
-        </Link>
-        <p className="rail-label">YOUR WORKBENCH</p>
-        <nav aria-label="Main navigation">
-          <Link
-            to="/workspaces"
-            className={workspaceActive ? 'active' : undefined}
-            aria-current={workspaceActive ? 'page' : undefined}
-          >
-            Workspaces
+      {!entryRoute && (
+        <aside className="sidebar">
+          <Link className="wordmark" to="/" aria-label="Code Along home">
+            <ProductBrand />
           </Link>
-          <NavLink to="/drafts">Local drafts</NavLink>
-        </nav>
-        <div className="rail-footer">
-          <span className="status-dot" aria-hidden="true" />
-          Learn. Build. Together.
-        </div>
-      </aside>
-      <div className="app-body">
-        <header className="topbar">
-          <span className="topbar-context">Python workbench</span>
-          {identity.data ? (
-            <div className="actions">
-              <span>{identity.data.display_name}</span>
-              <AccountActions />
-            </div>
-          ) : (
-            <Link className="button secondary" to="/login">
-              Sign in
+          <p className="rail-label">WORKSPACE</p>
+          <nav aria-label="Main navigation">
+            <Link
+              to="/workspaces"
+              className={workspaceActive ? 'active' : undefined}
+              aria-current={workspaceActive ? 'page' : undefined}
+            >
+              <Icon name="workspace" size={18} />
+              <span>Workspaces</span>
             </Link>
+            <NavLink to="/drafts">
+              <Icon name="code" size={18} />
+              <span>Local drafts</span>
+            </NavLink>
+          </nav>
+          <div className="rail-note">
+            <Icon name="book" size={20} />
+            <p>
+              A little progress,
+              <br />
+              <strong>together.</strong>
+            </p>
+          </div>
+          <div className="rail-footer">
+            <span className="rail-footer-symbol" aria-hidden="true">
+              {'</>'}
+            </span>
+            <span>Your Python learning space</span>
+          </div>
+        </aside>
+      )}
+      <div className="app-body">
+        <header className={`topbar${entryRoute ? ' entry-header' : ''}`}>
+          {entryRoute ? (
+            <Link
+              className="entry-wordmark"
+              to="/"
+              aria-label="Code Along home"
+            >
+              <ProductBrand />
+            </Link>
+          ) : (
+            <div className="topbar-context">
+              <Icon
+                name={
+                  context === 'Local drafts'
+                    ? 'code'
+                    : context === 'Project workspace'
+                      ? 'folder'
+                      : context === 'Workspaces'
+                        ? 'workspace'
+                        : 'book'
+                }
+                size={17}
+              />
+              <span>{context}</span>
+            </div>
           )}
+          <div className="header-actions">
+            <AppearanceToggle />
+            {identity.data ? (
+              <>
+                <span className="account-identity">
+                  <span className="account-avatar" aria-hidden="true">
+                    {(
+                      Array.from(identity.data.display_name.trim())[0] ?? '·'
+                    ).toUpperCase()}
+                  </span>
+                  <span className="account-name">
+                    {identity.data.display_name}
+                  </span>
+                </span>
+                <AccountActions />
+              </>
+            ) : !accountRoute ? (
+              <>
+                <Link className="header-signin" to="/login">
+                  Sign in
+                </Link>
+                <Link className="button" to="/auth/signup">
+                  Create account
+                </Link>
+              </>
+            ) : (
+              <span className="entry-header-note">
+                A shared space for learning Python.
+              </span>
+            )}
+          </div>
         </header>
         <main id="main" tabIndex={-1} key={location.pathname}>
           <Outlet />
         </main>
-        <footer className="app-footer">
-          Code Along <span>A little progress, together.</span>
-        </footer>
+        {!workbenchRoute && (
+          <footer className="app-footer">
+            <span>Code Along</span>
+            <span>Code with others. Learn from each other.</span>
+          </footer>
+        )}
       </div>
     </div>
   );
 }
 function Home() {
   const identity = useIdentity();
+  const location = useLocation();
   if (identity.data) return <WorkspacesPage />;
+  if (identity.isPending)
+    return (
+      <div className="welcome-loading" role="status">
+        Opening Code Along…
+      </div>
+    );
   return (
-    <div className="page">
+    <>
       {new URLSearchParams(location.search).get('local-recovery') ===
         'unavailable' && (
-        <Notice tone="error">
-          You are signed out. Local drafts could not be cleared. Clear this
-          site’s browser data before leaving a shared computer.
-        </Notice>
+        <div className="entry-notice">
+          <Notice tone="error">
+            You are signed out. Local drafts could not be cleared. Clear this
+            site’s browser data before leaving a shared computer.
+          </Notice>
+        </div>
       )}
-      <p className="eyebrow">A PLACE TO WORK TOGETHER</p>
-      <h1>Your workspaces</h1>
-      <p className="lead">
-        Bring your people and your Python. Keep each learning group and its
-        projects in one place.
-      </p>
-      <div className="empty-state">
-        <span className="empty-mark" aria-hidden="true">
-          [ ]
-        </span>
-        <h2>Make room for your next idea.</h2>
-        <p>
-          Sign in to create a workspace or join a group you have been invited
-          to.
-        </p>
-        <Link className="button" to="/login">
-          Sign in to Code Along
-        </Link>
-      </div>
-      <div className="page-note">
-        <strong>A workspace is your group's home.</strong>
-        <p>
-          Projects stay private to the people you choose to share them with.
-        </p>
-      </div>
-    </div>
+      <Welcome />
+    </>
   );
 }
+
 function Missing() {
   return (
     <div className="page narrow">

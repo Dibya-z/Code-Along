@@ -33,6 +33,7 @@ import type { TicketLoader } from '../collaboration/api.ts';
 import type { FileSource } from './model/workspace.ts';
 import { SharedSourceActions } from './source-actions.tsx';
 import { createPortal } from 'react-dom';
+import { Icon } from '../../ui/icon.tsx';
 
 const noSubscription = () => () => {};
 const noCollaboration = () => null;
@@ -530,7 +531,10 @@ function ScopedWorkbench({
           )}
         >
           <div className="section-head">
-            <h2>Files</h2>
+            <h2>
+              <Icon name="folder" size={16} />
+              Files
+            </h2>
             {addControl}
           </div>
           <FileTree
@@ -539,13 +543,21 @@ function ScopedWorkbench({
             entrypoint={summary.entrypoint}
             onSelect={selectFile}
           />
-          <p className="editor-scope-note">
-            {local
-              ? 'This local draft stays in this browser.'
-              : capability
-                ? 'This link grants source access only. Saved confirms your current code is stored in Code Along.'
-                : 'Live edits are shared with project members. Saved confirms your current code is stored in Code Along.'}
-          </p>
+          {local || capability ? (
+            <p className="editor-scope-note">
+              {local
+                ? 'This local draft stays in this browser.'
+                : 'This link grants source access only. Saved confirms your current code is stored in Code Along.'}
+            </p>
+          ) : (
+            <details className="editor-scope-note">
+              <summary>About shared editing</summary>
+              <p>
+                Live edits are shared with project members. Saved confirms your
+                current code is stored in Code Along.
+              </p>
+            </details>
+          )}
         </div>
       </aside>
       <section
@@ -555,50 +567,59 @@ function ScopedWorkbench({
         hidden={Boolean(guide && compactGuide && pane !== 'editor')}
         tabIndex={guide ? -1 : undefined}
       >
-        <FileTabs
-          files={tabs}
-          selectedId={selectedId}
-          onSelect={selectFile}
-          onClose={close}
-        />
-        <div className="editor-pane-head">
-          {guide && compactGuide && (
-            <Button
-              type="button"
-              className="guide-files-toggle"
-              variant="secondary"
-              aria-expanded={filesOpen}
-              aria-label={filesOpen ? 'Hide files' : 'Show files'}
-              aria-controls="project-file-list"
-              onClick={() => setFilesOpen((current) => !current)}
-            >
-              Files <span aria-hidden="true">{filesOpen ? '▴' : '▾'}</span>
-            </Button>
-          )}
-          <details className="editor-options">
-            <summary>Editor options</summary>
-            <label className="editor-size">
-              Code size
-              <select
-                aria-label="Editor text size"
-                value={fontSize}
-                onChange={(event) => setFontSize(event.target.value)}
+        <div className="editor-heading-row">
+          <FileTabs
+            files={tabs}
+            selectedId={selectedId}
+            onSelect={selectFile}
+            onClose={close}
+          />
+          <div className="editor-pane-head">
+            {guide && compactGuide && (
+              <Button
+                type="button"
+                className="guide-files-toggle"
+                variant="secondary"
+                aria-expanded={filesOpen}
+                aria-label={filesOpen ? 'Hide files' : 'Show files'}
+                aria-controls="project-file-list"
+                onClick={() => setFilesOpen((current) => !current)}
               >
-                <option value="1rem">16 px</option>
-                <option value="1.125rem">18 px</option>
-                <option value="1.25rem">20 px</option>
-              </select>
-            </label>
-          </details>
-          {!collaboration && (
-            <span className="badge">
-              {!summary.writable || paused
-                ? 'Read only'
-                : active?.dirty
-                  ? 'Local draft'
-                  : 'Ready to edit'}
-            </span>
-          )}
+                Files <span aria-hidden="true">{filesOpen ? '▴' : '▾'}</span>
+              </Button>
+            )}
+            <details className="editor-options">
+              <summary>
+                <Icon name="settings" size={16} />
+                Editor options
+              </summary>
+              <label className="editor-size">
+                Code size
+                <select
+                  aria-label="Editor text size"
+                  value={fontSize}
+                  onChange={(event) => setFontSize(event.target.value)}
+                >
+                  <option value="1rem">16 px</option>
+                  <option value="1.125rem">18 px</option>
+                  <option value="1.25rem">20 px</option>
+                </select>
+              </label>
+              <p className="editor-keyboard-help" id="editor-keyboard-help">
+                Tab moves focus. Ctrl/Cmd + ] indents. Arrow keys switch file
+                tabs; Delete closes a tab.
+              </p>
+            </details>
+            {!collaboration && (
+              <span className="badge">
+                {!summary.writable || paused
+                  ? 'Read only'
+                  : active?.dirty
+                    ? 'Local draft'
+                    : 'Ready to edit'}
+              </span>
+            )}
+          </div>
         </div>
         {notice && <Notice>{notice}</Notice>}
         <div
@@ -644,10 +665,6 @@ function ScopedWorkbench({
             />
           )}
         </div>
-        <p className="editor-keyboard-help" id="editor-keyboard-help">
-          Tab moves focus. Ctrl/Cmd + ] indents. Arrow keys switch file tabs;
-          Delete closes a tab.
-        </p>
         {fileActions}
       </section>
       <ExecutionPanel

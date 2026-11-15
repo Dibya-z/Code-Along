@@ -10,7 +10,7 @@ test('signed-out shell reflows and supports keyboard navigation', async ({
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
     await expect(
-      page.getByRole('heading', { name: 'Your workspaces' }),
+      page.getByRole('heading', { name: /Write Python\.\s*Learn together\./ }),
     ).toBeVisible();
     expect(
       await page.evaluate(
@@ -20,7 +20,7 @@ test('signed-out shell reflows and supports keyboard navigation', async ({
   }
   await page.goto('/');
   await expect(
-    page.getByRole('heading', { name: 'Your workspaces' }),
+    page.getByRole('heading', { name: /Write Python\.\s*Learn together\./ }),
   ).toBeVisible();
   await page.screenshot({
     path: test.info().outputPath('shell.png'),
@@ -35,7 +35,9 @@ test('signed-out shell reflows and supports keyboard navigation', async ({
   await expect(page.getByText('Skip to content')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('main')).toBeFocused();
-  await page.getByRole('link', { name: 'Sign in to Code Along' }).click();
+  await page
+    .getByRole('link', { name: 'Open your workspace', exact: true })
+    .click();
   await expect(
     page.getByRole('heading', { name: 'Sign in', exact: true }),
   ).toBeVisible();
@@ -43,6 +45,49 @@ test('signed-out shell reflows and supports keyboard navigation', async ({
   await expect(
     page.getByRole('heading', { name: "Let's get you back." }),
   ).toBeVisible();
+  expect(failures).toEqual([]);
+});
+test('appearance preference survives reload and unavailable storage stays optional', async ({
+  page,
+}) => {
+  const failures: string[] = [];
+  page.on('pageerror', (error) => failures.push(error.message));
+  await page.goto('/');
+  await page
+    .getByRole('button', { name: 'Switch to dark theme', exact: true })
+    .click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await expect(
+    page.getByRole('button', { name: 'Switch to light theme', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page
+    .getByRole('button', { name: 'Switch to light theme', exact: true })
+    .click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.evaluate(() => {
+    document.documentElement.dataset['theme'] = 'dark';
+  });
+  await page
+    .getByRole('button', { name: 'Switch to light theme', exact: true })
+    .click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', {
+      get() {
+        throw new DOMException(
+          'Preference storage unavailable.',
+          'SecurityError',
+        );
+      },
+    });
+  });
+  await page.reload();
+  await page
+    .getByRole('button', { name: 'Switch to dark theme', exact: true })
+    .click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   expect(failures).toEqual([]);
 });
 test('dialog traps focus, closes by escape and restores trigger focus', async ({

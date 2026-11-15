@@ -9,6 +9,10 @@
 .learning-view {
   scroll-margin-top: var(--space-6);
 }
+.learning-view > .content-section + .content-section {
+  padding-block-start: var(--space-8);
+  border-block-start: 1px solid var(--color-separator);
+}
 .learning-view:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
@@ -18,15 +22,41 @@
   max-width: 100%;
 }
 .assignment-prose {
-  max-width: 65ch;
+  max-width: var(--measure-prose);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  font-size: 1rem;
   line-height: 1.6;
+}
+.assignment-reading {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.assignment-reading > h2,
+.assignment-reading > .section-head h2 {
+  margin-block-end: var(--space-3);
+  font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  line-height: 1.25;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.assignment-reading > .assignment-prose {
+  padding-block: var(--space-4);
+  margin-block: var(--space-4);
+  border-block: 1px solid var(--color-separator);
+}
+.assignment-reading > h3 {
+  margin-block: var(--space-6) var(--space-3);
+  font-size: var(--text-heading-sm);
+}
+.assignment-reading .section-head {
+  gap: var(--space-3) var(--space-4);
 }
 .assignment-author fieldset {
   border: 0;
-  padding: 0;
-  margin: 0 0 var(--space-6);
+  border-block-end: 1px solid var(--color-separator);
+  padding: 0 0 var(--space-6);
+  margin: 0 0 var(--space-8);
 }
 .assignment-author legend {
   font-size: var(--text-heading-sm);
@@ -42,7 +72,8 @@
   color: var(--color-ink);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  resize: vertical;
 }
 .checkbox-field {
   display: flex;
@@ -64,8 +95,9 @@
   max-height: 28rem;
   overflow: auto;
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  background: var(--color-raised);
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
   color: var(--color-ink);
   font-size: 1rem;
   line-height: 1.5;
@@ -109,7 +141,7 @@
   color: var(--color-ink);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
 }
 .task-practice-action,
 .practice-action {
@@ -120,9 +152,9 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2) var(--space-4);
-  padding-block: var(--space-3);
+  padding-block: var(--space-4);
   border-block-end: 1px solid var(--color-separator);
 }
 .learning-roster li > *,
@@ -130,4 +162,76 @@
 .learning-view details {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.learning-view .task-disclosure,
+.assignment-reading .task-disclosure {
+  margin-block-start: var(--space-4);
+  border-block-start: 1px solid var(--color-separator);
+}
+.learning-view .task-disclosure > summary,
+.assignment-reading .task-disclosure > summary {
+  min-height: var(--target-min);
+  padding-block: var(--space-3);
+  color: var(--color-ink);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.learning-view .task-disclosure > summary::marker,
+.assignment-reading .task-disclosure > summary::marker {
+  color: var(--color-muted);
+}
+.learning-view .task-disclosure[open],
+.assignment-reading .task-disclosure[open] {
+  padding-block-end: var(--space-4);
+}
+.assignment-reading .task-disclosure .task-disclosure {
+  padding-inline-start: var(--space-4);
+  border-inline-start: 2px solid var(--color-separator);
+}
+.task-hints {
+  margin-block: var(--space-6);
+}
+.task-hints > .muted {
+  margin-block: var(--space-2) var(--space-4);
+  font-size: var(--text-meta);
+}
+.learning-work-row {
+  align-items: start;
+  gap: var(--space-6);
+  padding-block: var(--space-6);
+}
+.learning-work-row h3 {
+  margin-block: 0 var(--space-2);
+  font-size: 1.125rem;
+}
+.learning-work-row .actions {
+  justify-content: flex-end;
+}
+.learning-view#progress label {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 30rem;
+  font-weight: 600;
+}
+.learning-view#progress .list-row h3 {
+  margin-block: 0 var(--space-3);
+  font-size: var(--text-heading-sm);
+}
+.learning-view#progress .list-row p {
+  max-width: var(--measure-prose);
+  margin-block: var(--space-2);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+@media (max-width: 48rem) {
+  .learning-work-row {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .learning-work-row .actions {
+    justify-content: flex-start;
+  }
 }

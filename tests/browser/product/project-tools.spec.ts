@@ -214,14 +214,14 @@ test('templates, local metadata, Python imports and source export/import round t
   );
   await expect(page.locator('body')).toHaveCSS(
     'background-color',
-    'rgb(17, 26, 22)',
+    'rgb(17, 25, 20)',
   );
   await expect(
     page.getByRole('button', { name: 'Refresh local list', exact: true }),
-  ).toHaveCSS('background-color', 'rgb(24, 35, 29)');
+  ).toHaveCSS('background-color', 'rgb(25, 35, 28)');
   await expect(
     page.getByRole('button', { name: 'Create local draft', exact: true }),
-  ).toHaveCSS('background-color', 'rgb(148, 215, 176)');
+  ).toHaveCSS('background-color', 'rgb(197, 230, 155)');
   await page.screenshot({
     path: test.info().outputPath('local-drafts-dark.png'),
     fullPage: true,

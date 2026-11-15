@@ -13,6 +13,8 @@ import { useIdentity } from '../auth/session.ts';
 import { InvitationsPanel } from '../invitations/pages.tsx';
 import { WorkspaceAssignments } from '../learning/list.tsx';
 import { TaskNavigation } from '../learning/navigation.tsx';
+import { Icon } from '../../ui/icon.tsx';
+import './styles.css';
 export function WorkspacesPage() {
   return (
     <SignedIn>
@@ -39,19 +41,24 @@ function WorkspaceList() {
     create.mutate(String(new FormData(event.currentTarget).get('name') ?? ''));
   }
   return (
-    <div className="page">
-      <div className="section-head">
+    <div className="page workspace-index">
+      <div className="workspace-page-header">
         <div>
-          <p className="eyebrow">YOUR WORKBENCH</p>
+          <p className="workspace-kicker">A LITTLE PROGRESS, TOGETHER</p>
           <h1>Your workspaces</h1>
-          <p className="lead">
-            One home for each group. A clear place for every project.
+          <p className="workspace-intro">
+            Your groups, projects and Python practice, in one place.
           </p>
         </div>
         <Dialog
           title="Create a workspace"
           description="Give your learning group a name. You’ll be its first member and owner."
-          trigger={<Button>Create workspace</Button>}
+          trigger={
+            <Button>
+              <Icon name="plus" />
+              Create workspace
+            </Button>
+          }
         >
           <form className="form-stack" onSubmit={submit}>
             <Field
@@ -73,23 +80,53 @@ function WorkspaceList() {
         <Notice>Loading workspaces…</Notice>
       ) : query.data?.items.length ? (
         <>
-          <div className="list">
+          <div className="workspace-collection-heading">
+            <h2>Your spaces</h2>
+            <span>
+              {query.data.count}{' '}
+              {query.data.count === 1 ? 'workspace' : 'workspaces'}
+            </span>
+          </div>
+          <div className="workspace-grid">
             {query.data.items.map((workspace) => (
-              <div key={workspace.id} className="list-row">
-                <div>
-                  <h2>
-                    <Link to={`/workspaces/${workspace.id}`}>
-                      {workspace.name}
-                    </Link>
-                  </h2>
-                  <p>
-                    {workspace.archived
-                      ? 'Archived workspace'
-                      : 'Learning workspace'}
-                  </p>
-                </div>
-                <span className="badge">{workspace.role}</span>
-              </div>
+              <article className="workspace-card" key={workspace.id}>
+                <Link
+                  className="workspace-card-link"
+                  to={`/workspaces/${workspace.id}`}
+                  aria-label={workspace.name}
+                  aria-describedby={`workspace-${workspace.id}-role workspace-${workspace.id}-state`}
+                >
+                  <span className="workspace-monogram" aria-hidden="true">
+                    {Array.from(workspace.name.trim())
+                      .slice(0, 2)
+                      .join('')
+                      .toLocaleUpperCase()}
+                  </span>
+                  <span
+                    id={`workspace-${workspace.id}-role`}
+                    className="workspace-card-role"
+                  >
+                    {workspace.role}
+                  </span>
+                  <div className="workspace-card-copy">
+                    <h3>{workspace.name}</h3>
+                    <p id={`workspace-${workspace.id}-state`}>
+                      {workspace.archived
+                        ? 'Archived workspace'
+                        : 'Learning workspace'}
+                    </p>
+                  </div>
+                  <div className="workspace-card-footer">
+                    <span>
+                      <Icon name="folder" />
+                      Projects & assignments
+                    </span>
+                    <span className="workspace-card-arrow" aria-hidden="true">
+                      <Icon name="arrow-right" />
+                    </span>
+                  </div>
+                </Link>
+              </article>
             ))}
           </div>
           <Pagination
@@ -101,25 +138,40 @@ function WorkspaceList() {
         </>
       ) : (
         !query.error && (
-          <div className="empty-state">
-            <span className="empty-mark" aria-hidden="true">
-              [ ]
+          <div className="workspace-empty">
+            <span className="workspace-empty-icon" aria-hidden="true">
+              <Icon name="workspace" />
             </span>
+            <p className="workspace-kicker">GOOD THINGS START SMALL</p>
             <h2>A fresh workspace starts here.</h2>
             <p>
               Create a workspace for your group, or open an invitation someone
               has shared with you.
             </p>
+            <ol className="workspace-first-steps">
+              <li>
+                <span>01</span> Make a space
+              </li>
+              <li>
+                <span>02</span> Invite your people
+              </li>
+              <li>
+                <span>03</span> Write some Python
+              </li>
+            </ol>
           </div>
         )
       )}
-      <div className="page-note">
-        <strong>Your projects stay yours.</strong>
-        <p>
-          Joining a workspace gives you membership. Private project access is
-          always shared separately.
-        </p>
-      </div>
+      <aside className="workspace-privacy-note">
+        <Icon name="shield" />
+        <div>
+          <strong>Your projects stay yours.</strong>
+          <p>
+            Joining a workspace gives you membership. Private project access is
+            always shared separately.
+          </p>
+        </div>
+      </aside>
     </div>
   );
 }
@@ -175,13 +227,13 @@ function WorkspaceDetail() {
   const owner = workspace?.role === 'owner';
   if (query.isPending)
     return (
-      <div className="page">
+      <div className="page workspace-detail">
         <Notice>Loading workspace…</Notice>
       </div>
     );
   if (query.error || !workspace)
     return (
-      <div className="page">
+      <div className="page workspace-detail">
         <Link to="/workspaces">← Your workspaces</Link>
         <h1>Workspace unavailable.</h1>
         <Failure error={query.error} />
@@ -208,17 +260,37 @@ function WorkspaceDetail() {
     });
   }
   return (
-    <div className="page">
-      <Link to="/workspaces">← Your workspaces</Link>
-      <div className="section-head content-section">
-        <div>
-          <p className="eyebrow">
-            LEARNING WORKSPACE · {workspace.role.toUpperCase()}
-          </p>
+    <div className="page workspace-detail">
+      <Link className="workspace-back" to="/workspaces">
+        <span aria-hidden="true">←</span> Your workspaces
+      </Link>
+      <div className="workspace-page-header workspace-detail-header">
+        <span className="workspace-monogram" aria-hidden="true">
+          {Array.from(workspace.name.trim())
+            .slice(0, 2)
+            .join('')
+            .toLocaleUpperCase()}
+        </span>
+        <div className="workspace-detail-copy">
+          <p className="workspace-kicker">LEARNING WORKSPACE</p>
           <h1>{workspace.name}</h1>
-          <p className="lead">
-            A shared place to learn. Each project has its own access list.
+          <p className="workspace-intro">
+            Your group's projects, lessons and shared progress.
           </p>
+          <div className="workspace-context">
+            <span className="workspace-role">{workspace.role}</span>
+            {members.data && (
+              <span>
+                <Icon name="users" />
+                {members.data.count}{' '}
+                {members.data.count === 1 ? 'member' : 'members'}
+              </span>
+            )}
+            <span>
+              <Icon name="shield" />
+              Project access is shared separately
+            </span>
+          </div>
         </div>
         {workspace.archived && <span className="badge">Archived</span>}
       </div>
@@ -256,8 +328,11 @@ function WorkspaceDetail() {
           active={active === 'assignments'}
         />
       </div>
-      <details className="content-section task-disclosure">
-        <summary>Members</summary>
+      <details className="content-section task-disclosure workspace-disclosure">
+        <summary>
+          <Icon name="users" />
+          Members
+        </summary>
         <section className="content-section" aria-labelledby="members-heading">
           <h2 id="members-heading">Workspace members</h2>
           {members.error && <Failure error={members.error} />}
@@ -267,9 +342,17 @@ function WorkspaceDetail() {
             <div className="list">
               {members.data?.items.map((member) => (
                 <div className="list-row" key={member.user_id}>
-                  <div>
-                    <strong>{member.display_name}</strong>
-                    <p>{member.role}</p>
+                  <div className="workspace-member-identity">
+                    <span className="workspace-member-mark" aria-hidden="true">
+                      {Array.from(member.display_name.trim())
+                        .slice(0, 1)
+                        .join('')
+                        .toLocaleUpperCase()}
+                    </span>
+                    <div>
+                      <strong>{member.display_name}</strong>
+                      <p>{member.role}</p>
+                    </div>
                   </div>
                   {owner && member.role !== 'owner' && !workspace.archived ? (
                     <div className="actions">
@@ -328,8 +411,11 @@ function WorkspaceDetail() {
         {owner && <InvitationsPanel workspace={workspace} />}
       </details>
       {(owner || !workspace.archived) && (
-        <details className="content-section task-disclosure">
-          <summary>Workspace administration</summary>
+        <details className="content-section task-disclosure workspace-disclosure">
+          <summary>
+            <Icon name="workspace" />
+            Workspace administration
+          </summary>
           {owner ? (
             <section
               className="content-section"
@@ -337,8 +423,7 @@ function WorkspaceDetail() {
             >
               <h2 id="settings-heading">Workspace settings</h2>
               <form
-                className="form-stack"
-                style={{ maxWidth: '28rem' }}
+                className="form-stack workspace-settings-form"
                 onSubmit={rename}
               >
                 <Field

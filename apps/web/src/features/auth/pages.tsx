@@ -12,15 +12,16 @@ import {
   announceLocalLogout,
   markSessionEnding,
 } from '../recovery/session-events.ts';
+import './styles.css';
 type Kind = 'login' | 'signup' | 'forgot' | 'reset' | 'verify';
 const content = {
   login: {
     title: 'Welcome back.',
-    intro: 'Pick up where you left off.',
+    intro: 'Open your projects and continue learning with your group.',
     action: 'Sign in',
   },
   signup: {
-    title: 'A good place to begin.',
+    title: 'Create your account.',
     intro:
       'Create your Code Along account. We’ll send a link to verify your email.',
     action: 'Create account',
@@ -102,95 +103,140 @@ export function AccountPage({ kind }: { kind: Kind }) {
   const invalidKey =
     (kind === 'verify' || kind === 'reset') && !key && !message;
   return (
-    <div className="page narrow auth-layout">
-      <div>
-        <p className="eyebrow">YOUR CODE ALONG ACCOUNT</p>
-        <h1>{kind === 'login' ? 'Sign in' : content[kind].title}</h1>
-        <p className="lead">{content[kind].intro}</p>
-      </div>
-      {failure && <Notice tone="error">{failure}</Notice>}
-      {message ? (
-        <>
-          <Notice tone="success">{message}</Notice>
-          <Link className="button" to={`/login${nextQuery}`}>
-            Go to sign in
-          </Link>
-        </>
-      ) : invalidKey ? (
-        <>
-          <Notice tone="error">
-            This link is missing its verification key. Open the complete link
-            from your email.
-          </Notice>
-          {kind === 'reset' ? (
-            <Link to="/auth/forgot">Request a password reset</Link>
-          ) : (
-            <Link to={`/login${nextQuery}`}>Return to sign in</Link>
-          )}
-        </>
-      ) : (
-        <form onSubmit={(e) => void submit(e)} className="form-stack">
-          {kind === 'signup' && (
-            <Field
-              label="Display name"
-              name="display_name"
-              autoComplete="nickname"
-              maxLength={80}
-              required
-              error={fields['display_name']}
-              hint="The name your group will see."
-            />
-          )}
-          {['login', 'signup', 'forgot'].includes(kind) && (
-            <Field
-              label="Email address"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              maxLength={254}
-              error={fields['email']}
-            />
-          )}
-          {['login', 'signup', 'reset'].includes(kind) && (
-            <Field
-              label="Password"
-              name="password"
-              type="password"
-              autoComplete={
-                kind === 'login' ? 'current-password' : 'new-password'
-              }
-              required
-              minLength={kind === 'login' ? 1 : 8}
-              maxLength={256}
-              error={fields['password']}
-              hint={
-                kind === 'login'
-                  ? undefined
-                  : 'Use at least 8 characters. Avoid common or personal words.'
-              }
-            />
-          )}
-          <Button type="submit" busy={busy}>
-            {busy ? 'Please wait…' : content[kind].action}
-          </Button>
-        </form>
-      )}
-      {kind === 'login' && (
-        <div className="form-stack">
-          <Link to="/auth/forgot">Forgot your password?</Link>
+    <div className="account-entry">
+      <section className="account-form" aria-labelledby="account-heading">
+        <div className="account-form-heading">
+          <p className="account-label">Your Code Along account</p>
+          <h1 id="account-heading">
+            {kind === 'login' ? 'Sign in' : content[kind].title}
+          </h1>
+          <p className="lead">{content[kind].intro}</p>
+        </div>
+        {failure && <Notice tone="error">{failure}</Notice>}
+        {message ? (
+          <>
+            <Notice tone="success">{message}</Notice>
+            <Link className="button" to={`/login${nextQuery}`}>
+              Go to sign in
+            </Link>
+          </>
+        ) : invalidKey ? (
+          <>
+            <Notice tone="error">
+              This link is missing its verification key. Open the complete link
+              from your email.
+            </Notice>
+            {kind === 'reset' ? (
+              <Link to="/auth/forgot">Request a password reset</Link>
+            ) : (
+              <Link to={`/login${nextQuery}`}>Return to sign in</Link>
+            )}
+          </>
+        ) : (
+          <form onSubmit={(e) => void submit(e)} className="form-stack">
+            {kind === 'signup' && (
+              <Field
+                label="Display name"
+                name="display_name"
+                autoComplete="nickname"
+                maxLength={80}
+                required
+                error={fields['display_name']}
+                hint="The name your group will see."
+              />
+            )}
+            {['login', 'signup', 'forgot'].includes(kind) && (
+              <Field
+                label="Email address"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                maxLength={254}
+                error={fields['email']}
+              />
+            )}
+            {['login', 'signup', 'reset'].includes(kind) && (
+              <Field
+                label="Password"
+                name="password"
+                type="password"
+                autoComplete={
+                  kind === 'login' ? 'current-password' : 'new-password'
+                }
+                required
+                minLength={kind === 'login' ? 1 : 8}
+                maxLength={256}
+                error={fields['password']}
+                hint={
+                  kind === 'login'
+                    ? undefined
+                    : 'Use at least 8 characters. Avoid common or personal words.'
+                }
+              />
+            )}
+            <Button type="submit" busy={busy}>
+              {busy ? 'Please wait…' : content[kind].action}
+            </Button>
+          </form>
+        )}
+        {kind === 'login' && (
+          <div className="form-stack">
+            <Link to="/auth/forgot">Forgot your password?</Link>
+            <p className="muted">
+              New here?{' '}
+              <Link to={`/auth/signup${nextQuery}`}>Create an account</Link>
+            </p>
+          </div>
+        )}
+        {kind === 'signup' && (
           <p className="muted">
-            New here?{' '}
-            <Link to={`/auth/signup${nextQuery}`}>Create an account</Link>
+            Already have an account?{' '}
+            <Link to={`/login${nextQuery}`}>Sign in</Link>
+          </p>
+        )}
+      </section>
+      <aside className="account-story" aria-labelledby="account-story-heading">
+        <div className="account-story-heading">
+          <p className="account-story-label">A shared Python workspace</p>
+          <h2 id="account-story-heading">
+            Write Python. <span>Learn together.</span>
+          </h2>
+          <p>
+            Bring your questions, work through ideas and make progress with your
+            group.
           </p>
         </div>
-      )}
-      {kind === 'signup' && (
-        <p className="muted">
-          Already have an account?{' '}
-          <Link to={`/login${nextQuery}`}>Sign in</Link>
-        </p>
-      )}
+        <div className="account-code-art" aria-hidden="true">
+          <span className="account-code-caption">Python illustration</span>
+          <pre>
+            <code>
+              <span className="account-code-name">ideas</span> = [
+              <span className="account-code-string">"ask"</span>,{' '}
+              <span className="account-code-string">"try"</span>,{' '}
+              <span className="account-code-string">"understand"</span>]{'\n\n'}
+              <span className="account-code-keyword">for</span> idea{' '}
+              <span className="account-code-keyword">in</span> ideas:{'\n'}
+              {'    '}print(idea)
+            </code>
+          </pre>
+          <span className="account-code-rule" />
+        </div>
+        <ul className="account-story-benefits">
+          <li>
+            <strong>Shared editing</strong>
+            <span>Work on the same project with your group.</span>
+          </li>
+          <li>
+            <strong>Python practice</strong>
+            <span>Run your code and inspect what it does.</span>
+          </li>
+          <li>
+            <strong>Your learning work</strong>
+            <span>Keep tasks, submissions and feedback together.</span>
+          </li>
+        </ul>
+      </aside>
     </div>
   );
 }

@@ -21,6 +21,7 @@ import { ProjectHistory } from '../history/panel.tsx';
 import { ProjectShares } from '../shares/management.tsx';
 import { ProjectDiscussion } from '../discussion/panel.tsx';
 import { runtimeProfile } from '@code-along/contracts/execution/profiles';
+import { Icon, type IconName } from '../../ui/icon.tsx';
 
 const projectSections = [
   'code',
@@ -30,6 +31,13 @@ const projectSections = [
   'settings',
 ] as const;
 type ProjectSection = (typeof projectSections)[number];
+const sectionIcons: Record<ProjectSection, IconName> = {
+  code: 'code',
+  discussion: 'message',
+  history: 'history',
+  sharing: 'users',
+  settings: 'settings',
+};
 function revealFocusedLink(nav: HTMLElement, link: HTMLAnchorElement) {
   // Keep keyboard focus fully visible inside this scroller without moving the page.
   queueMicrotask(() => {
@@ -232,30 +240,40 @@ function ProjectDetails() {
             : null;
       }}
     >
-      <Link to={`/workspaces/${project.workspace_id}`}>← Workspace</Link>
+      <div className="project-context">
+        <Link
+          className="project-workspace-link"
+          aria-label="← Workspace"
+          to={`/workspaces/${project.workspace_id}`}
+        >
+          <Icon name="arrow-left" size={16} />
+          Workspace
+        </Link>
+        <span className="badge project-role">
+          {project.archived
+            ? 'Archived'
+            : project.role[0]!.toUpperCase() + project.role.slice(1)}
+        </span>
+        <Button
+          className="project-refresh"
+          variant="secondary"
+          busy={query.isFetching}
+          onClick={() => {
+            void query.refetch();
+          }}
+        >
+          <Icon name="history" size={16} />
+          Refresh project
+        </Button>
+      </div>
       <div className="section-head project-heading">
         <div>
           <h1>{project.name}</h1>
-          <p className="muted">
+          <p className="muted project-runtime">
+            <Icon name="code" size={16} />
             {runtimeProfile(project.runtime_id)?.name ?? 'Python'} · Entrypoint{' '}
-            {project.entrypoint_path}
+            <code>{project.entrypoint_path}</code>
           </p>
-        </div>
-        <div className="actions">
-          <span className="badge">
-            {project.archived
-              ? 'Archived'
-              : project.role[0]!.toUpperCase() + project.role.slice(1)}
-          </span>
-          <Button
-            variant="secondary"
-            busy={query.isFetching}
-            onClick={() => {
-              void query.refetch();
-            }}
-          >
-            Refresh project
-          </Button>
         </div>
       </div>
       <nav
@@ -296,6 +314,7 @@ function ProjectDetails() {
                 focusSection.current = true;
               }}
             >
+              <Icon name={sectionIcons[item]} size={18} />
               {item[0]!.toUpperCase() + item.slice(1)}
             </Link>
           ))}
@@ -364,6 +383,7 @@ function ProjectDetails() {
                     variant="secondary"
                     disabled={add.isPending || change.isPending}
                   >
+                    <Icon name="plus" size={16} />
                     Add file
                   </Button>
                 }

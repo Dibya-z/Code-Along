@@ -1,0 +1,237 @@
+.account-entry {
+  display: grid;
+  grid-template-areas: 'story form';
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  width: min(72rem, calc(100% - 4rem));
+  margin: clamp(2rem, 5vw, 4rem) auto;
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: clip;
+}
+
+.account-form {
+  grid-area: form;
+  align-self: center;
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+  width: 100%;
+  max-width: 30rem;
+  padding: clamp(2rem, 4vw, 4rem);
+  margin-inline: auto;
+}
+
+.account-form-heading h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.2;
+  letter-spacing: -0.045em;
+}
+
+.account-form-heading .lead {
+  margin: var(--space-3) 0 0;
+  max-width: 34ch;
+}
+
+.account-label,
+.account-story-label {
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-meta);
+  font-weight: 500;
+}
+
+.account-label {
+  color: var(--color-muted);
+}
+
+.account-form .form-stack {
+  gap: var(--space-6);
+}
+
+.account-form .form-stack > .button {
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+.account-form > p,
+.account-form .form-stack > p {
+  margin: 0;
+}
+
+.account-form a:not(.button) {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-min);
+  text-decoration-thickness: 1px;
+}
+
+.account-form .notice {
+  margin: 0;
+  border: 1px solid var(--color-separator);
+  border-inline-start: 3px solid var(--color-info);
+  border-radius: var(--radius-sm);
+  background: var(--color-canvas);
+}
+
+.account-form .notice.error {
+  border-inline-start-color: var(--color-error);
+}
+
+.account-form .notice.success {
+  border-inline-start-color: var(--color-success);
+}
+
+.account-story {
+  grid-area: story;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+  padding: clamp(2rem, 4vw, 3rem);
+  background: var(--color-nav, var(--color-ink));
+  color: var(--color-on-nav, var(--color-surface));
+}
+
+.account-story-label {
+  color: var(--color-nav-muted, var(--color-surface));
+}
+
+.account-story-heading h2 {
+  margin: 0 0 var(--space-6);
+  font-size: clamp(2.125rem, 3.5vw, 3rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.055em;
+}
+
+.account-story-heading h2 span {
+  display: block;
+  color: var(--color-accent, var(--color-on-nav, var(--color-surface)));
+}
+
+.account-story-heading > p:last-child {
+  max-width: 32ch;
+  margin: 0;
+  color: var(--color-nav-muted, var(--color-surface));
+}
+
+.account-code-art {
+  padding-block: var(--space-6);
+  border-block: 1px solid var(--color-nav-active, var(--color-border));
+}
+
+.account-code-caption {
+  display: block;
+  margin-bottom: var(--space-4);
+  color: var(--color-nav-muted, var(--color-surface));
+  font: var(--text-meta) / 1.5 var(--font-code);
+}
+
+.account-code-art pre {
+  margin: 0;
+  font: 0.875rem/1.8 var(--font-code);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.account-code-art code {
+  font: inherit;
+}
+
+.account-code-keyword,
+.account-code-name {
+  color: var(--color-accent, var(--color-on-nav, var(--color-surface)));
+}
+
+.account-code-string {
+  color: var(--color-on-nav, var(--color-surface));
+}
+
+.account-code-rule {
+  display: block;
+  width: 2rem;
+  height: 2px;
+  margin-top: var(--space-6);
+  background: var(--color-accent, var(--color-on-nav, var(--color-surface)));
+}
+
+.account-story-benefits {
+  display: grid;
+  gap: var(--space-4);
+  padding: 0;
+  margin: auto 0 0;
+  list-style: none;
+}
+
+.account-story-benefits li {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.account-story-benefits strong {
+  font-size: var(--text-meta);
+  font-weight: 600;
+}
+
+.account-story-benefits span {
+  color: var(--color-nav-muted, var(--color-surface));
+  font-size: var(--text-meta);
+  line-height: 1.5;
+}
+
+@media (max-width: 56rem) {
+  .account-entry {
+    width: min(36rem, calc(100% - 3rem));
+    grid-template-areas: 'form' 'story';
+    grid-template-columns: minmax(0, 1fr);
+    margin-block: var(--space-8);
+  }
+
+  .account-form {
+    max-width: none;
+  }
+
+  .account-story {
+    gap: var(--space-6);
+  }
+
+  .account-story-heading h2 {
+    font-size: 2rem;
+    margin-bottom: var(--space-4);
+  }
+
+  .account-story-heading h2 span {
+    display: inline;
+  }
+
+  .account-story-heading > p:last-child {
+    max-width: 44ch;
+  }
+
+  .account-code-art {
+    display: none;
+  }
+
+  .account-story-benefits {
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-nav-active, var(--color-border));
+  }
+}
+
+@media (max-width: 28rem) {
+  .account-entry {
+    width: calc(100% - 2rem);
+    margin-block: var(--space-4);
+  }
+
+  .account-form,
+  .account-story {
+    padding: var(--space-6);
+  }
+
+  .account-story-heading h2 {
+    font-size: 1.75rem;
+  }
+}

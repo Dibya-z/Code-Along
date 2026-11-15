@@ -17,8 +17,10 @@
   font: 600 0.875rem/1.4 var(--font-ui);
   text-decoration: none;
   cursor: pointer;
+  box-shadow: var(--shadow-control);
   transition:
     background var(--motion-fast),
+    box-shadow var(--motion-fast),
     transform var(--motion-fast);
 }
 .button:hover {
@@ -79,21 +81,25 @@ select {
 }
 .notice {
   padding: 1rem 1.25rem;
+  border: 1px solid var(--color-separator);
   border-left: 3px solid var(--color-info);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   font: 1rem/1.5 var(--font-ui);
   overflow-wrap: anywhere;
 }
 .notice.error {
-  border-color: var(--color-error);
+  border-left-color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 4%, var(--color-surface));
 }
 .notice.success {
-  border-color: var(--color-success);
+  border-left-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 5%, var(--color-surface));
 }
 .dialog-overlay {
   position: fixed;
   inset: 0;
-  background: #0008;
+  background: rgb(10 27 18 / 45%);
   z-index: var(--layer-dialog);
 }
 .dialog {
@@ -107,8 +113,9 @@ select {
   padding: 2rem;
   background: var(--color-surface);
   color: var(--color-ink);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-separator);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dialog);
   font: 1rem/1.5 var(--font-ui);
 }
 .dialog h2 {

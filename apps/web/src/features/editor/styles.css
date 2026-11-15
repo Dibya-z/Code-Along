@@ -1,9 +1,131 @@
+.project-page .project-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.project-page .project-workspace-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target-min);
+  color: var(--color-muted);
+  font-size: var(--text-meta);
+  text-decoration: none;
+}
+.project-page .project-workspace-link:hover {
+  color: var(--color-ink);
+}
+.project-page .project-role {
+  background: var(--color-raised);
+  color: var(--color-muted);
+  border-color: transparent;
+}
+.project-page .project-refresh {
+  margin-inline-start: auto;
+  gap: var(--space-2);
+  padding-inline: var(--space-2);
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: var(--text-meta);
+}
+.project-page .project-refresh:hover:not(:disabled) {
+  color: var(--color-ink);
+  background: var(--color-raised);
+}
+.project-page .project-heading {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-4);
+  gap: var(--space-3);
+}
+.project-page .project-heading h1 {
+  margin: 0 0 var(--space-2);
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+}
+.project-page .project-runtime {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  row-gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-meta);
+}
+.project-page .project-runtime code {
+  font-size: inherit;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.project-page > .project-section-nav {
+  flex-wrap: nowrap;
+  gap: var(--space-4);
+  max-width: 100%;
+  overflow-x: auto;
+  margin-top: 0;
+  padding-inline: var(--space-1);
+  scroll-padding-inline: var(--space-1);
+  border-bottom: 1px solid var(--color-separator);
+}
+.project-page > .project-section-nav a {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--target-min);
+  padding: var(--space-2) var(--space-1);
+  border-radius: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.project-page > .project-section-nav a:hover {
+  color: var(--color-ink);
+  background: transparent;
+}
+.project-page > .project-section-nav a[aria-current='page'] {
+  color: var(--color-ink);
+  background: transparent;
+  box-shadow: inset 0 -2px var(--color-primary);
+}
+.project-page > .project-section-nav a:focus-visible {
+  outline-offset: -2px;
+}
+.project-page > .project-section-nav::after {
+  content: '';
+  flex: 0 0 var(--space-1);
+}
+.project-page .project-command-bar {
+  gap: var(--space-2) var(--space-4);
+  border-bottom: 0;
+  padding-block: var(--space-2);
+}
+.project-page .project-command-bar .execution-toolbar {
+  padding: 0;
+}
+.project-page .project-collaboration {
+  flex-basis: 20rem;
+}
+.project-page .project-recovery .local-recovery {
+  margin-block: 0;
+}
+.project-page .editor-workbench {
+  margin-top: var(--space-3);
+}
+
 .editor-workbench {
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr);
   border: 1px solid var(--color-separator);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
   overflow: hidden;
 }
 .editor-workbench[data-collaboration='true'] {
@@ -11,16 +133,31 @@
 }
 .editor-explorer {
   min-width: 0;
-  padding: var(--space-4);
-  background: var(--color-canvas);
+  padding: var(--space-3);
+  background: var(--color-raised);
   border-right: 1px solid var(--color-separator);
 }
 .editor-explorer .section-head {
   gap: var(--space-2);
   flex-wrap: wrap;
+  min-height: var(--target-min);
+  margin-bottom: var(--space-2);
 }
 .editor-explorer h2 {
-  font-size: var(--text-heading-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-meta);
+  font-weight: 500;
+}
+.editor-explorer .section-head .button {
+  gap: var(--space-1);
+  padding-inline: var(--space-2);
+  background: transparent;
+  border-color: transparent;
+  font-size: var(--text-meta);
 }
 .files-toggle {
   display: none;
@@ -58,9 +195,14 @@
   text-align: left;
   font: var(--text-meta)/1.5 var(--font-code);
 }
-.editor-file[aria-pressed='true'],
 .editor-file:hover {
-  background: var(--color-raised);
+  background: var(--color-surface);
+}
+.editor-file[aria-pressed='true'] {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: inset 2px 0 var(--color-primary);
+  font-weight: 600;
 }
 .file-name {
   grid-column: 2;
@@ -89,11 +231,18 @@
   font-size: 0.625rem;
 }
 .editor-scope-note {
-  border-top: 1px solid var(--color-separator);
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
+  margin-top: var(--space-4);
   color: var(--color-muted);
   font-size: var(--text-meta);
+  line-height: 1.6;
+}
+.editor-scope-note > summary {
+  min-height: var(--target-min);
+  align-content: center;
+  cursor: pointer;
+}
+.editor-scope-note p {
+  margin: 0 0 var(--space-2);
 }
 .editor-pane {
   min-width: 0;
@@ -103,12 +252,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   border-bottom: 1px solid var(--color-separator);
-  background: var(--color-surface);
-  position: sticky;
-  top: 0;
-  z-index: 5;
+  background: var(--color-raised);
+  position: relative;
+  top: auto;
+  z-index: var(--layer-base);
 }
 .workbench-controls > div {
   flex: 1;
@@ -119,16 +268,29 @@
   gap: var(--space-2);
   padding: var(--space-3);
 }
+.pane-switch .button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-muted);
+  scroll-margin-block-start: var(--project-command-height, 8rem);
+}
+.pane-switch .button[aria-pressed='true'] {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-control);
+}
 .console-width {
   display: none;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3);
+  min-height: var(--target-min);
+  padding: var(--space-1) var(--space-3);
   font-size: var(--text-meta);
 }
 .console-width input {
   min-height: var(--target-min);
-  width: 6rem;
+  width: 5rem;
   padding: 0;
 }
 .editor-workbench > .execution-panel {
@@ -136,7 +298,7 @@
 }
 @media (min-width: 80rem) {
   .editor-workbench {
-    grid-template-columns: 10rem minmax(0, 1fr) minmax(
+    grid-template-columns: 12.5rem minmax(0, 1fr) minmax(
         18rem,
         var(--console-width, 34%)
       );
@@ -161,13 +323,15 @@
   display: flex;
   min-height: var(--target-min);
   overflow-x: auto;
-  border-bottom: 1px solid var(--color-separator);
-  background: var(--color-canvas);
+  min-width: 0;
+  flex: 1 1 0;
+  border-bottom: 0;
+  background: var(--color-raised);
 }
 .editor-tab-wrap {
   display: flex;
   flex: none;
-  border-right: 1px solid var(--color-separator);
+  border-right: 0;
 }
 .editor-tab,
 .editor-tab-close {
@@ -194,15 +358,45 @@
   background: var(--color-surface);
   box-shadow: inset 0 -2px var(--color-primary);
 }
+.editor-tab-wrap:has(.editor-tab[aria-selected='true']) {
+  background: var(--color-surface);
+}
+.editor-tab-wrap:has(.editor-tab[aria-selected='true']) .editor-tab-close {
+  box-shadow: inset 0 -2px var(--color-primary);
+}
 .editor-tab:hover,
 .editor-tab-close:hover {
   background: var(--color-raised);
   color: var(--color-ink);
 }
+.editor-heading-row {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  background: var(--color-raised);
+  border-bottom: 1px solid var(--color-separator);
+}
+.editor-heading-row:has(.editor-options[open]),
+.editor-heading-row:has(.guide-files-toggle),
+.editor-heading-row:has(.editor-pane-head > .badge) {
+  flex-wrap: wrap;
+}
+.editor-heading-row:has(.editor-options[open]) .editor-pane-head,
+.editor-heading-row:has(.guide-files-toggle) .editor-pane-head,
+.editor-heading-row:has(.editor-pane-head > .badge) .editor-pane-head {
+  flex-basis: 100%;
+  border-top: 1px solid var(--color-separator);
+}
+.editor-heading-row:has(.editor-options[open]) > .editor-tabs,
+.editor-heading-row:has(.guide-files-toggle) > .editor-tabs,
+.editor-heading-row:has(.editor-pane-head > .badge) > .editor-tabs {
+  flex-basis: 100%;
+}
+.editor-heading-row:has(.guide-files-toggle) .editor-pane-head {
+  justify-content: space-between;
+}
 .editor-pane-head {
   display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-2);
@@ -210,9 +404,17 @@
 }
 .editor-options > summary {
   cursor: pointer;
+  align-content: center;
   min-height: var(--target-min);
-  padding-block: var(--space-3);
+  padding-block: var(--space-2);
   font-size: var(--text-meta);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+.editor-options > summary .ui-icon {
+  display: inline-block;
+  vertical-align: -3px;
+  margin-inline-end: var(--space-1);
 }
 .editor-options[open] {
   width: 100%;
@@ -220,6 +422,12 @@
 .editor-options .editor-size {
   margin: 0 0 var(--space-3);
   justify-content: flex-end;
+}
+.editor-options .editor-keyboard-help {
+  max-width: 45ch;
+  padding: 0 0 var(--space-3);
+  margin: 0;
+  line-height: 1.6;
 }
 .editor-pane-head h2 {
   font: 500 var(--text-meta)/1.5 var(--font-code);
@@ -248,22 +456,22 @@
   font-size: var(--text-meta);
 }
 .python-editor .cm-scroller {
-  min-height: 24rem;
+  min-height: 26rem;
   max-height: 36rem;
   overflow: auto;
   font: inherit;
 }
 .python-editor .cm-content {
-  padding: var(--space-4) 0;
+  padding: var(--space-3) 0;
   caret-color: var(--color-ink);
 }
 .python-editor .cm-line {
   padding-inline: var(--space-4);
 }
 .python-editor .cm-gutters {
-  background: var(--color-canvas);
+  background: var(--color-surface);
   color: var(--color-muted);
-  border-color: var(--color-separator);
+  border-color: transparent;
 }
 .python-editor .cm-activeLine,
 .python-editor .cm-activeLineGutter {
@@ -334,8 +542,8 @@
   .pane-switch {
     display: flex;
     width: 100%;
-    padding-top: 0;
     padding: var(--space-2);
+    gap: var(--space-1);
   }
   .workbench-controls > div {
     flex-basis: 100%;
@@ -352,6 +560,35 @@
   }
   .python-editor .cm-scroller {
     min-height: 18rem;
+  }
+}
+
+@media (max-width: 48rem) {
+  .project-page .project-heading {
+    margin-top: var(--space-1);
+    margin-bottom: var(--space-3);
+  }
+  .project-page .project-heading h1 {
+    font-size: var(--text-heading-sm);
+  }
+  .project-page > .project-section-nav {
+    gap: var(--space-3);
+  }
+  .project-page > .project-section-nav a {
+    gap: var(--space-1);
+    padding-inline: var(--space-1);
+  }
+  .project-page .project-command-bar {
+    gap: var(--space-1);
+  }
+  .project-page .project-collaboration {
+    flex-basis: 100%;
+  }
+  .project-page .editor-workbench {
+    margin-top: var(--space-2);
+  }
+  .editor-heading-row .editor-tab {
+    padding-inline: var(--space-2);
   }
 }
 

@@ -330,7 +330,7 @@ test('two accounts receive plaintext once despite duplicate notifications and re
         name: 'Recheck discussion',
         exact: true,
       }),
-    ).toHaveCSS('background-color', 'rgb(24, 35, 29)');
+    ).toHaveCSS('background-color', 'rgb(25, 35, 28)');
     await discussion(p.peer).screenshot({
       path: test.info().outputPath('discussion-dark.png'),
     });
@@ -806,7 +806,7 @@ test('viewer history loads older UTC messages, denies writes, and a live capabil
     await expect(discussion(p.peer)).toHaveCSS('outline-width', '2px');
     await expect(discussion(p.peer)).toHaveCSS(
       'outline-color',
-      'rgb(21, 122, 86)',
+      'rgb(35, 107, 67)',
     );
     await p.peer.evaluate(() => window.scrollBy(0, -12));
     await p.peer.screenshot({
@@ -855,7 +855,7 @@ test('viewer history loads older UTC messages, denies writes, and a live capabil
     ).toBeVisible();
     await expect(log).toBeFocused();
     await expect(log).toHaveCSS('outline-width', '2px');
-    await expect(log).toHaveCSS('outline-color', 'rgb(21, 122, 86)');
+    await expect(log).toHaveCSS('outline-color', 'rgb(35, 107, 67)');
     await discussion(p.peer).screenshot({
       path: test.info().outputPath('discussion-list-keyboard.png'),
     });

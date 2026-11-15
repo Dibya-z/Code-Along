@@ -92,6 +92,52 @@ async function codeGeometry(page: Page, breakdown = false) {
   }, breakdown);
 }
 
+async function expectFirstLineUnobscured(page: Page) {
+  const visible = await page
+    .locator('.cm-line')
+    .first()
+    .evaluate((line) => {
+      const bounds = line.getBoundingClientRect();
+      const editor =
+        line.closest('.cm-editor')?.getBoundingClientRect() ?? bounds;
+      const left = Math.max(bounds.left, editor.left, 0);
+      const right = Math.min(bounds.right, editor.right, innerWidth);
+      const x = left + Math.min(24, Math.max(1, (right - left) / 2));
+      const hits = [
+        bounds.top + 2,
+        bounds.top + bounds.height / 2,
+        bounds.bottom - 2,
+      ].map((y) => {
+        const hit = document.elementFromPoint(x, y);
+        return {
+          y,
+          exposed: hit !== null && (hit === line || line.contains(hit)),
+          tag: hit?.tagName,
+          id: hit?.id,
+        };
+      });
+      return {
+        exposed:
+          right > left &&
+          bounds.top >= Math.max(editor.top, 0) &&
+          bounds.bottom <= Math.min(editor.bottom, innerHeight) &&
+          hits.every((hit) => hit.exposed),
+        line: {
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
+        },
+        hits,
+        x,
+      };
+    });
+  expect(
+    visible.exposed,
+    `First code line must be unobscured: ${JSON.stringify(visible)}`,
+  ).toBe(true);
+}
+
 test('project routing uses the loaded app stylesheet without a late CSS admission dependency', async ({
   page,
   browserName,
@@ -159,10 +205,22 @@ test('project tasks retain source, undo, a waiting run and discussion draft whil
   expect(await page.evaluate(() => history.length)).toBe(initialHistory);
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect(editor).toBeInViewport();
+  await expectFirstLineUnobscured(page);
   await page.screenshot({
     path: test.info().outputPath('tasks-desktop.png'),
     fullPage: true,
   });
+  const editorOptions = page.locator('.editor-options > summary');
+  await editorOptions.click();
+  const selectedFile = page.getByRole('tab', {
+    name: 'main.py',
+    exact: true,
+  });
+  await expect(selectedFile).toBeVisible();
+  await selectedFile.focus();
+  await expect(selectedFile).toBeFocused();
+  await editorOptions.click();
+  await editor.focus();
   const mobileStarts: { width: number; y: number }[] = [];
   for (const [width, height] of [
     [390, 844],
@@ -206,6 +264,7 @@ test('project tasks retain source, undo, a waiting run and discussion draft whil
     const diagnostic = `Default code at ${width}x${height}: ${JSON.stringify({ before, after, settled }).slice(0, 1900)}`;
     expect(y, diagnostic).toBeLessThan(700);
     await expect(line, diagnostic).toBeInViewport();
+    await expectFirstLineUnobscured(page);
     const codeLink = navigation.getByRole('link', {
       name: 'Code',
       exact: true,
@@ -386,9 +445,10 @@ test('project tasks retain source, undo, a waiting run and discussion draft whil
   await page.evaluate(() => {
     document.documentElement.dataset.theme = 'dark';
   });
-  await expect(
-    page.getByRole('button', { name: 'Refresh project', exact: true }),
-  ).toHaveCSS('background-color', 'rgb(24, 35, 29)');
+  await expect(page.locator('.editor-workbench')).toHaveCSS(
+    'background-color',
+    'rgb(25, 35, 28)',
+  );
   await page.screenshot({
     path: test.info().outputPath('tasks-dark.png'),
     fullPage: true,

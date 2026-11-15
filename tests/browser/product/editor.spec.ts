@@ -99,9 +99,10 @@ for (const keyboardPlatform of ['native', 'linux']) {
       () => (document.documentElement.dataset.theme = 'dark'),
     );
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await expect(
-      page.getByRole('button', { name: 'Add file', exact: true }),
-    ).toHaveCSS('background-color', 'rgb(24, 35, 29)');
+    await expect(page.locator('.editor-workbench')).toHaveCSS(
+      'background-color',
+      'rgb(25, 35, 28)',
+    );
     await page.screenshot({
       path: test.info().outputPath('editor-dark.png'),
       fullPage: true,

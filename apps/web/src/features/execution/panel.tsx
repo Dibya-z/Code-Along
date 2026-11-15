@@ -21,6 +21,7 @@ import {
   type WorkPracticeInput,
 } from './practice.ts';
 import { retainedSource, type SourceActionPortal } from './source-actions.ts';
+import { Icon } from '../../ui/icon.tsx';
 export interface PracticeAction {
   readonly input: WorkPracticeInput;
   readonly target: HTMLElement | null;
@@ -159,6 +160,7 @@ export function ExecutionPanel({
             );
           }}
         >
+          <Icon name="play" size={16} />
           Run code
         </Button>
         <Button
@@ -228,18 +230,23 @@ export function ExecutionPanel({
           </div>,
           practice.target,
         )}
-      <h2 className="console-heading">Console</h2>
-      <p className="execution-status" role="status">
-        {snapshot.phase === 'idle' && !complete
-          ? 'Loading project files…'
-          : snapshot.phase === 'idle' && catalogue.isPending
-            ? 'Checking runtimes…'
-            : snapshot.kind === 'practice' && snapshot.phase === 'succeeded'
-              ? 'Checks finished'
-              : snapshot.kind === 'practice' && snapshot.phase === 'failed'
-                ? 'Checks failed'
-                : labels[snapshot.phase]}
-      </p>
+      <div className="console-head">
+        <h2 className="console-heading">
+          <Icon name="terminal" size={17} />
+          Console
+        </h2>
+        <p className="execution-status" role="status">
+          {snapshot.phase === 'idle' && !complete
+            ? 'Loading project files…'
+            : snapshot.phase === 'idle' && catalogue.isPending
+              ? 'Checking runtimes…'
+              : snapshot.kind === 'practice' && snapshot.phase === 'succeeded'
+                ? 'Checks finished'
+                : snapshot.kind === 'practice' && snapshot.phase === 'failed'
+                  ? 'Checks failed'
+                  : labels[snapshot.phase]}
+        </p>
+      </div>
       {(!online || paused) && (
         <Notice>
           {!online && 'You are offline. '}Local practice uses the complete code

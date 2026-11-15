@@ -277,7 +277,7 @@ test('two accounts converge on empty/short text, show real multi-tab presence, a
     });
     await expect(
       page.getByRole('button', { name: 'Follow River', exact: true }),
-    ).toHaveCSS('background-color', 'rgb(24, 35, 29)');
+    ).toHaveCSS('background-color', 'rgb(25, 35, 28)');
     await page.screenshot({
       path: test.info().outputPath('collaboration-dark.png'),
       fullPage: true,

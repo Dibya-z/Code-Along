@@ -351,10 +351,10 @@ test('snapshot links open anonymously without live transport, enforce recipients
     );
     await expect(
       visitor.getByRole('button', { name: 'Recheck shared link', exact: true }),
-    ).toHaveCSS('background-color', 'rgb(24, 35, 29)');
+    ).toHaveCSS('background-color', 'rgb(25, 35, 28)');
     await expect(
       visitor.getByLabel('Frozen Python source for main.py', { exact: true }),
-    ).toHaveCSS('color', 'rgb(237, 242, 235)');
+    ).toHaveCSS('color', 'rgb(237, 243, 233)');
     await visitor.screenshot({
       path: test.info().outputPath('snapshot-dark.png'),
       fullPage: true,
