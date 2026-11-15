@@ -40,7 +40,10 @@ function projectObservations() {
     access?: string;
     route?: string;
     frame?: string;
+    recent: object[];
+    pending: object[];
   }[] = [];
+  const passive: { actor: Actor; phase: Phase; observation: object }[] = [];
   const recent: {
     a: Actor;
     p: Phase;
@@ -107,7 +110,7 @@ function projectObservations() {
   };
   const accessControl = (value: string) =>
     /access.?control|\bCORS\b|cross.origin.*(?:blocked|denied)/i.test(value);
-  function observe(page: Page, actor: Actor) {
+  async function observe(page: Page, actor: Actor) {
     const pageError = (error: Error) => {
       const access = accessControl(error.message);
       const frame = error.stack?.match(
@@ -148,7 +151,26 @@ function projectObservations() {
             }
           : {}),
         ...(frame ? { frame: `${frame[1]}:${frame[2]}:${frame[3]}` } : {}),
+        recent: recent.filter((entry) => entry.a === actor).slice(-3),
+        pending: [...pending.values()]
+          .filter((entry) => entry.a === actor)
+          .slice(-3)
+          .map(({ at, ...entry }) => ({ ...entry, ms: Date.now() - at })),
       });
+    };
+    const runtimeObservation = (message: ConsoleMessage) => {
+      const prefix = '__code_along_project_runtime__';
+      if (!message.text().startsWith(prefix)) return;
+      try {
+        const observation: unknown = JSON.parse(
+          message.text().slice(prefix.length),
+        );
+        if (typeof observation !== 'object' || !observation) return;
+        passive.push({ actor, phase: phases[actor], observation });
+        if (passive.length > 24) passive.shift();
+      } catch {
+        // A diagnostic cannot change application or page-error behavior.
+      }
     };
     const request = (value: Request) => {
       const route = routeShape(value.url());
@@ -207,16 +229,84 @@ function projectObservations() {
       pending.delete(value);
     };
     page.on('pageerror', pageError);
+    page.on('console', runtimeObservation);
     page.on('request', request);
     page.on('response', response);
     page.on('requestfinished', finished);
     page.on('requestfailed', failed);
     dispose.push(() => {
       page.off('pageerror', pageError);
+      page.off('console', runtimeObservation);
       page.off('request', request);
       page.off('response', response);
       page.off('requestfinished', finished);
       page.off('requestfailed', failed);
+    });
+    await page.addInitScript(() => {
+      if (window !== window.top) return;
+      const documentId = performance.timeOrigin;
+      const promises = new WeakMap<Promise<unknown>, number>();
+      let nextPromise = 0;
+      const describe = (value: unknown) => {
+        const error =
+          value instanceof Error || value instanceof DOMException
+            ? value
+            : null;
+        const message = error?.message ?? '';
+        const stack =
+          error && 'stack' in error && typeof error.stack === 'string'
+            ? error.stack
+            : '';
+        return {
+          name: ['Error', 'TypeError', 'AbortError', 'SecurityError'].includes(
+            error?.name ?? '',
+          )
+            ? error!.name
+            : 'other',
+          kind: /access.?control|\bCORS\b|cross.origin.*(?:blocked|denied)/i.test(
+            message,
+          )
+            ? 'native-access-control'
+            : /AbortError|aborted|cancelled/i.test(message)
+              ? 'aborted'
+              : /Could not connect\. Check your connection/.test(message)
+                ? 'network-wrapper'
+                : 'other',
+          frame:
+            stack.match(
+              /\/assets\/([A-Za-z0-9_-]{1,100}\.js:[0-9]{1,9}:[0-9]{1,9})(?=[\s)]|$)/,
+            )?.[1] ?? '',
+        };
+      };
+      const record = (
+        event: string,
+        value?: unknown,
+        promise?: Promise<unknown>,
+      ) => {
+        if (promise && !promises.has(promise))
+          promises.set(promise, ++nextPromise);
+        console.debug(
+          '__code_along_project_runtime__' +
+            JSON.stringify({
+              event,
+              document: documentId,
+              state: document.readyState,
+              ...describe(value),
+              cause:
+                value instanceof Error ? describe(value.cause).kind : 'other',
+              ...(promise ? { promise: promises.get(promise) } : {}),
+            }),
+        );
+      };
+      window.addEventListener('error', (event) => record('error', event.error));
+      window.addEventListener('unhandledrejection', (event) =>
+        record('unhandledrejection', event.reason, event.promise),
+      );
+      window.addEventListener('rejectionhandled', (event) =>
+        record('rejectionhandled', event.reason, event.promise),
+      );
+      window.addEventListener('pagehide', () => record('pagehide'));
+      record('document');
     });
   }
   return {
@@ -230,6 +320,15 @@ function projectObservations() {
         errorCount: errors.length,
         phases,
         errors: errors.slice(-4),
+        signals: passive
+          .filter(
+            ({ observation }) =>
+              'event' in observation &&
+              observation.event !== 'document' &&
+              observation.event !== 'pagehide',
+          )
+          .slice(-3),
+        passive: passive.slice(-5),
         recent: [...recent],
         pending: [...pending.values()].map(({ at, ...entry }) => ({
           ...entry,
@@ -240,7 +339,9 @@ function projectObservations() {
       while (message.length > 1900) {
         if (data.recent.length) data.recent.shift();
         else if (data.pending.length) data.pending.shift();
+        else if (data.passive.length) data.passive.shift();
         else if (data.errors.length > 1) data.errors.shift();
+        else if (data.signals.length > 1) data.signals.shift();
         else break;
         message = JSON.stringify(data);
       }
@@ -399,7 +500,7 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
   const observations = projectObservations();
   const errors = observations.errors;
   let lifecycle: Awaited<ReturnType<typeof dialogLifecycle>> | undefined;
-  observations.observe(page, 'owner');
+  await observations.observe(page, 'owner');
   await register(
     page,
     `project-owner-${browserName}-${stamp}@example.test`,
@@ -411,7 +512,7 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
   });
   try {
     const recipient = await context.newPage();
-    observations.observe(recipient, 'recipient');
+    await observations.observe(recipient, 'recipient');
     await register(recipient, recipientEmail, 'River');
     await page
       .getByRole('button', { name: 'Create workspace', exact: true })

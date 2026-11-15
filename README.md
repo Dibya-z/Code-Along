@@ -77,7 +77,7 @@ packages/runtime-profiles/ Reviewed self-hosted runtime/package inventories
 tests/browser/            Owned runner, UI and two-user product browser checks
 tools/dev/                Disposable service harnesses, setup and schema generation
 tools/ci/                 CI-only native tools, dependency and Compose checks
-infra/                    Digest-pinned development containers and HTTPS proxy
+infra/                    Development and standalone production Compose/HTTPS profiles
 docs/                     Architecture, API contracts, protocols and operations
 ```
 
@@ -194,13 +194,13 @@ Firefox is **unverified** on this workstation: its owned launcher fails before n
 - [Backend configuration and commands](docs/operations/backend-development.md)
 - [Checkpoint protocol](docs/protocols/collaboration-checkpoints.md) and [persistence proof](docs/architecture/checkpoint-persistence-proof.md)
 
-Production TLS/domains, SMTP delivery, HSTS, recovery/load/security review and deployment approval remain future operational work. Learner Python never executes in the API or ordinary application workers. Temporary keys, mail, environment files, volumes, caches, builds and test evidence remain ignored.
+Production Compose/settings, separate-site proxy configuration and private backup/restore tooling have passed their declared preparation checks. Real target DNS/certificates, database TLS/role provisioning, SMTP delivery, controlled deployment and broader pilot/load review remain operational work. See [production preparation](docs/operations/production.md) and [MVP readiness](docs/operations/mvp-readiness.md). Learner Python never executes in the API or ordinary application workers. Temporary keys, mail, environment files, volumes, caches, builds and test evidence remain ignored.
 
 ## Development workflow
 
-Follow **PLAN → IMPLEMENT → TEST → REVIEW → SHOW CHANGES → APPROVAL → COMMIT → UPDATE PROGRESS → NEXT TASK**. Keep meaningful units separate, review the complete staged diff and preserve unrelated files. Normally, each commit needs approval; pushing, merging, deploying or changing accepted architecture also needs explicit authorization.
+Follow **PLAN → IMPLEMENT → TEST → REVIEW → SHOW CHANGES → APPROVAL → COMMIT → UPDATE PROGRESS → NEXT TASK**. Keep meaningful units separate, review the complete staged diff and preserve unrelated files. The owner has granted standing approval for verified project commits/pushes, while retaining tests, scope/message reporting and staging/secret review. Merges, actual deployment, architecture/OS trust changes and destructive operations require separate explicit approval.
 
-After M3 delivery, the owner authorized current UI clarity improvements and the complete approved M4 on 14 November 2026. Verified commits and pushes may proceed in coherent related feature bundles without repeated approval prompts. This scope ends after M4 and excludes M5 implementation, architecture changes, merges, deployment, unrelated destructive actions and OS certificate-trust changes. A commit's hash is recorded in the next meaningful tracker update rather than amending history or creating a bookkeeping loop.
+The 15 November MVP instruction authorizes essential reliability and M5 production/recovery preparation alongside M4 acceptance, superseding the earlier M4-only limit. Optional M6/M7 work remains deferred. Record a commit's hash in the next meaningful tracker update rather than amending history or creating a bookkeeping loop.
 
 See [development storage and verification](docs/operations/development-resources.md) for the low-storage workflow and conservative prose-only CI path. Application, dependency, protocol and security changes retain full verification.
 

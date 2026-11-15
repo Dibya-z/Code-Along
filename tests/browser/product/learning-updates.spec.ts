@@ -337,11 +337,9 @@ test('learning HTTP heads repair final dropped markers and newer H2 stays submit
       'Correction still refers only to older H1.',
     );
     // This request must start after the correction committed, not during bootstrap.
+    const expectedProgressURL = new URL(progressPath(f), f.learner.url()).href;
     const refreshed = f.learner.waitForRequest(
-      (r) =>
-        new URL(r.url()).pathname ===
-          `/api/v1/assignments/${f.assignmentId}/progress/` &&
-        r.method() === 'GET',
+      (r) => r.url() === expectedProgressURL && r.method() === 'GET',
     );
     await f.learner.bringToFront();
     await f.learner.evaluate(() => window.dispatchEvent(new Event('focus')));
@@ -366,10 +364,7 @@ test('learning HTTP heads repair final dropped markers and newer H2 stays submit
         Math.max(0, observedAt + seconds * 1000 - Date.now()) + 2000,
       );
       const replacement = f.learner.waitForRequest(
-        (r) =>
-          new URL(r.url()).pathname ===
-            `/api/v1/assignments/${f.assignmentId}/progress/` &&
-          r.method() === 'GET',
+        (r) => r.url() === expectedProgressURL && r.method() === 'GET',
       );
       await progress
         .getByRole('button', { name: 'Refresh my progress', exact: true })
@@ -381,14 +376,11 @@ test('learning HTTP heads repair final dropped markers and newer H2 stays submit
     const refreshedProgress = (await refreshedResponse!.json()) as Progress;
     expect(refreshedProgress.latest_submission?.id).toBe(second.id);
     expect(refreshedProgress.latest_assessment).toBeNull();
+    expect(refreshedProgress.state).toBe('submitted');
 
     await expect(
       progress.getByText('Submitted', { exact: true }),
     ).toBeVisible();
-    const actual = await get<Progress>(f.learner, progressPath(f));
-    expect(actual.latest_submission?.id).toBe(second.id);
-    expect(actual.latest_assessment).toBeNull();
-    expect(actual.state).toBe('submitted');
     await expect(
       f.learner.getByText(
         'No feedback has been published for this submission.',
