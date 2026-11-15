@@ -1,9 +1,15 @@
 # Focused product interface refresh
 
-Status: **In Progress**, 15 November 2026. The owner selected a focused
+Status: **Completed**, 15 November 2026. The owner selected a focused
 developer-product direction and authorized implementation and verified
 commits/pushes. This changes the presentation of the existing independently
 implemented platform; it does not replace its architecture or core workflows.
+
+Accepted source **`92c09facb52f94f76b7968b67d41ab3f75f2953f`** passes
+[full Linux CI](https://github.com/Dibya-z/Code-Along/actions/runs/43686267508):
+all six jobs, **134 product, 30 isolation, six foundation UI and six development
+cases**. Fresh local visual acceptance includes 29 screenshots and 49 viewport
+checks; the two formerly failing responsive journeys pass in both browsers.
 
 ## Design decisions
 
@@ -44,7 +50,7 @@ Worker resources, account/session handling, permissions, source authority and
 receipt-based Saved semantics are preserved. No backend, API contract, migration,
 dependency, execution protocol or security policy changes are included.
 
-## Verification record
+## Verification history
 
 Sixteen actual screenshots of the previous interface were retained locally.
 The first capture reached an incorrectly scoped optional console step after
@@ -73,8 +79,8 @@ Independent review of those captures identifies two further tab-presentation
 issues: the selected underline paints beneath an opaque child, and a wrapping
 learning header can collapse its tab strip to zero width. Bounded CSS fixes put
 the indicator on the controls and give the tabs their own line in the existing
-wrap modes. Their formatting check passes; these final CSS changes still await
-fresh rendering. The final production web rebuild passes in 2.007s on the
+wrap modes. Their formatting check passes; fresh rendering is deferred at that
+checkpoint and subsequently completed below. A production web rebuild passes in 2.007s on the
 corrected source; the unchanged shared Storybook inputs retain their passing
 build.
 
@@ -82,7 +88,7 @@ The first two-engine retained-navigation run reaches an outdated exact-backgroun
 expectation: Refresh project is now a transparent control. The check is moved to
 the actual solid editor surface in navigation, plot and Add file checks, retaining the
 exact dark token expectation and all behavioral assertions. That failed run remains diagnostic evidence; the
-complete corrected journey and final Linux gate are pending.
+complete corrected journey and full suites move to the later Linux gate.
 
 The navigation check also opens Editor options and verifies that the actual
 selected file tab remains visible and keyboard-focusable before returning to
@@ -93,7 +99,7 @@ macOS swap allocation, with no owned test services left running. Heavy local
 work stays paused below its 4.2GiB preflight; the 3.5GiB hard floor is preserved.
 Headroom temporarily recovers to about 5GiB, allowing the final web build, then
 falls below preflight again before a new browser fixture starts. The final
-fresh-source browser acceptance will run in Linux CI instead of starting
+fresh-source browser acceptance moves to Linux CI instead of starting
 another large local stack. Earlier
 local passes are scoped to their captured source rather than claimed as a pass
 for these later changes. No user data or installed tools are removed.
@@ -113,7 +119,7 @@ starts before a final source/query audit catches a changed workspace return-link
 name: its decorative arrow became hidden from accessibility. The correction
 explicitly restores the previous `← Your workspaces` label. The original
 workspace test stays intact. Scoped lint and web types pass; the complete
-replacement Linux run remains required before acceptance.
+replacement Linux run is still required at that checkpoint.
 
 The label correction is pushed as
 [`842e45e`](https://github.com/Dibya-z/Code-Along/commit/842e45eb17ad79bddf9765c78845462cc8c0fe0c).
@@ -155,6 +161,36 @@ frozen source/build checks and clean shutdown pass; all eight ports close and
 4.966GiB remains. The earlier zero-case sandbox setup failure is retained
 separately from the passing native run. Full Linux acceptance still remains
 required for the coherent responsive-control repair.
+
+The responsive repair is committed/pushed as
+[`92c09fa`](https://github.com/Dibya-z/Code-Along/commit/92c09facb52f94f76b7968b67d41ab3f75f2953f).
+Its [full Linux run](https://github.com/Dibya-z/Code-Along/actions/runs/43686267508)
+is the final acceptance gate, now recorded successful below. A final fresh-source visual capture passes
+**2/2 in 18.692s**, with **29 screenshots and 49 viewport geometry records**.
+All indexed viewports fit horizontally. Restored file tabs measure at least
+44px high, remain keyboard-focusable with Editor options open, and show the
+selected indicator across the tab. First source is visible at ordinary
+390/320px and in the narrow learning workspace. Independent visual inspection
+covers entry, account forms, workspaces, projects, editor and learning views.
+Both source exports retain exact bytes. All 613 source inputs and 25 web outputs
+remain frozen, existing certificates/environment/native QA mail are preserved,
+all owned test services stop, all eight ports close and 4.959GiB remains.
+
+## Final acceptance
+
+All six actual Linux jobs finish successfully on `92c09fa`. Chromium passes all
+67 product cases in 16.7 minutes; WebKit passes all 67 in 19.8 minutes. Each
+passes 15 isolation and three foundation UI cases; Compose passes six development
+cases. Source/backend/protocol, dependency/contract and production-build checks
+also pass. The retained phone-output, 200% text-zoom, source-byte, permission,
+Worker, focus and zero-error assertions are unchanged. No configured retry,
+increased quota, longer deadline or error filtering is introduced.
+
+UI1 is complete. This does not certify retail devices, full screen-reader
+coverage, classroom load or a live production deployment. The earlier
+intermittent WebKit native-fetch cause remains unresolved; it does not recur in
+this successful strict run. Broader M5 work and target-provider prerequisites
+remain in [MVP readiness](../operations/mvp-readiness.md).
 
 ## Local preview
 

@@ -1,7 +1,8 @@
 # MVP readiness
 
-Updated 15 November 2026 (Asia/Kolkata). The essential MVP and M4 are accepted
-on the declared Chromium/WebKit baseline. Production/recovery preparation is
+Updated 15 November 2026 (Asia/Kolkata). The essential MVP, M4 and focused
+interface refresh are accepted on the declared Chromium/WebKit baseline.
+Production/recovery preparation is
 complete; actual deployment and broader M5 pilot gates remain separate.
 
 ## Essential scope
@@ -12,14 +13,21 @@ execution/output/Stop, collaborative code/cursors, server checkpoints, history,
 chat, assignments, participation/team work, immutable submissions, manual
 feedback and derived progress/private learning updates.
 Authoritative server grading, voice, drawing and advanced analytics are deferred.
-The focused product-interface refresh is tracked separately in the
-[interface refresh record](../architecture/interface-refresh.md); the accepted
-MVP source and its earlier test counts below remain historical evidence until
-that refresh completes its own acceptance gate.
+The completed product-interface refresh is recorded in the
+[interface validation](../architecture/interface-refresh.md). It adds original
+branding, coordinated account/workspace/IDE/learning screens and optional
+light/dark appearance without changing the approved stack or source authority.
 
 ## Current verification
 
-- [Full exact-source Linux CI](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362) on `401940f` passes all six jobs: **134 product, 30 isolation, four foundation and six development cases**, plus source/backend/protocol/build checks. Both browsers pass every declared product case with zero configured retries.
+- [Full exact-source Linux CI](https://github.com/Dibya-z/Code-Along/actions/runs/43686267508) on `92c09fa` passes all six jobs: **134 product, 30 isolation, six foundation UI and six development cases**, plus source/backend/protocol/build checks. Both browsers pass every declared product case with zero configured retries. The earlier functional-MVP acceptance on [`401940f`](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362) remains historical evidence; its foundation suite had four cases before the two-engine appearance check was added.
+
+- Final interface verification includes **29 fresh screenshots and 49 viewport
+  geometry records**, independent visual review, actual tab/keyboard/source
+  visibility and a **4/4 targeted repair gate** across both browsers. Full Linux
+  acceptance verifies the original phone-output and 200% text-zoom limits after
+  the two real responsive bugs are fixed. No quotas, deadlines, error assertions
+  or retries are relaxed. All owned local test services stop afterward.
 
 - The combined backend pass completed **1,122 tests plus 83 subtests**. A later
   security review changed only backup host/TLS validation and its tests; all
@@ -68,7 +76,7 @@ that refresh completes its own acceptance gate.
 | Normal `npm run dev`, live mounts and existing-data preservation  | Passed, including all 19 live preservation checks                               |
 | Actual production Compose/Nginx configuration and runtime checks  | Passed isolated proxy/TLS checks; external prerequisites remain                 |
 | Real migrated project/submission/feedback backup/restore exercise | Passed, including final host/TLS validation recheck                             |
-| Combined source checks, reviewed commit and remote CI             | Passed: `401940f`, all six full Linux jobs successful                           |
+| Combined source checks, reviewed commit and remote CI             | Passed: `92c09fa`, all six full Linux jobs successful                           |
 | Target DNS, real TLS/database/mail checks and deployment          | Operator inputs and separate deployment approval required                       |
 
 ## Earlier investigation and preservation
@@ -140,7 +148,7 @@ remain M5 follow-up work; the delivery outbox is not a general audit log.
 
 ## Current exact-source acceptance
 
-Source `401940fa1d7a75efd789386d5abb7d8df1d54bb4` passes [full Linux run 43656864362](https://github.com/Dibya-z/Code-Along/actions/runs/43656864362). Chromium passes 67 product cases in 16.8 minutes; WebKit passes 67 in 19.8 minutes. Each also passes 15 isolation and two foundation cases; Compose passes six development cases. Source and aggregate jobs succeed. M4 and the essential MVP are Completed.
+Source `92c09facb52f94f76b7968b67d41ab3f75f2953f` passes [full Linux run 43686267508](https://github.com/Dibya-z/Code-Along/actions/runs/43686267508). Chromium passes 67 product cases in 16.7 minutes; WebKit passes 67 in 19.8 minutes. Each also passes 15 isolation and three foundation UI cases; Compose passes six development cases. Source and aggregate jobs succeed. M4, the essential MVP and UI1 are Completed.
 
 The earlier WebKit native API-fetch error did not recur in the final strict permissions journey. Its cause remains unresolved, with passive diagnostics retained for M5.1; no application fix or error filtering is claimed. The current complete pass does not certify classroom load, retail devices or absence of intermittent failures.
 
