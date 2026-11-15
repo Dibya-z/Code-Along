@@ -16,7 +16,12 @@ test('create, rename, archive and restore a workspace', async ({
   await expect(
     page.getByRole('heading', { name: 'Python circle', exact: true }),
   ).toBeVisible();
-  await expect(page.getByText('LEARNING WORKSPACE · OWNER')).toBeVisible();
+  await expect(
+    page.getByText('LEARNING WORKSPACE', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator('.workspace-context').getByText('owner', { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'Projects', exact: true }),
   ).toBeVisible();

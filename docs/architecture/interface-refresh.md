@@ -115,6 +115,19 @@ explicitly restores the previous `← Your workspaces` label. The original
 workspace test stays intact. Scoped lint and web types pass; the complete
 replacement Linux run remains required before acceptance.
 
+The label correction is pushed as
+[`842e45e`](https://github.com/Dibya-z/Code-Along/commit/842e45eb17ad79bddf9765c78845462cc8c0fe0c).
+Its [Linux run](https://github.com/Dibya-z/Code-Along/actions/runs/43683144245)
+passes the six development cases and reaches product testing. A complete
+cross-test audit then identifies six presentation assertions requiring alignment:
+workspace and invitation checks split their combined eyebrow/role strings into
+two visible checks, and four permission-journey assertions look in the new
+project context row rather than the former heading. The same exact roles,
+visibility, HTTP denials and ownership transitions remain required. All seventeen
+exact CSS assertions and other changed-markup selectors are reviewed. Browser
+typing, scoped lint and formatting pass; application source and behavior remain
+unchanged. The final grouped test correction still requires full Linux acceptance.
+
 ## Local preview
 
 From the repository root, run `npm run dev`, then open

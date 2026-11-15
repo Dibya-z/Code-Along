@@ -628,7 +628,7 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
       .click();
     await expect(
       recipient
-        .locator('.project-heading')
+        .locator('.project-context')
         .getByText('Viewer', { exact: true }),
     ).toBeVisible();
     observations.phase('recipient', 'viewerwritedenied');
@@ -672,7 +672,7 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
     await recipient.reload();
     await expect(
       recipient
-        .locator('.project-heading')
+        .locator('.project-context')
         .getByText('Editor', { exact: true }),
     ).toBeVisible();
     await showFiles(recipient);
@@ -725,12 +725,12 @@ test('private project, scoped invitation, viewer/editor permissions and ownershi
       .getByRole('button', { name: 'Confirm project transfer', exact: true })
       .click();
     await expect(
-      page.locator('.project-heading').getByText('Editor', { exact: true }),
+      page.locator('.project-context').getByText('Editor', { exact: true }),
     ).toBeVisible();
     observations.phase('recipient', 'newOwnerOpen');
     await recipient.goto(projectUrl);
     await expect(
-      recipient.locator('.project-heading').getByText('Owner', { exact: true }),
+      recipient.locator('.project-context').getByText('Owner', { exact: true }),
     ).toBeVisible();
     expect(errors, observations.message()).toEqual([]);
   } catch (error) {

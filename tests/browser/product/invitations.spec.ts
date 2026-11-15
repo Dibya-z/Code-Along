@@ -52,7 +52,12 @@ test('a recipient joins by invitation and removal invalidates the old link', asy
       recipient.getByRole('heading', { name: 'Shared learning', exact: true }),
     ).toBeVisible();
     await expect(
-      recipient.getByText('LEARNING WORKSPACE · LEARNER'),
+      recipient.getByText('LEARNING WORKSPACE', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      recipient
+        .locator('.workspace-context')
+        .getByText('learner', { exact: true }),
     ).toBeVisible();
     await recipient.goto(url);
     await expect(
